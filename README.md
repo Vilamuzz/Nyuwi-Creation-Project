@@ -12,6 +12,7 @@
 
 ## Design Web
 1. <a href="https://www.figma.com/design/5LNKR48WHkyUTxXGCf8bpT/Untitled?node-id=0-1&t=ChRzWjcY63NY5sqj-1" target="_blank">Figma</a>
+2. <a href="https://balsamiq.cloud/sbak1wr/p6v12f5" target="_blank">Balsamiq</a>
 
 ## Assets Web
 1. <a href="https://drive.google.com/drive/folders/12AQRHeQ3g5vjdaLDCS5dijrI1PG3Euly" target="_blank">Google Drive</a>
