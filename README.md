@@ -1,1 +1,11 @@
 # Nyuwi-Creation-Project
+
+## Roadmap
+1. <a href="https://www.canva.com/design/DAGSG8cxYVE/yMOnO7jKfWhBQHEnEhlt8g/edit?utm_content=DAGSG8cxYVE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton" target="_blank">Canva version</a>
+2. <a href="https://roadmap.sh/r/web-nyuwi-creation" target="_blank">Roadmap.sh version</a>
+
+## Design Web
+1. <a href="https://www.figma.com/design/5LNKR48WHkyUTxXGCf8bpT/Untitled?node-id=0-1&t=ChRzWjcY63NY5sqj-1" target="_blank">Figma</a>
+
+## Assets Web
+1. <a href="https://drive.google.com/drive/folders/12AQRHeQ3g5vjdaLDCS5dijrI1PG3Euly" target="_blank">Google Drive</a>
