@@ -11,8 +11,8 @@
 1.  <a href="https://drive.google.com/file/d/1jc5FSPUwBjqCjqDlbbEsTwZjUvwDuUkE/view?usp=drive_link" target="_blank">Draw.io</a>
 
 ## Design Web
-1. <a href="https://www.figma.com/design/5LNKR48WHkyUTxXGCf8bpT/Untitled?node-id=0-1&t=ChRzWjcY63NY5sqj-1" target="_blank">Figma</a>
-2. <a href="https://balsamiq.cloud/sbak1wr/p6v12f5" target="_blank">Balsamiq</a>
+1. <a href="https://balsamiq.cloud/sbak1wr/p6v12f5" target="_blank">Wireframe</a>
+2. <a href="https://www.figma.com/design/5LNKR48WHkyUTxXGCf8bpT/Untitled?node-id=0-1&t=ChRzWjcY63NY5sqj-1" target="_blank">UI/UX Design</a>
 
 ## Assets Web
 1. <a href="https://drive.google.com/drive/folders/12AQRHeQ3g5vjdaLDCS5dijrI1PG3Euly" target="_blank">Google Drive</a>
