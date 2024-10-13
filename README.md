@@ -17,7 +17,7 @@ php artisan migrate
 ## Usage
 
 ```sh
-npm run dev & php aritsan serve
+npm run dev & php artisan serve
 ```
 
 ## Roadmap
