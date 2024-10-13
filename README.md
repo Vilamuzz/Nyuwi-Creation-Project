@@ -4,34 +4,22 @@
 
 ## Install and .env setup
 1.     npm install & composer install
+2.     cp .env.example .env
+3.     php artisan key:generate
 
-2. 
-```sh
-cp .env.example .env
-```
-3. 
-```sh
-php artisan key:generate
-```
 
 ## Database setup
-
-```sh
-CREATE DATABASE nyuwicreation
+1.     CREATE DATABASE nyuwicreation
+2. Modified file .env
 ```
-
-file .env
-
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE=nyuwicreation
 DB_USERNAME=root
 DB_PASSWORD=
-
-```sh
-php artisan migrate
 ```
+3.     php artisan migrate
 
 ## Usage
 
