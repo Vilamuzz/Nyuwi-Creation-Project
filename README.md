@@ -9,7 +9,7 @@
 
 
 ## Database setup
-1.     CREATE DATABASE nyuwicreation
+1. Buat database pada mysql bernama nyuwicreation
 2. Modified file .env
 ```
 DB_CONNECTION=mysql
