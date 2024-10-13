@@ -2,13 +2,34 @@
 
 > simple to do list using laravel and react
 
-## Install
-
+## Install and .env setup
+1. 
 ```sh
 npm install & composer install
 ```
+2. 
+```sh
+cp .env.example .env
+```
+3. 
+```sh
+php artisan key:generate
+```
 
-## Migrate
+## Database setup
+
+```sh
+CREATE DATABASE nyuwicreation
+```
+
+file .env
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=nyuwicreation
+DB_USERNAME=root
+DB_PASSWORD=
 
 ```sh
 php artisan migrate
