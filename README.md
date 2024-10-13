@@ -8,6 +8,12 @@
 npm install & composer install
 ```
 
+## Migrate
+
+```sh
+php artisan migrate
+```
+
 ## Usage
 
 ```sh
