@@ -3,7 +3,7 @@
 > simple to do list using laravel and react
 
 ## Install and .env setup
-1.     ```sh npm install & composer install```
+1.     npm install & composer install
 
 2. 
 ```sh
