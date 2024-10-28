@@ -1,8 +1,21 @@
 <script setup>
 import HomeLayout from "@/Layouts/HomeLayout.vue";
+import { Head, Link } from "@inertiajs/vue3";
+
+defineProps({
+    canLogin: {
+        type: Boolean,
+        default: true,
+    },
+    canRegister: {
+        type: Boolean,
+        default: true,
+    },
+});
 </script>
 
 <template>
+    <Head title="Home" />
     <HomeLayout>
         <!-- Content that will be rendered inside the slot of HomeLayout -->
 

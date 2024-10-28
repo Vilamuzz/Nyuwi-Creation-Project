@@ -12,7 +12,7 @@ defineProps({
     <nav>
         <div class="navbar bg-base-100 fixed top-0 left-0 w-full z-50">
             <div class="navbar-start">
-                <a class="btn btn-ghost text-xl">daisyUI</a>
+                <a class="btn btn-ghost text-xl">#</a>
             </div>
             <div class="navbar-center">
                 <div class="form-control">
@@ -38,15 +38,22 @@ defineProps({
             </div>
             <div class="navbar-end">
                 <Link
-                    ><button class="btn btn-primary btn-sm mx-2">
-                        Sign up
-                    </button></Link
+                    :href="route('register')"
+                    class="btn btn-primary btn-sm mx-2"
                 >
+                    Register
+                </Link>
 
-                <Link :href="route('login')"
-                    ><button class="btn btn-neutral btn-sm">
-                        Sign in
-                    </button></Link
+                <Link :href="route('login')" class="btn btn-neutral btn-sm">
+                    Log in
+                </Link>
+                <Link
+                    :href="route('logout')"
+                    method="post"
+                    as="button"
+                    class="btn btn-warning btn-sm mx-2"
+                >
+                    Log out</Link
                 >
             </div>
         </div>
