@@ -36,6 +36,7 @@ npm run dev & php artisan serve
 
 ## Activity Diagram
 1.  <a href="https://drive.google.com/file/d/1jc5FSPUwBjqCjqDlbbEsTwZjUvwDuUkE/view?usp=drive_link" target="_blank">Draw.io</a>
+2.  <a href="https://docs.google.com/spreadsheets/d/1A18lWVP0toieqK9y6qp6_wkLITDLSXdJ68oT5ytl488/edit?gid=0#gid=0" target="_blank">Draw.io</a>
 
 ## Design Web
 1. <a href="https://balsamiq.cloud/sbak1wr/p6v12f5" target="_blank">Wireframe</a>
