@@ -3,10 +3,10 @@ import Navbar from "@/Components/Navbar.vue";
 import Footer from "@/Components/Footer.vue";
 </script>
 <template>
-    <Navbar></Navbar>
+    <Navbar />
     <!-- This is where the content inside HomeLayout will be injected -->
-    <main class="pt-20">
+    <main>
         <slot></slot>
     </main>
-    <Footer></Footer>
+    <Footer />
 </template>

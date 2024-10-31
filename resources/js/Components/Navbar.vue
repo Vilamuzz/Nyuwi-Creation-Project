@@ -1,61 +1,61 @@
 <script setup>
 import { Link } from "@inertiajs/vue3";
+import { usePage } from "@inertiajs/vue3";
 
-defineProps({
-    href: {
-        type: String,
-        required: true,
-    },
-});
+const { props } = usePage();
+const isLoggedIn = props.auth.user;
+const role = props.auth?.user?.role || null;
 </script>
-<template>
-    <nav>
-        <div class="navbar bg-base-100 fixed top-0 left-0 w-full z-50">
-            <div class="navbar-start">
-                <a class="btn btn-ghost text-xl">#</a>
-            </div>
-            <div class="navbar-center">
-                <div class="form-control">
-                    <div class="relative w-full md:w-96 lg:w-[640px]">
-                        <!-- Magnifying glass icon -->
-                        <span
-                            class="absolute inset-y-0 left-0 flex items-center pl-3"
-                        >
-                            <img
-                                src="../../../public/img/magnifying-glass.svg"
-                                width="20px"
-                                alt=""
-                            />
-                        </span>
-                        <!-- Search input field -->
-                        <input
-                            type="text"
-                            placeholder="Search"
-                            class="input input-bordered w-full h-10 pl-10"
-                        />
-                    </div>
-                </div>
-            </div>
-            <div class="navbar-end">
-                <Link
-                    :href="route('register')"
-                    class="btn btn-primary btn-sm mx-2"
-                >
-                    Register
-                </Link>
 
-                <Link :href="route('login')" class="btn btn-neutral btn-sm">
-                    Log in
-                </Link>
-                <Link
-                    :href="route('logout')"
-                    method="post"
-                    as="button"
-                    class="btn btn-warning btn-sm mx-2"
-                >
-                    Log out</Link
-                >
+<template>
+    <!-- Navbar -->
+    <nav class="fixed top-0 left-0 w-full bg-white shadow z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo Perusahaan -->
+                <div class="flex-shrink-0">
+                    <img
+                        :src="'/img/Logo/Logo.svg'"
+                        alt="Logo Perusahaan"
+                        class="h-12"
+                    />
+                </div>
+
+                <!-- Input Pencarian -->
+                <div class="flex-grow mx-4">
+                    <input
+                        type="text"
+                        placeholder="Cari..."
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+
+                <!-- Tombol Register dan Masuk -->
+                <div v-if="!isLoggedIn" class="flex space-x-4">
+                    <Link
+                        :href="route('register')"
+                        class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-center"
+                    >
+                        Register
+                    </Link>
+                    <Link
+                        :href="route('login')"
+                        class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 text-center"
+                    >
+                        Masuk
+                    </Link>
+                </div>
+                <div v-else class="flex space-x-4">
+                    <Link
+                        :href="route('logout')"
+                        method="post"
+                        class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-center"
+                    >
+                        Log out
+                    </Link>
+                </div>
             </div>
         </div>
     </nav>
+    <div class="pt-16"></div>
 </template>
