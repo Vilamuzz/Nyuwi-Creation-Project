@@ -33,7 +33,17 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $role = Auth::user()->role;
+
+        // Redirect based on role
+        if ($role == 'admin') {
+            return redirect('/dashboard');
+        }
+        if ($role == 'pelanggan') {
+            return redirect('/');
+        }
+
+        return redirect()->intended(route('/', absolute: false));
     }
 
     /**
@@ -47,6 +57,6 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect('/login');
     }
 }
