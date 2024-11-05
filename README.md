@@ -39,7 +39,7 @@ npm run dev & php artisan serve
 
 ## Design Web
 1. <a href="https://balsamiq.cloud/sbak1wr/p6v12f5" target="_blank">Wireframe</a>
-2. <a href="https://www.figma.com/design/38JRr8OKPDHfuoh4BBLgnA/nyuwi-creative?m=auto&t=9BpPiq6kYUypRTH8-6">UI/UX Design</a>
+2. <a href="">UI/UX Design</a>
 
 ## Assets Web
 1. <a href="https://drive.google.com/drive/folders/12AQRHeQ3g5vjdaLDCS5dijrI1PG3Euly" target="_blank">Google Drive</a>
