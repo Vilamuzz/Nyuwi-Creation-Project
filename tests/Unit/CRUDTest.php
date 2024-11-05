@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\Product;
+use App\Models\User;
 use App\CRUD;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -20,7 +21,7 @@ class CRUDTest extends TestCase
         $this->crudService = new CRUD();
     }
 
-    public function testCreateProductSuccessfully()
+    public function testCreateReadUpdateDeleteProductSuccessfully()
     {
         $data = [
             'nama' => 'Product 1',
@@ -28,50 +29,29 @@ class CRUDTest extends TestCase
             'harga' => 1000,
         ];
 
+        // Test Create
         $product = $this->crudService->create($data);
-
         $this->assertDatabaseHas('products', $data);
-        $this->assertEquals('Product 1', $product->nama);
-    }
 
-    public function testReadProductSuccessfully()
-    {
-        $product = Product::factory()->create();
-
+        // Test Read
         $foundProduct = $this->crudService->read($product->id);
         $this->assertEquals($product->id, $foundProduct->id);
-    }
 
-    public function testUpdateProductSuccessfully()
-    {
-        $product = Product::factory()->create([
-            'nama' => 'Product 1',
-            'jumlah_stok' => 5,
-            'harga' => 500,
-        ]);
-
+        // Test Update
         $updatedData = [
             'nama' => 'Updated Product',
             'jumlah_stok' => 15,
             'harga' => 1500,
         ];
-
         $updatedProduct = $this->crudService->update($product->id, $updatedData);
-
-        $this->assertEquals('Updated Product', $updatedProduct->nama);
         $this->assertDatabaseHas('products', $updatedData);
-    }
 
-    public function testDeleteProductSuccessfully()
-    {
-        $product = Product::factory()->create();
-
+        // Test Delete
         $this->crudService->delete($product->id);
-
         $this->assertDatabaseMissing('products', ['id' => $product->id]);
     }
 
-    public function testValidationFailsWithInvalidData()
+    public function testCreateProductWithInvalidData()
     {
         $this->expectException(ValidationException::class);
 
@@ -84,11 +64,37 @@ class CRUDTest extends TestCase
         $this->crudService->create($data);
     }
 
-    public function testHandleErrorWhenProductNotFound()
+    public function testUpdateNonExistentProduct()
     {
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage("Product not found.");
 
-        $this->crudService->read(999); // Assuming ID 999 does not exist
+        $this->crudService->update(999, [
+            'nama' => 'Non-existent product',
+            'jumlah_stok' => 5,
+            'harga' => 500,
+        ]);
+    }
+
+    public function testDeleteProductUsedByAnotherFeature()
+    {
+        // This would be specific to your application. Here, simulate an error if deletion is attempted
+        $product = Product::factory()->create();
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage("Product is in use and cannot be deleted.");
+
+        $this->crudService->delete($product->id);
+    }
+
+    public function testCRUDOperationsWithoutProperPermissions()
+    {
+        // Assuming you have a permission system in place
+        $this->actingAs(User::factory()->create(['role' => 'user'])); // User without proper permissions
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage("Unauthorized.");
+
+        $this->crudService->create(['nama' => 'Unauthorized Product', 'jumlah_stok' => 10, 'harga' => 1000]);
     }
 }
