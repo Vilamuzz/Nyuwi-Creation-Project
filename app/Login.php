@@ -2,40 +2,28 @@
 
 namespace App;
 
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 class Login
 {
-    public function login($email, $password)
+    public function authenticate($credentials)
     {
-        // Validasi email dan password
-        if (strlen($email) < 5 || strlen($password) < 5) {
-            throw ValidationException::withMessages(['error' => 'Email atau password terlalu pendek.']);
+        // Periksa apakah email dan password ada
+        if (empty($credentials['email']) || empty($credentials['password'])) {
+            return ['status' => false, 'message' => 'Username atau password kosong'];
         }
 
-        // Cari user berdasarkan email
-        $user = User::where('email', $email)->first();
-
-        // Jika user ditemukan dan password cocok, buat sesi login
-        if ($user && Hash::check($password, $user->password)) {
-            Auth::login($user);
-            return true;
+        // Gunakan email untuk autentikasi
+        if (Auth::attempt($credentials)) {
+            return ['status' => true, 'message' => 'Login berhasil'];
         }
 
-        // Jika gagal, lemparkan exception
-        throw ValidationException::withMessages(['error' => 'Login gagal. Email atau password salah.']);
+        return ['status' => false, 'message' => 'Login gagal, username atau password salah'];
     }
 
     public function logout()
     {
         Auth::logout();
-    }
-
-    public function isAuthenticated()
-    {
-        return Auth::check();
+        return ['status' => true, 'message' => 'Logout berhasil'];
     }
 }

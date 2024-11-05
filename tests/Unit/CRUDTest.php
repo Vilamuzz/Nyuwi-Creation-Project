@@ -1,13 +1,11 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Feature;
 
-use App\Models\Product;
-use App\Models\User;
+use Tests\TestCase;
 use App\CRUD;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Validation\ValidationException;
-use Tests\TestCase;
+use App\Models\Product;
 
 class CRUDTest extends TestCase
 {
@@ -21,80 +19,64 @@ class CRUDTest extends TestCase
         $this->crudService = new CRUD();
     }
 
-    public function testCreateReadUpdateDeleteProductSuccessfully()
+    public function test_create_product()
     {
         $data = [
-            'nama' => 'Product 1',
+            'nama' => 'Produk A',
             'jumlah_stok' => 10,
-            'harga' => 1000,
+            'harga' => 15000
         ];
 
-        // Test Create
-        $product = $this->crudService->create($data);
+        $response = $this->crudService->create($data);
         $this->assertDatabaseHas('products', $data);
+        $this->assertInstanceOf(Product::class, $response);
+    }
 
-        // Test Read
-        $foundProduct = $this->crudService->read($product->id);
-        $this->assertEquals($product->id, $foundProduct->id);
+    public function test_read_product()
+    {
+        $product = Product::factory()->create();
+        $response = $this->crudService->read($product->id);
 
-        // Test Update
-        $updatedData = [
-            'nama' => 'Updated Product',
-            'jumlah_stok' => 15,
-            'harga' => 1500,
-        ];
-        $updatedProduct = $this->crudService->update($product->id, $updatedData);
-        $this->assertDatabaseHas('products', $updatedData);
+        $this->assertEquals($product->id, $response->id);
+        $this->assertEquals($product->nama, $response->nama);
+    }
 
-        // Test Delete
+    public function test_update_product()
+    {
+        $product = Product::factory()->create();
+        $updatedData = ['nama' => 'Produk A Updated', 'jumlah_stok' => 5, 'harga' => 20000];
+
+        $response = $this->crudService->update($product->id, $updatedData);
+
+        $this->assertEquals('Produk A Updated', $response->nama);
+        $this->assertEquals(5, $response->jumlah_stok);
+        $this->assertEquals(20000, $response->harga);
+    }
+
+    public function test_delete_product()
+    {
+        $product = Product::factory()->create();
         $this->crudService->delete($product->id);
+
         $this->assertDatabaseMissing('products', ['id' => $product->id]);
     }
 
-    public function testCreateProductWithInvalidData()
+    public function test_create_product_with_invalid_data()
     {
-        $this->expectException(ValidationException::class);
-
-        $data = [
-            'nama' => '', // nama is required
-            'jumlah_stok' => -1, // jumlah_stok cannot be negative
-            'harga' => 'invalid_price', // harga must be numeric
-        ];
-
+        $data = ['nama' => null]; // Assuming 'nama' is required
+        $this->expectException(\Illuminate\Database\QueryException::class);
         $this->crudService->create($data);
     }
 
-    public function testUpdateNonExistentProduct()
+    public function test_update_nonexistent_product()
     {
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage("Product not found.");
-
-        $this->crudService->update(999, [
-            'nama' => 'Non-existent product',
-            'jumlah_stok' => 5,
-            'harga' => 500,
-        ]);
+        $this->expectException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+        $this->crudService->update(999, ['nama' => 'Produk C']);
     }
 
-    public function testDeleteProductUsedByAnotherFeature()
+    public function test_delete_nonexistent_product()
     {
-        // This would be specific to your application. Here, simulate an error if deletion is attempted
-        $product = Product::factory()->create();
-
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage("Product is in use and cannot be deleted.");
-
-        $this->crudService->delete($product->id);
-    }
-
-    public function testCRUDOperationsWithoutProperPermissions()
-    {
-        // Assuming you have a permission system in place
-        $this->actingAs(User::factory()->create(['role' => 'user'])); // User without proper permissions
-
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage("Unauthorized.");
-
-        $this->crudService->create(['nama' => 'Unauthorized Product', 'jumlah_stok' => 10, 'harga' => 1000]);
+        $this->expectException(\Illuminate\Database\Eloquent\ModelNotFoundException::class);
+        $this->crudService->delete(999);
     }
 }

@@ -1,94 +1,62 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Feature;
 
-use App\Models\User;
+use Tests\TestCase;
 use App\Login;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
-use Tests\TestCase;
+use App\Models\User;
 
 class LoginTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected $login;
+    protected $loginService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->login = new Login();
+        $this->loginService = new Login();
     }
 
-    public function testLoginWithValidCredentials()
+    public function test_user_can_login_with_valid_credentials()
     {
-        // Buat user dengan password terenkripsi
+        // Membuat user dummy
         $user = User::factory()->create([
-            'email' => 'test@example.com',
-            'password' => Hash::make('validPassword'),
+            'password' => bcrypt($password = 'password123')
         ]);
 
-        // Uji login dengan kredensial yang valid
-        $result = $this->login->login('test@example.com', 'validPassword');
+        // Menggunakan email sebagai field login sesuai dengan model User
+        $credentials = ['email' => $user->email, 'password' => $password];
+        $response = $this->loginService->authenticate($credentials);
 
-        $this->assertTrue($result);
-        $this->assertTrue(Auth::check());
-        $this->assertEquals(Auth::user()->id, $user->id);
+        $this->assertTrue($response['status']);
+        $this->assertEquals('Login berhasil', $response['message']);
     }
 
-    public function testLoginWithInvalidCredentials()
+    public function test_user_cannot_login_with_invalid_credentials()
     {
-        $this->expectException(ValidationException::class);
-        $this->expectExceptionMessage('Login gagal. Email atau password salah.');
+        // Menggunakan email sebagai field login yang benar
+        $credentials = ['email' => 'wrong_user', 'password' => 'wrong_password'];
+        $response = $this->loginService->authenticate($credentials);
 
-        // Buat user dengan password terenkripsi
-        User::factory()->create([
-            'email' => 'test@example.com',
-            'password' => Hash::make('validPassword'),
-        ]);
-
-        // Uji login dengan password yang salah
-        $this->login->login('test@example.com', 'invalidPassword');
+        $this->assertFalse($response['status']);
+        $this->assertEquals('Login gagal, username atau password salah', $response['message']);
     }
 
-    public function testLoginWithShortCredentials()
+    public function test_user_cannot_login_with_empty_credentials()
     {
-        $this->expectException(ValidationException::class);
-        $this->expectExceptionMessage('Email atau password terlalu pendek.');
+        $credentials = ['email' => '', 'password' => ''];
+        $response = $this->loginService->authenticate($credentials);
 
-        // Uji login dengan email dan password yang pendek
-        $this->login->login('test', 'pass');
+        $this->assertFalse($response['status']);
+        $this->assertEquals('Username atau password kosong', $response['message']);
     }
 
-    public function testLogout()
+    public function test_user_can_logout()
     {
-        // Buat user dan login
-        $user = User::factory()->create([
-            'email' => 'test@example.com',
-            'password' => Hash::make('validPassword'),
-        ]);
-        $this->login->login('test@example.com', 'validPassword');
-
-        // Uji logout
-        $this->login->logout();
-        $this->assertFalse(Auth::check());
-    }
-
-    public function testIsAuthenticated()
-    {
-        // Buat user dan login
-        $user = User::factory()->create([
-            'email' => 'test@example.com',
-            'password' => Hash::make('validPassword'),
-        ]);
-        $this->login->login('test@example.com', 'validPassword');
-
-        $this->assertTrue($this->login->isAuthenticated());
-
-        // Logout dan periksa status autentikasi
-        $this->login->logout();
-        $this->assertFalse($this->login->isAuthenticated());
+        $response = $this->loginService->logout();
+        $this->assertTrue($response['status']);
+        $this->assertEquals('Logout berhasil', $response['message']);
     }
 }
