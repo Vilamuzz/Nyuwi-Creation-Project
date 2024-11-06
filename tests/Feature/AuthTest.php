@@ -1,3 +1,5 @@
+<?php
+
 namespace Tests\Feature;
 
 use Tests\TestCase;
@@ -25,7 +27,7 @@ class AuthTest extends TestCase
 
         // Memastikan respons sukses
         $response->assertStatus(200)
-                 ->assertJson(['message' => 'Login successful']);
+            ->assertJson(['message' => 'Login successful']);
     }
 
     /** @test */
@@ -44,6 +46,6 @@ class AuthTest extends TestCase
 
         // Memastikan respons gagal
         $response->assertStatus(401)
-                 ->assertJson(['message' => 'Unauthorized']);
+            ->assertJson(['message' => 'Unauthorized']);
     }
 }
