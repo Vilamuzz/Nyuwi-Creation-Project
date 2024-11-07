@@ -3,76 +3,53 @@
 namespace App;
 
 use App\Models\Product;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Exception;
+use Illuminate\Support\Facades\Auth;
+use InvalidArgumentException;
 
 class CRUD
 {
     public function create(array $data)
     {
-        if (is_null($data)) {
-            throw new \InvalidArgumentException('Data cannot be null');
-        }
+        $this->authorizeAdmin();
 
-        // Daftar field yang wajib ada
-        $requiredFields = ['nama', 'jumlah_stok', 'harga'];
-
-        // Periksa jika field wajib tidak ada di $data atau bernilai null
-        foreach ($requiredFields as $field) {
-            if (!array_key_exists($field, $data) || is_null($data[$field])) {
-                throw new \InvalidArgumentException("Field '{$field}' is required and cannot be null");
-            }
+        if (empty($data) || array_filter($data, fn($value) => is_null($value))) {
+            throw new InvalidArgumentException('Data cannot be null');
         }
 
         return Product::create($data);
     }
 
-
-
     public function read($id)
     {
-        try {
-            return Product::findOrFail($id);
-        } catch (ModelNotFoundException $e) {
-            // Menangani kasus ketika produk tidak ditemukan
-            throw new Exception("Product with ID {$id} not found", 404);
-        }
+        return Product::findOrFail($id);
     }
-
 
     public function update($id, array $data)
     {
-        try {
-            // Cari produk berdasarkan ID, lempar ModelNotFoundException jika tidak ditemukan
-            $product = Product::findOrFail($id);
+        $this->authorizeAdmin();
 
-            // Daftar field yang wajib ada untuk pembaruan
-            $requiredFields = ['nama', 'jumlah_stok', 'harga'];
+        $product = Product::findOrFail($id);
+        $product->update($data);
 
-            // Periksa jika field wajib tidak ada di $data atau bernilai null
-            foreach ($requiredFields as $field) {
-                if (array_key_exists($field, $data) && is_null($data[$field])) {
-                    throw new \InvalidArgumentException("Field '{$field}' cannot be null");
-                }
-            }
-
-            // Lakukan pembaruan data produk
-            $product->update($data);
-            return $product;
-        } catch (ModelNotFoundException $e) {
-            throw new Exception("Product with ID {$id} not found", 404);
-        }
+        return $product;
     }
-
 
     public function delete($id)
     {
-        try {
-            $product = Product::findOrFail($id);
-            $product->delete();
-            return true;
-        } catch (ModelNotFoundException $e) {
-            throw new Exception("Product with ID {$id} not found");
+        $this->authorizeAdmin();
+
+        $product = Product::findOrFail($id);
+        $product->delete();
+
+        return true;
+    }
+
+    protected function authorizeAdmin()
+    {
+        $user = Auth::user();
+
+        if ($user->role !== 'Admin') {
+            throw new \Exception('Unauthorized: Only admins can perform this action');
         }
     }
 }
