@@ -22,7 +22,7 @@ Route::get('/Shop', function () {
 Route::resource('products', ProductController::class);
 
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    return Inertia::render('Admin/Products/Index');
 })->middleware(['auth', EnsureAdmin::class])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
