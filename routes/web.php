@@ -9,10 +9,14 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Home', [
+    return Inertia::render('Customers/LandingPage', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
     ]);
+});
+
+Route::get('/Shop', function () {
+    return Inertia::render('Customers/ShopingPage');
 });
 
 Route::resource('products', ProductController::class);
