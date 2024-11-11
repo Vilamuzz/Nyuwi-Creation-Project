@@ -14,7 +14,7 @@ class ProductController extends Controller
     public function index()
     {
         $products = Product::get();
-        return Inertia::render('Products/Index', [
+        return Inertia::render('Admin/Products/Index', [
             'products' => $products
         ]);
     }
@@ -24,7 +24,7 @@ class ProductController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Products/Create');
+        return Inertia::render('Admin/Products/Create');
     }
 
     /**
@@ -59,24 +59,40 @@ class ProductController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Product $product)
     {
-        //
+        return Inertia::render('Admin/Products/Edit', [
+            'product' => $product
+        ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, Product $product)
     {
-        //
+        $validatedData = $request->validate([
+            'nama' => 'required|string|max:255',
+            'jumlah_stok' => 'required|integer|min:1',
+            'harga' => 'required|string|max:255',
+        ]);
+
+        // Create the new product
+        $product->update([
+            'nama' => $validatedData['nama'],
+            'jumlah_stok' => $validatedData['jumlah_stok'],
+            'harga' => $validatedData['harga'],
+        ]);
+
+        return redirect()->route('products.index')->with('success', 'Product updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Product $product)
     {
-        //
+        $product->delete();
+        return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
     }
 }

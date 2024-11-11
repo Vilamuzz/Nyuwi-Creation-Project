@@ -9,16 +9,20 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Home', [
+    return Inertia::render('Customers/LandingPage', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
     ]);
 });
 
+Route::get('/Shop', function () {
+    return Inertia::render('Customers/ShopingPage');
+});
+
 Route::resource('products', ProductController::class);
 
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    return Inertia::render('Admin/Products/Index');
 })->middleware(['auth', EnsureAdmin::class])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

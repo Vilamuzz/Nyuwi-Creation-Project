@@ -1,10 +1,18 @@
 <script setup>
-import { Head, Link } from "@inertiajs/vue3";
+import { Head, Link, useForm } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 
 defineProps({
     products: Array,
 });
+
+const form = useForm({});
+
+const deleteProduct = (productId) => {
+    if (confirm("Are you sure you want to delete this product?")) {
+        form.delete(route("products.destroy", productId));
+    }
+};
 </script>
 <template>
     <Head title="Products" />
@@ -107,15 +115,13 @@ defineProps({
                                     >
                                         Edit
                                     </Link>
-                                    <Link
-                                        :href="
-                                            route('products.destroy', item.id)
-                                        "
-                                        method="delete"
+                                    <button
+                                        @click="deleteProduct(item.id)"
+                                        type="submit"
                                         class="px-4 py-2 text-white bg-red-500 rounded hover:bg-red-700"
                                     >
                                         Hapus
-                                    </Link>
+                                    </button>
                                 </td>
                             </tr>
                         </tbody>
