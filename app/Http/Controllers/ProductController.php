@@ -59,8 +59,9 @@ class ProductController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Product $product)
+    public function edit($id)
     {
+        $product = Product::findOrFail($id);
         return Inertia::render('Admin/Products/Edit', [
             'product' => $product
         ]);
@@ -69,8 +70,9 @@ class ProductController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Product $product)
+    public function update(Request $request, $id)
     {
+        $product = Product::findOrFail($id);
         $validatedData = $request->validate([
             'nama' => 'required|string|max:255',
             'jumlah_stok' => 'required|integer|min:1',
@@ -90,8 +92,9 @@ class ProductController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Product $product)
+    public function destroy($id)
     {
+        $product = Product::findOrFail($id);
         $product->delete();
         return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
     }

@@ -19,11 +19,19 @@ Route::get('/Shop', function () {
     return Inertia::render('Customers/ShopingPage');
 });
 
-Route::resource('products', ProductController::class);
+Route::resource('dashboard', ProductController::class)->names([
+    'index' => 'products.index',
+    'create' => 'products.create',
+    'store' => 'products.store',
+    'show' => 'products.show',
+    'edit' => 'products.edit',
+    'update' => 'products.update',
+    'destroy' => 'products.destroy',
+]);
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Admin/Products/Index');
-})->middleware(['auth', EnsureAdmin::class])->name('dashboard');
+// Route::get('/dashboard', function () {
+//     return Inertia::render('Admin/Products/Index');
+// })->middleware(['auth', EnsureAdmin::class])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

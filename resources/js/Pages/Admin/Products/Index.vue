@@ -10,7 +10,7 @@ const form = useForm({});
 
 const deleteProduct = (productId) => {
     if (confirm("Are you sure you want to delete this product?")) {
-        form.delete(route("products.destroy", productId));
+        form.delete(route("products.destroy", { dashboard: productId }));
     }
 };
 </script>
