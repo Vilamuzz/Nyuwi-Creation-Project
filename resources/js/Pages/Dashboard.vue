@@ -73,7 +73,7 @@ import { Head } from "@inertiajs/vue3";
                                 <td
                                     class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap"
                                 >
-                                    {{ item.nama }}
+                                    {{ item.name }}
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap"
@@ -83,13 +83,13 @@ import { Head } from "@inertiajs/vue3";
                                 <td
                                     class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap"
                                 >
-                                    {{ item.harga }}
+                                    {{ item.price }}
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap"
                                 >
                                     <img
-                                        :src="item.gambar"
+                                        :src="item.image"
                                         alt="Gambar produk"
                                         class="w-16 h-16 object-cover rounded"
                                     />
@@ -121,16 +121,16 @@ import { Head } from "@inertiajs/vue3";
 // Add a data source for the table
 const items = [
     {
-        nama: "Produk 1",
+        name: "Produk 1",
         jumlahStok: 10,
-        harga: "Rp10,000",
-        gambar: "/path/to/image1.jpg",
+        price: "Rp10,000",
+        image: "/path/to/image1.jpg",
     },
     {
-        nama: "Produk 2",
+        name: "Produk 2",
         jumlahStok: 5,
-        harga: "Rp15,000",
-        gambar: "/path/to/image2.jpg",
+        price: "Rp15,000",
+        image: "/path/to/image2.jpg",
     },
     // Add more items as needed
 ];

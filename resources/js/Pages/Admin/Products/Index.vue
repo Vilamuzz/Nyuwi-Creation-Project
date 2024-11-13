@@ -85,23 +85,23 @@ const deleteProduct = (productId) => {
                                 <td
                                     class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap"
                                 >
-                                    {{ item.nama }}
+                                    {{ item.name }}
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap"
                                 >
-                                    {{ item.jumlah_stok }}
+                                    {{ item.stock }}
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap"
                                 >
-                                    {{ item.harga }}
+                                    {{ item.price }}
                                 </td>
                                 <td
                                     class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap"
                                 >
                                     <img
-                                        :src="item.gambar"
+                                        :src="item.image"
                                         alt="Gambar produk"
                                         class="w-16 h-16 object-cover rounded"
                                     />

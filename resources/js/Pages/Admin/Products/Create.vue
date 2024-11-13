@@ -5,9 +5,9 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 defineProps({ errors: Object });
 
 const form = useForm({
-    nama: "",
-    jumlah_stok: "",
-    harga: "",
+    name: "",
+    stock: "",
+    price: "",
 });
 
 const saveProduct = () => {
@@ -36,58 +36,58 @@ const saveProduct = () => {
                 <!-- Nama Produk -->
                 <div class="mb-4">
                     <label
-                        for="nama"
+                        for="name"
                         class="block text-gray-700 font-semibold mb-2"
                         >Nama Produk</label
                     >
                     <input
                         type="text"
-                        v-model="form.nama"
+                        v-model="form.name"
                         class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
                         placeholder="Nama Produk"
                         required
                     />
-                    <div v-if="errors.nama" class="text-red-500">
-                        {{ errors.nama }}
+                    <div v-if="errors.name" class="text-red-500">
+                        {{ errors.name }}
                     </div>
                 </div>
 
                 <!-- Jumlah Stok -->
                 <div class="mb-4">
                     <label
-                        for="jumlah_stok"
+                        for="stock"
                         class="block text-gray-700 font-semibold mb-2"
                         >Jumlah Stok</label
                     >
                     <input
                         type="number"
-                        v-model="form.jumlah_stok"
+                        v-model="form.stock"
                         class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
                         placeholder="Jumlah Stok"
                         required
                         min="1"
                     />
-                    <div v-if="errors.jumlah_stok" class="text-red-500">
-                        {{ errors.jumlah_stok }}
+                    <div v-if="errors.stock" class="text-red-500">
+                        {{ errors.stock }}
                     </div>
                 </div>
 
                 <!-- Harga -->
                 <div class="mb-4">
                     <label
-                        for="harga"
+                        for="price"
                         class="block text-gray-700 font-semibold mb-2"
                         >Harga</label
                     >
                     <input
                         type="text"
-                        v-model="form.harga"
+                        v-model="form.price"
                         class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
                         placeholder="Rp10,000"
                         required
                     />
-                    <div v-if="errors.harga" class="text-red-500">
-                        {{ errors.harga }}
+                    <div v-if="errors.price" class="text-red-500">
+                        {{ errors.price }}
                     </div>
                 </div>
 
