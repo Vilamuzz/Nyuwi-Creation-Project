@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Product;
+use App\Models\Category;
 
 class ProductController extends Controller
 {
@@ -24,7 +25,10 @@ class ProductController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Admin/Products/Create');
+        $categories = Category::all();
+        return Inertia::render('Admin/Products/Create', [
+            'categories' => $categories
+        ]);
     }
 
     /**
@@ -36,17 +40,26 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'stock' => 'required|integer|min:1',
             'price' => 'required|string|max:255',
+            'category_id' => 'nullable|integer|exists:categories,id',
+            'new_category' => 'nullable|string|max:255',
         ]);
 
-        // Create the new product
+        // Buat kategori baru jika 'new_category' diisi
+        if ($request->filled('new_category')) {
+            $category = Category::create(['name' => $request->new_category]);
+            $validatedData['category_id'] = $category->id;
+        }
+
         Product::create([
             'name' => $validatedData['name'],
             'stock' => $validatedData['stock'],
             'price' => $validatedData['price'],
+            'category_id' => $validatedData['category_id'],
         ]);
 
         return redirect()->route('products.index')->with('success', 'Product created successfully.');
     }
+
 
     /**
      * Display the specified resource.
