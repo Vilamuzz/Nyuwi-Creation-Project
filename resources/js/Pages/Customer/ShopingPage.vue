@@ -3,6 +3,10 @@ import { Head } from "@inertiajs/vue3";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Main/Hero.vue";
 import Product from "@/Components/Sub-main/Product.vue";
+
+defineProps({
+    products: Array,
+});
 </script>
 
 <template>
@@ -24,14 +28,12 @@ import Product from "@/Components/Sub-main/Product.vue";
         <section>
             <div class="flex flex-col items-center space-y-8 my-14">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <Product />
-                    <Product />
-                    <Product />
-                    <Product />
-                    <Product />
-                    <Product />
-                    <Product />
-                    <Product />
+                    <Product
+                        v-for="(item, index) in products"
+                        :key="index"
+                        :name="item.name"
+                        :price="item.price"
+                    />
                 </div>
                 <nav class="space-x-4">
                     <a

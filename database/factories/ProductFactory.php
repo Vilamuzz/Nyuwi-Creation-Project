@@ -12,10 +12,10 @@ class ProductFactory extends Factory
     public function definition()
     {
         return [
-            'nama' => $this->faker->word,
-            'jumlah_stok' => $this->faker->numberBetween(1, 100),
-            'harga' => $this->faker->randomFloat(2, 10, 1000),
-            'gambar' => $this->faker->imageUrl(640, 480, 'product', true),
+            'name' => $this->faker->word,
+            'stock' => $this->faker->numberBetween(1, 100),
+            'price' => $this->faker->randomFloat(2, 10, 1000),
+            'image' => $this->faker->imageUrl(640, 480, 'product', true),
         ];
     }
 }

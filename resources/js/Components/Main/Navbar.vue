@@ -21,7 +21,7 @@ const role = props.auth?.user?.role || null;
         <!-- Links -->
         <div class="hidden md:flex space-x-10 text-gray-700">
             <Link href="/" class="font-bold hover:text-orange-500">Home</Link>
-            <Link href="/Shop" class="font-bold hover:text-orange-500"
+            <Link href="/shop" class="font-bold hover:text-orange-500"
                 >Shop</Link
             >
             <Link href="#" class="font-bold hover:text-orange-500">About</Link>

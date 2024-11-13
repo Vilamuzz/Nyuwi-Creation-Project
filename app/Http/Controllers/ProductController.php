@@ -33,16 +33,16 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'nama' => 'required|string|max:255',
-            'jumlah_stok' => 'required|integer|min:1',
-            'harga' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
+            'stock' => 'required|integer|min:1',
+            'price' => 'required|string|max:255',
         ]);
 
         // Create the new product
         Product::create([
-            'nama' => $validatedData['nama'],
-            'jumlah_stok' => $validatedData['jumlah_stok'],
-            'harga' => $validatedData['harga'],
+            'name' => $validatedData['name'],
+            'stock' => $validatedData['stock'],
+            'price' => $validatedData['price'],
         ]);
 
         return redirect()->route('products.index')->with('success', 'Product created successfully.');
@@ -74,16 +74,16 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
         $validatedData = $request->validate([
-            'nama' => 'required|string|max:255',
-            'jumlah_stok' => 'required|integer|min:1',
-            'harga' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
+            'stock' => 'required|integer|min:1',
+            'price' => 'required|string|max:255',
         ]);
 
         // Create the new product
         $product->update([
-            'nama' => $validatedData['nama'],
-            'jumlah_stok' => $validatedData['jumlah_stok'],
-            'harga' => $validatedData['harga'],
+            'name' => $validatedData['name'],
+            'stock' => $validatedData['stock'],
+            'price' => $validatedData['price'],
         ]);
 
         return redirect()->route('products.index')->with('success', 'Product updated successfully.');
@@ -97,5 +97,13 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
         $product->delete();
         return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
+    }
+
+    public function shop()
+    {
+        $products = Product::get();
+        return Inertia::render('Customer/ShopingPage', [
+            'products' => $products
+        ]);
     }
 }
