@@ -2,8 +2,9 @@
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 
-defineProps({
+const props = defineProps({
     products: Array,
+    categories: Array,
 });
 
 const form = useForm({});
@@ -12,6 +13,10 @@ const deleteProduct = (productId) => {
     if (confirm("Are you sure you want to delete this product?")) {
         form.delete(route("products.destroy", { dashboard: productId }));
     }
+};
+const getCategoryName = (categoryId) => {
+    const category = props.categories.find((cat) => cat.id === categoryId);
+    return category ? category.name : "Tidak ada kategori";
 };
 </script>
 <template>
@@ -56,6 +61,11 @@ const deleteProduct = (productId) => {
                                 <th
                                     class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-700 uppercase"
                                 >
+                                    Kategori
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-700 uppercase"
+                                >
                                     Jumlah Stok
                                 </th>
                                 <th
@@ -63,11 +73,7 @@ const deleteProduct = (productId) => {
                                 >
                                     Harga
                                 </th>
-                                <th
-                                    class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-700 uppercase"
-                                >
-                                    Gambar
-                                </th>
+
                                 <th
                                     class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-700 uppercase"
                                 >
@@ -90,6 +96,11 @@ const deleteProduct = (productId) => {
                                 <td
                                     class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap"
                                 >
+                                    {{ getCategoryName(item.category_id) }}
+                                </td>
+                                <td
+                                    class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap"
+                                >
                                     {{ item.stock }}
                                 </td>
                                 <td
@@ -97,15 +108,7 @@ const deleteProduct = (productId) => {
                                 >
                                     {{ item.price }}
                                 </td>
-                                <td
-                                    class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap"
-                                >
-                                    <img
-                                        :src="item.image"
-                                        alt="Gambar produk"
-                                        class="w-16 h-16 object-cover rounded"
-                                    />
-                                </td>
+
                                 <td
                                     class="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap"
                                 >

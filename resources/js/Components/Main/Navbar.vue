@@ -63,9 +63,12 @@ const role = props.auth?.user?.role || null;
             <span role="button" class="btn btn-ghost m-1 hover:bg-transparent"
                 ><img :src="'/img/icon/wishlist.svg'" alt=""
             /></span>
-            <span role="button" class="btn btn-ghost m-1 hover:bg-transparent"
-                ><img :src="'/img/icon/cart.svg'" alt=""
-            /></span>
+            <Link href="cart" class="font-bold hover:text-orange-500"
+                ><span
+                    role="button"
+                    class="btn btn-ghost m-1 hover:bg-transparent"
+                    ><img :src="'/img/icon/cart.svg'" alt="" /></span
+            ></Link>
         </div>
     </div>
 </template>

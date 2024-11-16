@@ -1,9 +1,9 @@
 <script setup>
-import { Head } from "@inertiajs/vue3";
+import { Head, Link } from "@inertiajs/vue3";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Product from "@/Components/Sub-main/Product.vue";
 
-defineProps({
+const props = defineProps({
     canLogin: {
         type: Boolean,
         default: true,
@@ -12,7 +12,13 @@ defineProps({
         type: Boolean,
         default: true,
     },
+    products: Array,
+    categories: Array,
 });
+const getCategoryName = (categoryId) => {
+    const category = props.categories.find((cat) => cat.id === categoryId);
+    return category ? category.name : "Tidak ada kategori";
+};
 </script>
 <template>
     <Head title="Landing Page" />
@@ -88,20 +94,21 @@ defineProps({
             <div class="flex flex-col items-center space-y-8 mb-10">
                 <h1 class="text-3xl font-bold">Our Products</h1>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <Product />
-                    <Product />
-                    <Product />
-                    <Product />
-                    <Product />
-                    <Product />
-                    <Product />
-                    <Product />
+                    <Product
+                        v-for="(item, index) in products"
+                        :key="index"
+                        :id="item.id"
+                        :name="item.name"
+                        :price="item.price"
+                        :category="getCategoryName(item.category_id)"
+                    />
                 </div>
-                <button
+                <Link
+                    href="/shop"
                     class="border-orange-500 border text-md font-bold text-orange-500 py-2 px-12 hover:text-white hover:bg-orange-500 duration-300"
                 >
                     Show More
-                </button>
+                </Link>
             </div>
         </section>
         <section class="bg-orange-100 py-20">

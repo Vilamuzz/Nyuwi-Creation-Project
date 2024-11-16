@@ -2,18 +2,36 @@
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 
-const props = defineProps({ errors: Object, product: Object });
+// Mengambil props `errors`, `product`, dan `categories`
+const props = defineProps({
+    errors: Object,
+    product: Object,
+    categories: Array,
+});
 
 const form = useForm({
     name: props.product.name,
     stock: props.product.stock,
     price: props.product.price,
+    category_id: props.product.category_id, // Menambahkan category_id
+    new_category: "", // Untuk kategori baru jika user memilih menambahkan kategori
 });
 
+// Fungsi untuk mengirim permintaan update produk
 const updateProduct = () => {
-    const res = form.put(route("products.update", props.product.id));
-    if (res) {
-        form.reset();
+    // Jika pengguna memilih untuk menambahkan kategori baru
+    if (form.new_category) {
+        // Kirim data form dengan kategori baru
+        form.put(route("products.update", props.product.id), {
+            preserveScroll: true,
+            onSuccess: () => form.reset("new_category"),
+        });
+    } else {
+        // Kirim data form tanpa kategori baru (gunakan category_id yang dipilih)
+        form.put(route("products.update", props.product.id), {
+            preserveScroll: true,
+            onSuccess: () => form.reset(),
+        });
     }
 };
 </script>
@@ -80,7 +98,7 @@ const updateProduct = () => {
                         >Harga</label
                     >
                     <input
-                        type="text"
+                        type="number"
                         v-model="form.price"
                         class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
                         placeholder="Rp10,000"
@@ -88,6 +106,35 @@ const updateProduct = () => {
                     />
                     <div v-if="errors.price" class="text-red-500">
                         {{ errors.price }}
+                    </div>
+                </div>
+
+                <!-- Kategori -->
+                <div class="mb-4">
+                    <label
+                        for="category"
+                        class="block text-gray-700 font-semibold mb-2"
+                        >Kategori</label
+                    >
+                    <select
+                        v-model="form.category_id"
+                        class="w-full px-4 py-2 border rounded-md"
+                    >
+                        <option
+                            v-for="category in categories"
+                            :key="category.id"
+                            :value="category.id"
+                        >
+                            {{ category.name }}
+                        </option>
+                        <option value="new">Tambah Kategori Baru</option>
+                    </select>
+                    <div v-if="form.category_id === 'new'" class="mt-2">
+                        <input
+                            v-model="form.new_category"
+                            placeholder="Nama Kategori Baru"
+                            class="w-full px-4 py-2 border rounded-md"
+                        />
                     </div>
                 </div>
 

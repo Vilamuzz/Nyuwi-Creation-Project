@@ -15,8 +15,10 @@ class ProductController extends Controller
     public function index()
     {
         $products = Product::get();
+        $categories = Category::all();
         return Inertia::render('Admin/Products/Index', [
-            'products' => $products
+            'products' => $products,
+            'categories' => $categories
         ]);
     }
 
@@ -39,7 +41,7 @@ class ProductController extends Controller
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
             'stock' => 'required|integer|min:1',
-            'price' => 'required|string|max:255',
+            'price' => 'required|numeric|min:1',
             'category_id' => 'nullable|integer|exists:categories,id',
             'new_category' => 'nullable|string|max:255',
         ]);
@@ -76,7 +78,8 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
         return Inertia::render('Admin/Products/Edit', [
-            'product' => $product
+            'product' => $product,
+            'categories' => Category::all()
         ]);
     }
 
@@ -90,17 +93,27 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'stock' => 'required|integer|min:1',
             'price' => 'required|string|max:255',
+            'category_id' => 'nullable|integer|exists:categories,id',
+            'new_category' => 'nullable|string|max:255',
         ]);
 
-        // Create the new product
+        // Cek jika ada kategori baru yang diinputkan
+        if ($request->filled('new_category')) {
+            $category = Category::create(['name' => $request->new_category]);
+            $validatedData['category_id'] = $category->id;
+        }
+
+        // Update produk termasuk category_id
         $product->update([
             'name' => $validatedData['name'],
             'stock' => $validatedData['stock'],
             'price' => $validatedData['price'],
+            'category_id' => $validatedData['category_id'],
         ]);
 
         return redirect()->route('products.index')->with('success', 'Product updated successfully.');
     }
+
 
     /**
      * Remove the specified resource from storage.
@@ -115,8 +128,19 @@ class ProductController extends Controller
     public function shop()
     {
         $products = Product::get();
+        $categories = Category::all();
         return Inertia::render('Customer/ShopingPage', [
-            'products' => $products
+            'products' => $products,
+            'categories' => $categories
+        ]);
+    }
+    public function product($id)
+    {
+        $product = Product::findOrFail($id);
+        $categories = Category::all();
+        return Inertia::render('Customer/Product', [
+            'product' => $product,
+            'categories' => $categories
         ]);
     }
 }

@@ -7,15 +7,29 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use App\Models\Product;
+use App\Models\Category;
 
 Route::get('/', function () {
+    $products = Product::all();
+    $categories = Category::all();
     return Inertia::render('Customer/LandingPage', [
+        'products' => $products,
+        'categories' => $categories,
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
     ]);
 });
 
+
+
 Route::get('/shop', [ProductController::class, 'shop'])->name('shop');
+
+Route::get('/product/{id}', [ProductController::class, 'product'])->name('product');
+
+Route::get('cart', function () {
+    return Inertia::render('Customer/Cart');
+});
 
 Route::resource('dashboard', ProductController::class)->names([
     'index' => 'products.index',

@@ -4,9 +4,14 @@ import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Main/Hero.vue";
 import Product from "@/Components/Sub-main/Product.vue";
 
-defineProps({
+const props = defineProps({
     products: Array,
+    categories: Array,
 });
+const getCategoryName = (categoryId) => {
+    const category = props.categories.find((cat) => cat.id === categoryId);
+    return category ? category.name : "Tidak ada kategori";
+};
 </script>
 
 <template>
@@ -31,8 +36,10 @@ defineProps({
                     <Product
                         v-for="(item, index) in products"
                         :key="index"
+                        :id="item.id"
                         :name="item.name"
                         :price="item.price"
+                        :category="getCategoryName(item.category_id)"
                     />
                 </div>
                 <nav class="space-x-4">

@@ -88,7 +88,7 @@ const saveProduct = () => {
                         >Harga</label
                     >
                     <input
-                        type="text"
+                        type="number"
                         v-model="form.price"
                         class="w-full px-4 py-2 border rounded-md"
                         required
