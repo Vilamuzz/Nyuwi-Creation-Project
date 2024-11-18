@@ -28,11 +28,7 @@ import Hero from "@/Components/Customer/Main/Hero.vue";
                     <input type="text" class="rounded-md border-gray-400" />
                 </div>
                 <div class="flex flex-col space-y-2">
-                    <label for="state">State</label>
-                    <input type="text" class="rounded-md border-gray-400" />
-                </div>
-                <div class="flex flex-col space-y-2">
-                    <label for="zip_code">Zip Code</label>
+                    <label for="state">Province</label>
                     <input type="text" class="rounded-md border-gray-400" />
                 </div>
                 <div class="flex flex-col space-y-2">
@@ -50,16 +46,14 @@ import Hero from "@/Components/Customer/Main/Hero.vue";
                     <h1 class="font-bold text-2xl">Price</h1>
                 </div>
                 <div class="flex flex-row justify-between">
-                    <h1 class="text-gray-400">Product</h1>
-                    <h1 class="text-gray-400">Price</h1>
-                </div>
-                <div class="flex flex-row justify-between">
-                    <h1 class="">Subtotal</h1>
-                    <h1 class="">Price</h1>
+                    <div>
+                        <h1 class="text-gray-400">Product 1 x 1</h1>
+                    </div>
+                    <h1 class="text-gray-400">Rp 10.000</h1>
                 </div>
                 <div class="flex flex-row justify-between">
                     <h1 class="">Total</h1>
-                    <h1 class="">Price</h1>
+                    <h1 class="">Rp 10.000</h1>
                 </div>
                 <hr />
                 <div class="flex flex-col space-y-3">
@@ -80,7 +74,7 @@ import Hero from "@/Components/Customer/Main/Hero.vue";
                                 name="payment_method"
                             />
                             <label for="digital_wallet"
-                                >Digital Wallet(Dana)</label
+                                >Digital Wallet (Dana)</label
                             >
                         </div>
                         <div class="space-x-2">

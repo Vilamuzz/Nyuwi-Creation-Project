@@ -1,17 +1,45 @@
 <script setup>
-import { Head, Link } from "@inertiajs/vue3";
+import { Head, Link, useForm } from "@inertiajs/vue3"; // Tambahkan useForm
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Customer/Main/Hero.vue";
-import { computed } from "vue";
+import { computed, ref } from "vue"; // Tambahkan ref
 
 const props = defineProps({
     cartItems: Array,
 });
 
+// Form untuk delete item
+const form = useForm({});
+
+// Form untuk update quantity
+const updateForm = useForm({
+    quantity: null,
+});
+
+// Fungsi untuk menghapus item
+const deleteCartItem = (itemId) => {
+    if (confirm("Apakah anda yakin ingin menghapus item ini?")) {
+        form.delete(route("cart.remove", itemId), {
+            preserveScroll: true,
+        });
+    }
+};
+
+// Fungsi untuk mengupdate quantity
+const updateQuantity = (item, newQuantity) => {
+    updateForm.quantity = newQuantity;
+    updateForm.put(route("cart.update", item.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            // Reset form setelah berhasil
+            updateForm.reset();
+        },
+    });
+};
+
 // Compute total price from all items
 const cartTotal = computed(() => {
     if (!props.cartItems || props.cartItems.length === 0) return 0;
-
     return props.cartItems.reduce((total, item) => {
         return total + item.price * item.quantity;
     }, 0);
@@ -69,6 +97,12 @@ const formatPrice = (price) => {
                                         :value="item.quantity"
                                         min="1"
                                         class="w-16 px-2 py-1 border rounded-md"
+                                        @change="
+                                            updateQuantity(
+                                                item,
+                                                $event.target.value
+                                            )
+                                        "
                                     />
                                 </td>
                                 <td class="px-4 py-4">
@@ -76,6 +110,7 @@ const formatPrice = (price) => {
                                 </td>
                                 <td class="px-4 py-4">
                                     <button
+                                        @click="deleteCartItem(item.id)"
                                         class="text-red-500 hover:text-red-700"
                                     >
                                         Hapus

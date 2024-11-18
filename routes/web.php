@@ -61,6 +61,8 @@ use App\Http\Controllers\CartController;
 Route::middleware(['auth'])->group(function () {
     Route::post('/cart/add', [CartController::class, 'addToCart'])->name('cart.add');
     Route::get('/cart', [CartController::class, 'showCart'])->name('cart.show');
+    Route::delete('/cart/{id}', [CartController::class, 'removeFromCart'])->name('cart.remove');
+    Route::put('/cart/{id}', [CartController::class, 'updateCart'])->name('cart.update');
 });
 
 require __DIR__ . '/auth.php';

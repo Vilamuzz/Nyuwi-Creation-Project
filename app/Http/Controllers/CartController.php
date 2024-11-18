@@ -60,4 +60,18 @@ class CartController extends Controller
 
         return redirect()->back()->with('success', 'Produk berhasil dihapus dari keranjang.');
     }
+
+    public function updateCart(Request $request, $id)
+    {
+        $request->validate([
+            'quantity' => 'required|integer|min:1'
+        ]);
+
+        $cartItem = Cart::findOrFail($id);
+        $cartItem->update([
+            'quantity' => $request->quantity
+        ]);
+
+        return redirect()->back();
+    }
 }
