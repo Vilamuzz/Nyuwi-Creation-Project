@@ -1,9 +1,34 @@
 <script setup>
-import { Head, Link } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { Head, Link, useForm } from "@inertiajs/vue3";
+import { ref, watch } from "vue";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 const sizes = ref(["S", "M", "L", "XL"]);
 const colors = ref(["bg-yellow-300", "bg-red-300", "bg-blue-300"]);
+const quantity = ref(1);
+
+const form = useForm({
+    product_id: null,
+    quantity: 1,
+    price: 0,
+});
+
+watch(quantity, (newValue) => {
+    form.quantity = newValue;
+});
+
+const addToCart = () => {
+    form.product_id = props.product.id;
+    form.price = props.product.price;
+    form.quantity = quantity.value;
+    form.post(route("cart.add"), {
+        preserveScroll: true,
+        onSuccess: () => {
+            form.reset();
+            quantity.value = 1;
+        },
+    });
+};
+
 const props = defineProps({
     errors: Object,
     product: Object,
@@ -57,30 +82,35 @@ const props = defineProps({
 
                 <!-- Action Buttons -->
                 <div class="flex flex-row gap-x-4">
-                    <div
-                        class="rounded-md border border-gray-300 flex flex-row items-center p-0"
-                    >
-                        <div
+                    <div class="flex flex-row items-center p-0">
+                        <button
+                            type="button"
+                            @click="quantity > 1 ? quantity-- : null"
                             class="p-4 hover:bg-orange-500 rounded-l-md hover:text-white duration-300"
                         >
                             -
-                        </div>
-                        <div
-                            class="p-4 hover:bg-orange-500 hover:text-white duration-300"
-                        >
-                            1
-                        </div>
-                        <div
+                        </button>
+                        <input
+                            type="number"
+                            v-model="quantity"
+                            class="p-4 hover:bg-orange-500 hover:text-white duration-300 w-1/3"
+                            min="1"
+                        />
+
+                        <button
+                            type="button"
+                            @click="quantity++"
                             class="p-4 hover:bg-orange-500 rounded-r-md hover:text-white duration-300"
                         >
                             +
-                        </div>
+                        </button>
                     </div>
-                    <Link
+                    <button
+                        @click="addToCart"
                         class="rounded-md border border-gray-300 px-10 py-4 hover:bg-orange-500 hover:text-white duration-300"
                     >
                         Add To Cart
-                    </Link>
+                    </button>
                     <div class="rounded-md border border-gray-300 px-10 py-4">
                         + Compare ????
                     </div>

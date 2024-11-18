@@ -1,8 +1,8 @@
 <script setup>
 import { Head } from "@inertiajs/vue3";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
-import Hero from "@/Components/Main/Hero.vue";
-import Product from "@/Components/Sub-main/Product.vue";
+import Hero from "@/Components/Customer/Main/Hero.vue";
+import Product from "@/Components/Customer/Sub-main/Product.vue";
 
 const props = defineProps({
     products: Array,

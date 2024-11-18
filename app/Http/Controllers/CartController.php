@@ -6,9 +6,11 @@ use App\Models\Cart;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class CartController extends Controller
 {
+
     /**
      * Menambah produk ke dalam keranjang.
      */
@@ -39,8 +41,13 @@ class CartController extends Controller
      */
     public function showCart()
     {
-        $cartItems = Cart::where('user_id', Auth::id())->get();
-        return view('customer.cart', compact('cartItems'));
+        $cartItems = Cart::with('product')
+            ->where('user_id', Auth::id())
+            ->get();
+
+        return Inertia::render('Customer/Cart', [
+            'cartItems' => $cartItems
+        ]);
     }
 
     /**

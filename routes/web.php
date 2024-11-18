@@ -31,7 +31,11 @@ Route::get('cart', function () {
     return Inertia::render('Customer/Cart');
 });
 
-Route::resource('dashboard', ProductController::class)->names([
+Route::get('dashboard', function () {
+    return Inertia::render('Admin/Dashboard');
+})->name('dashboard');
+
+Route::resource('inventory', ProductController::class)->names([
     'index' => 'products.index',
     'create' => 'products.create',
     'store' => 'products.store',
@@ -41,14 +45,22 @@ Route::resource('dashboard', ProductController::class)->names([
     'destroy' => 'products.destroy',
 ]);
 
-// Route::get('/dashboard', function () {
-//     return Inertia::render('Admin/Products/Index');
-// })->middleware(['auth', EnsureAdmin::class])->name('dashboard');
+Route::get('/checkout', function () {
+    return Inertia::render('Customer/Checkout');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+use App\Http\Controllers\CartController;
+
+// Cart routes
+Route::middleware(['auth'])->group(function () {
+    Route::post('/cart/add', [CartController::class, 'addToCart'])->name('cart.add');
+    Route::get('/cart', [CartController::class, 'showCart'])->name('cart.show');
 });
 
 require __DIR__ . '/auth.php';

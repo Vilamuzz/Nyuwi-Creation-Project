@@ -1,7 +1,7 @@
 <script setup>
 import { Head, Link } from "@inertiajs/vue3";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
-import Product from "@/Components/Sub-main/Product.vue";
+import Product from "@/Components/Customer/Sub-main/Product.vue";
 
 const props = defineProps({
     canLogin: {

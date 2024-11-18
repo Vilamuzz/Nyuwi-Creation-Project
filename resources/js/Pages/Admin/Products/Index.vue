@@ -1,6 +1,7 @@
 <script setup>
 import { Head, Link, useForm } from "@inertiajs/vue3";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+// import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import AdminLayout from "@/Layouts/AdminLayout.vue";
 
 const props = defineProps({
     products: Array,
@@ -22,7 +23,7 @@ const getCategoryName = (categoryId) => {
 <template>
     <Head title="Products" />
 
-    <AuthenticatedLayout>
+    <AdminLayout>
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 Dashboard
@@ -132,5 +133,5 @@ const getCategoryName = (categoryId) => {
                 </div>
             </div>
         </div>
-    </AuthenticatedLayout>
+    </AdminLayout>
 </template>
