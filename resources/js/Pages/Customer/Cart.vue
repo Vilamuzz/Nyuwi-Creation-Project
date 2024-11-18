@@ -1,5 +1,5 @@
 <script setup>
-import { Head } from "@inertiajs/vue3";
+import { Head, Link } from "@inertiajs/vue3";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Customer/Main/Hero.vue";
 import { computed } from "vue";
@@ -100,11 +100,14 @@ const formatPrice = (price) => {
             <div class="bg-red-100 w-1/4 p-8">
                 <h2 class="text-xl font-bold mb-4">Ringkasan Belanja</h2>
                 <p>Total: {{ formatPrice(cartTotal) }}</p>
-                <button
-                    class="w-full mt-4 py-2 border border-black hover:border-transparent hover:text-white rounded-md hover:bg-orange-500 duration-150"
-                >
-                    Checkout
-                </button>
+                <div class="mt-4 flex items-center">
+                    <Link
+                        :href="route('checkout')"
+                        class="w-full text-center px-8 py-2 border border-black hover:border-transparent hover:text-white rounded-md hover:bg-orange-500 duration-150"
+                    >
+                        Checkout
+                    </Link>
+                </div>
             </div>
         </section>
     </CustomersLayout>

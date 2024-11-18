@@ -60,7 +60,7 @@ const navigation = [
                     :href="route('logout')"
                     method="post"
                     as="button"
-                    class="flex items-center w-full p-3 text-gray-900 rounded-lg hover:bg-orange-100"
+                    class="flex items-center p-3 text-gray-400 rounded-lg hover:bg-orange-200 hover:text-black duration-200"
                 >
                     <i class="fas fa-sign-out-alt w-5 h-5 text-gray-500"></i>
                     <span class="ml-3">Logout</span>

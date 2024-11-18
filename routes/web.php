@@ -47,7 +47,7 @@ Route::resource('inventory', ProductController::class)->names([
 
 Route::get('/checkout', function () {
     return Inertia::render('Customer/Checkout');
-});
+})->name('checkout');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
