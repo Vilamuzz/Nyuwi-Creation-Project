@@ -61,10 +61,10 @@ defineProps({
                                     #{{ order.id }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    {{ order.user.name }}
+                                    {{ order.name }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    ${{ order.total_amount }}
+                                    ${{ order.total_price }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span

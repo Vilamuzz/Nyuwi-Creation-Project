@@ -74,4 +74,15 @@ class CartController extends Controller
 
         return redirect()->back();
     }
+
+    public function showCheckout()
+    {
+        $cartItems = Cart::with('product')
+            ->where('user_id', Auth::id())
+            ->get();
+
+        return Inertia::render('Customer/Checkout', [
+            'cartItems' => $cartItems
+        ]);
+    }
 }

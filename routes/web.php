@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\OrderController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -45,17 +47,23 @@ Route::resource('inventory', ProductController::class)->names([
     'destroy' => 'products.destroy',
 ]);
 
-Route::get('/checkout', function () {
-    return Inertia::render('Customer/Checkout');
-})->name('checkout');
+Route::resource('inventory', ProductController::class)->names([
+    'index' => 'products.index',
+    'create' => 'products.create',
+    'store' => 'products.store',
+    'show' => 'products.show',
+    'edit' => 'products.edit',
+    'update' => 'products.update',
+    'destroy' => 'products.destroy',
+]);
+
+Route::get('/checkout', [CartController::class, 'showCheckout'])->name('checkout');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
-
-use App\Http\Controllers\CartController;
 
 // Cart routes
 Route::middleware(['auth'])->group(function () {
@@ -64,5 +72,8 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/cart/{id}', [CartController::class, 'removeFromCart'])->name('cart.remove');
     Route::put('/cart/{id}', [CartController::class, 'updateCart'])->name('cart.update');
 });
+
+Route::post('/checkout', [OrderController::class, 'store'])->name('order.store');
+Route::get('/orders', [OrderController::class, 'show'])->name('orders.show');
 
 require __DIR__ . '/auth.php';

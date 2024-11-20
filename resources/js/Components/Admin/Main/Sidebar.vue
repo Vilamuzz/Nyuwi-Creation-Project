@@ -15,6 +15,11 @@ const navigation = [
         icon: "fas fa-box",
     },
     {
+        name: "Orders",
+        href: route("orders.show"), // Points to /inventory (products.index)
+        icon: "fas fa-box",
+    },
+    {
         name: "Profile",
         href: route("profile.edit"), // Points to /customers (customers.index)
         icon: "fas fa-users",
