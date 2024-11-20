@@ -1,79 +1,16 @@
 <?php
 use PHPUnit\Framework\TestCase;
 
-class LoginTest extends TestCase
-{
-    private $loginService;
-
-    protected function setUp(): void
-    {
-        $this->loginService = new LoginService();
-    }
-
-    // Test successful login with valid credentials
-    public function testSuccessfulLogin()
-    {
-        $result = $this->loginService->login("dias", "dias123");
-        $this->assertTrue($result->isSuccess());
-    }
-
-    // Test login with empty username
-    public function testEmptyUsername()
-    {
-        $result = $this->loginService->login("", "dias123");
-        $this->assertFalse($result->isSuccess());
-        $this->assertEquals('Username tidak boleh kosong', $result->getError());
-    }
-
-    // Test login with empty password
-    public function testEmptyPassword()
-    {
-        $result = $this->loginService->login("dias", "");
-        $this->assertFalse($result->isSuccess());
-        $this->assertEquals('Password tidak boleh kosong', $result->getError());
-    }
-
-    // Test login with invalid credentials
-    public function testInvalidCredentials()
-    {
-        $result = $this->loginService->login("udin", "dindin22");
-        $this->assertFalse($result->isSuccess());
-        $this->assertEquals('Username atau password salah', $result->getError());
-    }
-
-    // Test login with inactive account
-    public function testInactiveAccount()
-    {
-    $result = $this->loginService->login("adi", "adil22");
-    $this->assertFalse($result->isSuccess());
-    $this->assertEquals('Akun tidak aktif', $result->getError());
-    }
-
-    // Test login dengan terlalu banyak percobaan gagal (Brute Force)
-    public function testBruteForceAttack()
-    {
-        // Melakukan 3 kali percobaan login dengan password salah
-        $this->loginService->login("dias", "wrongpassword");
-        $this->loginService->login("dias", "wrongpassword");
-        $this->loginService->login("dias", "wrongpassword");
-
-        // Setelah 3 percobaan gagal, akun harus terkunci
-        $result = $this->loginService->login("dias", "dias123");
-        $this->assertFalse($result->isSuccess());
-        $this->assertStringContainsString('Akun terkunci. Silakan coba lagi setelah', $result->getError());
-    }
-
-}
-
 class LoginService
 {
     private $accounts = [
-        'dias' => ['password' => 'dias123', 'active' => true, 'failed_attempts' => 0, 'lock_time' => 0],
-        'adi' => ['password' => 'adil22', 'active' => false, 'failed_attempts' => 0, 'lock_time' => 0],
-    ];    
+        'dias' => ['password' => 'dias123', 'role' => 'user', 'active' => true, 'failed_attempts' => 0, 'lock_time' => 0],
+        'admin' => ['password' => 'adminpass', 'role' => 'admin', 'active' => true, 'failed_attempts' => 0, 'lock_time' => 0],
+        'adi' => ['password' => 'adil22', 'role' => 'user', 'active' => false, 'failed_attempts' => 0, 'lock_time' => 0],
+    ];
 
     const MAX_FAILED_ATTEMPTS = 3;  // Maksimal percobaan login gagal
-    const LOCK_TIME = 120;  // Waktu kunci dalam detik (misalnya 2 menit)
+    const LOCK_TIME = 120;  // Waktu kunci dalam detik
 
     public function login($username, $password)
     {
@@ -98,7 +35,6 @@ class LoginService
                 $remaining_time = self::LOCK_TIME - $time_left;
                 return new LoginResult(false, 'Akun terkunci. Silakan coba lagi setelah ' . $remaining_time . ' detik.');
             } else {
-                // Reset setelah waktu kunci berakhir
                 $this->accounts[$username]['failed_attempts'] = 0;
                 $this->accounts[$username]['lock_time'] = 0;
             }
@@ -109,24 +45,21 @@ class LoginService
         }
 
         if ($account['password'] !== $password) {
-            // Jika password salah, tingkatkan jumlah percobaan gagal
             $this->accounts[$username]['failed_attempts']++;
             if ($this->accounts[$username]['failed_attempts'] >= self::MAX_FAILED_ATTEMPTS) {
-                // Kunci akun setelah jumlah percobaan gagal mencapai batas
                 $this->accounts[$username]['lock_time'] = time();
                 return new LoginResult(false, 'Akun terkunci. Silakan coba lagi setelah ' . self::LOCK_TIME . ' detik.');
             }
             return new LoginResult(false, 'Username atau password salah');
         }
 
-        // Reset percobaan gagal dan lock time setelah login sukses
         $this->accounts[$username]['failed_attempts'] = 0;
-        $this->accounts[$username]['lock_time'] = 0; // Reset lock time jika login sukses
+        $this->accounts[$username]['lock_time'] = 0;
 
-        return new LoginResult(true, '', 'dashboard');
+        $redirectPage = $account['role'] === 'admin' ? 'admin_dashboard' : 'user_dashboard';
+        return new LoginResult(true, '', $redirectPage);
     }
 }
-
 
 class LoginResult
 {
@@ -156,3 +89,92 @@ class LoginResult
         return $this->redirectPage;
     }
 }
+
+class LoginTest extends TestCase
+{
+    private $loginService;
+
+    protected function setUp(): void
+    {
+        $this->loginService = new LoginService();
+    }
+
+    public function testSuccessfulLoginUser()
+    {
+        $result = $this->loginService->login("dias", "dias123");
+        $this->assertTrue($result->isSuccess());
+        $this->assertEquals('user_dashboard', $result->getRedirectPage());
+    }
+
+    public function testEmptyUsername()
+    {
+        $result = $this->loginService->login("", "dias123");
+        $this->assertFalse($result->isSuccess());
+        $this->assertEquals('Username tidak boleh kosong', $result->getError());
+    }
+
+    public function testEmptyPassword()
+    {
+        $result = $this->loginService->login("dias", "");
+        $this->assertFalse($result->isSuccess());
+        $this->assertEquals('Password tidak boleh kosong', $result->getError());
+    }
+
+    public function testInactiveAccount()
+    {
+        $result = $this->loginService->login("adi", "adil22");
+        $this->assertFalse($result->isSuccess());
+        $this->assertEquals('Akun tidak aktif', $result->getError());
+    }
+
+    public function testBruteForceAttack()
+    {
+        $this->loginService->login("dias", "wrongpassword");
+        $this->loginService->login("dias", "wrongpassword");
+        $this->loginService->login("dias", "wrongpassword");
+
+        $result = $this->loginService->login("dias", "dias123");
+        $this->assertFalse($result->isSuccess());
+        $this->assertStringContainsString('Akun terkunci. Silakan coba lagi setelah', $result->getError());
+    }
+
+    public function testSuccessfulLoginAdmin()
+    {
+        $result = $this->loginService->login("admin", "adminpass");
+        $this->assertTrue($result->isSuccess());
+        $this->assertEquals('admin_dashboard', $result->getRedirectPage());
+    }
+
+    public function testEmptyUsernameAdmin()
+    {
+        $result = $this->loginService->login("", "adminpass");
+        $this->assertFalse($result->isSuccess());
+        $this->assertEquals('Username tidak boleh kosong', $result->getError());
+    }
+
+    public function testWrongPasswordAdmin()
+    {
+        $result = $this->loginService->login("admin", "wrongpass");
+        $this->assertFalse($result->isSuccess());
+        $this->assertEquals('Username atau password salah', $result->getError());
+    }
+
+    public function testEmptyPasswordAdmin()
+    {
+        $result = $this->loginService->login("admin", "");
+        $this->assertFalse($result->isSuccess());
+        $this->assertEquals('Password tidak boleh kosong', $result->getError());
+    }
+
+    public function testBruteForceAttackAdmin()
+    {
+        $this->loginService->login("admin", "wrongpass");
+        $this->loginService->login("admin", "wrongpass");
+        $this->loginService->login("admin", "wrongpass");
+
+        $result = $this->loginService->login("admin", "adminpass");
+        $this->assertFalse($result->isSuccess());
+        $this->assertStringContainsString('Akun terkunci. Silakan coba lagi setelah', $result->getError());
+    }
+}
+
