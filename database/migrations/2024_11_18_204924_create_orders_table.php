@@ -22,7 +22,7 @@ return new class extends Migration
             $table->decimal('total_price', 15, 2);
             $table->enum('payment_method', ['E-Wallet', 'cash_on_delivery'])->default('cash_on_delivery');
             $table->text('note')->nullable();
-            $table->enum('status', ['pending', 'processing', 'completed', 'cancelled'])->default('processing');
+            $table->enum('status', ['awaiting', 'pending', 'processing', 'completed', 'cancelled'])->default('awaiting');
             $table->timestamps();
         });
     }

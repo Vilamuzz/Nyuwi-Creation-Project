@@ -137,7 +137,7 @@ const formatPrice = (price) => {
                 <p>Total: {{ formatPrice(cartTotal) }}</p>
                 <div class="mt-4 flex items-center">
                     <Link
-                        :href="route('checkout')"
+                        :href="route('order.store')"
                         class="w-full text-center px-8 py-2 border border-black hover:border-transparent hover:text-white rounded-md hover:bg-orange-500 duration-150"
                     >
                         Checkout
