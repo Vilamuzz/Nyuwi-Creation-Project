@@ -81,15 +81,31 @@ const formatPrice = (price) => {
                             <tr v-for="item in cartItems" :key="item.id">
                                 <td class="px-4 py-4">
                                     <img
-                                        src="/img/background/category1.svg"
+                                        :src="
+                                            '/storage/products/' +
+                                            item.product.image
+                                        "
                                         alt="Product Image"
                                         class="w-16 h-16 object-cover rounded-md"
                                     />
                                 </td>
                                 <td class="px-4 py-4">
                                     {{ item.product.name }}
+                                    <div class="text-sm text-gray-500">
+                                        <span v-if="item.size"
+                                            >Size: {{ item.size }}</span
+                                        >
+                                        <span v-if="item.color" class="ml-2"
+                                            >Color:
+                                            <span
+                                                class="inline-block w-4 h-4 rounded-full ml-1"
+                                                :style="{
+                                                    backgroundColor: item.color,
+                                                }"
+                                            ></span>
+                                        </span>
+                                    </div>
                                 </td>
-
                                 <td class="px-4 py-4">{{ item.price }}</td>
                                 <td class="px-4 py-4">
                                     <input

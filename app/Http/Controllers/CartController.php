@@ -20,18 +20,34 @@ class CartController extends Controller
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|integer|min:1',
             'price' => 'required|numeric',
+            'size' => 'nullable|string',
+            'color' => 'nullable|string'
         ]);
 
-        $cartItem = Cart::updateOrCreate(
-            [
+        // Cek apakah produk dengan size dan color yang sama sudah ada di cart
+        $cartItem = Cart::where([
+            'user_id' => Auth::id(),
+            'product_id' => $request->product_id,
+            'size' => $request->size,
+            'color' => $request->color
+        ])->first();
+
+        if ($cartItem) {
+            // Update quantity jika item sudah ada
+            $cartItem->update([
+                'quantity' => $cartItem->quantity + $request->quantity
+            ]);
+        } else {
+            // Buat item baru jika belum ada
+            Cart::create([
                 'user_id' => Auth::id(),
                 'product_id' => $request->product_id,
-            ],
-            [
                 'quantity' => $request->quantity,
                 'price' => $request->price,
-            ]
-        );
+                'size' => $request->size,
+                'color' => $request->color
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Produk berhasil ditambahkan ke keranjang.');
     }

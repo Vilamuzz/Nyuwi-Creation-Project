@@ -183,20 +183,35 @@ const cartTotal = computed(() => {
                     <div
                         v-for="item in cartItems"
                         :key="item.id"
-                        class="flex flex-row justify-between"
+                        class="flex flex-row justify-between py-2"
                     >
-                        <h1 class="text-gray-400">
-                            {{ item.product.name }} x {{ item.quantity }}
-                        </h1>
+                        <div class="flex flex-col">
+                            <h1 class="text-gray-400">
+                                {{ item.product.name }} x {{ item.quantity }}
+                            </h1>
+                            <div class="text-sm text-gray-500">
+                                <span v-if="item.size"
+                                    >Size: {{ item.size }}</span
+                                >
+                                <span v-if="item.color" class="ml-2">
+                                    Color:
+                                    <span
+                                        class="inline-block w-4 h-4 rounded-full ml-1"
+                                        :style="{ backgroundColor: item.color }"
+                                    ></span>
+                                </span>
+                            </div>
+                        </div>
                         <h1 class="text-gray-400">
                             {{ formatPrice(item.price * item.quantity) }}
                         </h1>
                     </div>
-                    <div class="flex flex-row justify-between">
-                        <h1 class="">Total</h1>
-                        <h1 class="">{{ formatPrice(cartTotal) }}</h1>
+                    <div
+                        class="flex flex-row justify-between mt-4 pt-4 border-t"
+                    >
+                        <h1 class="font-bold">Total</h1>
+                        <h1 class="font-bold">{{ formatPrice(cartTotal) }}</h1>
                     </div>
-                    <hr />
                     <div class="flex flex-col space-y-3">
                         <h1 class="font-bold text-2xl">Payment Method</h1>
                         <div class="flex flex-col space-y-2">

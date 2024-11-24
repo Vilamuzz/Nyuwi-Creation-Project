@@ -5,6 +5,14 @@ import AdminLayout from "@/Layouts/AdminLayout.vue";
 defineProps({
     orders: Array,
 });
+
+const formatPrice = (price) => {
+    return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        minimumFractionDigits: 0,
+    }).format(price);
+};
 </script>
 
 <template>
@@ -64,7 +72,7 @@ defineProps({
                                     {{ order.name }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
-                                    ${{ order.total_price }}
+                                    {{ formatPrice(order.total_price) }}
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <span
@@ -95,30 +103,12 @@ defineProps({
                                 <td
                                     class="px-6 py-4 whitespace-nowrap space-x-2"
                                 >
-                                    <button
-                                        @click="
-                                            updateStatus(order.id, 'processing')
-                                        "
+                                    <Link
+                                        :href="route('orders.detail', order.id)"
                                         class="px-3 py-1 text-sm text-white bg-blue-500 rounded hover:bg-blue-600"
                                     >
-                                        Accept
-                                    </button>
-                                    <button
-                                        @click="
-                                            updateStatus(order.id, 'cancelled')
-                                        "
-                                        class="px-3 py-1 text-sm text-white bg-red-500 rounded hover:bg-red-600"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        @click="
-                                            updateStatus(order.id, 'pending')
-                                        "
-                                        class="px-3 py-1 text-sm text-white bg-yellow-500 rounded hover:bg-yellow-600"
-                                    >
-                                        Pending
-                                    </button>
+                                        Show Details
+                                    </Link>
                                 </td>
                             </tr>
                         </tbody>

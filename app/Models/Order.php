@@ -19,6 +19,7 @@ class Order extends Model
         'total_price',
         'payment_method',
         'note',
+        'status',
     ];
 
     public function orderItems()

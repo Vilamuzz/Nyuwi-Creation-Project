@@ -8,9 +8,13 @@ const form = useForm({
     product_id: null,
     quantity: 1,
     price: 0,
+    size: "",
+    color: "",
 });
 
 const quantity = ref(1);
+const selectedSize = ref("");
+const selectedColor = ref("");
 
 // Watch for quantity changes
 watch(quantity, (newValue) => {
@@ -22,11 +26,16 @@ const addToCart = () => {
     form.product_id = props.product.id;
     form.price = props.product.price;
     form.quantity = quantity.value;
+    form.size = selectedSize.value;
+    form.color = selectedColor.value;
+
     form.post(route("cart.add"), {
         preserveScroll: true,
         onSuccess: () => {
             form.reset();
             quantity.value = 1;
+            selectedSize.value = "";
+            selectedColor.value = "";
         },
     });
 };
@@ -89,12 +98,17 @@ const getCategoryName = (categoryId) => {
                 >
                     <h3 class="font-semibold mb-2">Colors</h3>
                     <div class="flex gap-2">
-                        <div
+                        <button
                             v-for="color in product.colors"
                             :key="color.id"
-                            class="w-8 h-8 rounded-full"
+                            @click="selectedColor = color.color"
+                            class="w-8 h-8 rounded-full border-2"
+                            :class="{
+                                'border-orange-500':
+                                    selectedColor === color.color,
+                            }"
                             :style="{ backgroundColor: color.color }"
-                        ></div>
+                        ></button>
                     </div>
                 </div>
 
@@ -102,13 +116,19 @@ const getCategoryName = (categoryId) => {
                 <div v-if="product.sizes && product.sizes.length" class="mt-4">
                     <h3 class="font-semibold mb-2">Sizes</h3>
                     <div class="flex gap-2">
-                        <div
+                        <button
                             v-for="size in product.sizes"
                             :key="size.id"
-                            class="px-4 py-2 border rounded-md hover:bg-orange-500 hover:text-white duration-300"
+                            @click="selectedSize = size.size"
+                            :class="[
+                                'px-4 py-2 border rounded-md hover:bg-orange-500 hover:text-white duration-300',
+                                selectedSize === size.size
+                                    ? 'bg-orange-500 text-white'
+                                    : '',
+                            ]"
                         >
                             {{ size.size }}
-                        </div>
+                        </button>
                     </div>
                 </div>
 
@@ -142,9 +162,21 @@ const getCategoryName = (categoryId) => {
                     <button
                         @click="addToCart"
                         class="rounded-md border border-gray-300 px-10 py-4 hover:bg-orange-500 hover:text-white duration-300"
-                        :disabled="product.stock < 1"
+                        :disabled="
+                            product.stock < 1 ||
+                            (!selectedSize && product.sizes?.length) ||
+                            (!selectedColor && product.colors?.length)
+                        "
                     >
-                        {{ product.stock < 1 ? "Out of Stock" : "Add To Cart" }}
+                        {{
+                            product.stock < 1
+                                ? "Out of Stock"
+                                : !selectedSize && product.sizes?.length
+                                ? "Please select size"
+                                : !selectedColor && product.colors?.length
+                                ? "Please select color"
+                                : "Add To Cart"
+                        }}
                     </button>
                 </div>
             </div>

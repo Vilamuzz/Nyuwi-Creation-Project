@@ -18,6 +18,8 @@ return new class extends Migration
             $table->integer('quantity');
             $table->decimal('price', 10, 2); // Harga satuan saat checkout
             $table->decimal('total_price', 15, 2); // Total harga item (quantity * price)
+            $table->string('size')->nullable(); // Add size column
+            $table->string('color')->nullable(); // Add color column
             $table->timestamps();
         });
     }

@@ -19,6 +19,34 @@ class OrderController extends Controller
             'orders' => $orders
         ]);
     }
+
+    public function detail($id)
+    {
+        $order = Order::with(['orderItems.product']) // Eager load order items and products
+            ->findOrFail($id);
+
+        return Inertia::render('Admin/Orders/Show', [
+            'order' => $order
+        ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
+
+        // Validate request
+        $request->validate([
+            'status' => 'required|in:pending,processing,completed,cancelled'
+        ]);
+
+        // Update order status
+        $order->update([
+            'status' => $request->status
+        ]);
+
+        return redirect()->back()->with('success', 'Order status updated successfully');
+    }
+
     public function store(Request $request)
     {
         // Validate incoming request
@@ -66,6 +94,8 @@ class OrderController extends Controller
                         'quantity' => $cartItem->quantity,
                         'price' => $cartItem->price,
                         'total_price' => $cartItem->price * $cartItem->quantity,
+                        'size' => $cartItem->size, // Add size from cart
+                        'color' => $cartItem->color // Add color from cart
                     ]);
                 }
 
