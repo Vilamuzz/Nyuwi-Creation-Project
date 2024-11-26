@@ -20,12 +20,18 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 3.     php artisan migrate
+4.     php artisan db:seed --class=IndoRegionSeeder
 
 ## Usage
 
+buat 2 command prompt
 ```sh
-npm run dev & php artisan serve
+npm run dev
 ```
+```sh
+php artisan serve
+```
+
 
 ## Roadmap
 1. <a href="https://www.canva.com/design/DAGSG8cxYVE/yMOnO7jKfWhBQHEnEhlt8g/edit?utm_content=DAGSG8cxYVE&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton" target="_blank">Canva version</a>
