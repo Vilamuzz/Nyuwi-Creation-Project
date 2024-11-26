@@ -19,6 +19,14 @@ const getCategoryName = (categoryId) => {
     const category = props.categories.find((cat) => cat.id === categoryId);
     return category ? category.name : "Tidak ada kategori";
 };
+
+const formatPrice = (price) => {
+    return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        minimumFractionDigits: 0,
+    }).format(price);
+};
 </script>
 <template>
     <Head title="Landing Page" />
@@ -99,8 +107,9 @@ const getCategoryName = (categoryId) => {
                         :key="index"
                         :id="item.id"
                         :name="item.name"
-                        :price="item.price"
+                        :price="formatPrice(item.price)"
                         :category="getCategoryName(item.category_id)"
+                        :image="item.image"
                     />
                 </div>
                 <Link

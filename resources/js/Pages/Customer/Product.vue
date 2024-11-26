@@ -61,8 +61,8 @@ const getCategoryName = (categoryId) => {
         </section>
         <section class="mx-24 my-6 flex flex-row gap-4">
             <!-- Image Section -->
-            <div class="w-1/12 flex flex-col">
-                <div v-if="product.image" class="p-8 bg-gray-200 rounded-md">
+            <div class="w-1/4 flex flex-col">
+                <div v-if="product.image" class="bg-gray-200 rounded-md">
                     <img
                         :src="`/storage/products/${product.image}`"
                         :alt="product.name"

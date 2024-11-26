@@ -14,13 +14,36 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::get();
-        $categories = Category::all();
+        $query = Product::query();
+
+        // Apply search filter
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('description', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Apply sorting
+        if ($request->has('sortField') && $request->has('sortDirection')) {
+            $query->orderBy(
+                $request->sortField,
+                $request->sortDirection
+            );
+        } else {
+            // Default sorting
+            $query->latest();
+        }
+
+        $products = $query->get();
+
         return Inertia::render('Admin/Products/Index', [
             'products' => $products,
-            'categories' => $categories
+            'categories' => Category::all(),
+            'filters' => $request->only(['search', 'sortField', 'sortDirection'])
         ]);
     }
 
@@ -122,55 +145,53 @@ class ProductController extends Controller
             'stock' => 'required|integer|min:1',
             'price' => 'required|numeric|min:1',
             'category_id' => 'nullable|integer|exists:categories,id',
-            'new_category' => 'nullable|string|max:255',
             'description' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'colors' => 'nullable|array',
+            'sizes' => 'nullable|array',
         ]);
 
-        // Buat kategori baru jika 'new_category' diisi
-        if ($request->filled('new_category')) {
-            $category = Category::create(['name' => $request->new_category]);
-            $validatedData['category_id'] = $category->id;
-        }
-
-        if ($request->hasFile('image')) {
-            // Delete old image if exists
-            if ($product->image && Storage::exists("public/{$product->image}")) {
-                Storage::delete("public/{$product->image}");
-            }
-
-            $image = $request->file('image');
-            $imageName = time() . '.' . $image->getClientOriginalExtension();
-            $image->storeAs('products', $imageName, 'public');
-            $validatedData['image'] = $imageName;
-        }
-
-        $product->update([
+        $updateData = [
             'name' => $validatedData['name'],
             'stock' => $validatedData['stock'],
             'price' => $validatedData['price'],
             'category_id' => $validatedData['category_id'],
             'description' => $request->description,
-            'image' => $validatedData['image'] ?? $product->image
-        ]);
+        ];
+
+        if ($request->hasFile('image')) {
+            // Delete old image
+            if ($product->image && Storage::exists("public/products/{$product->image}")) {
+                Storage::delete("public/products/{$product->image}");
+            }
+
+            // Store new image
+            $image = $request->file('image');
+            $imageName = time() . '.' . $image->getClientOriginalExtension();
+            $image->storeAs('products', $imageName, 'public');
+            $updateData['image'] = $imageName;
+        }
+
+        $product->update($updateData);
 
         // Update colors
-        $product->colors()->delete(); // Remove old colors
-        if ($request->colors) {
+        if ($request->has('colors')) {
+            $product->colors()->delete();
             foreach ($request->colors as $color) {
                 $product->colors()->create(['color' => $color]);
             }
         }
 
         // Update sizes
-        $product->sizes()->delete(); // Remove old sizes
-        if ($request->sizes) {
+        if ($request->has('sizes')) {
+            $product->sizes()->delete();
             foreach ($request->sizes as $size) {
                 $product->sizes()->create(['size' => $size]);
             }
         }
 
-        return redirect()->route('products.index')->with('success', 'Product updated successfully.');
+        return redirect()->route('products.index')
+            ->with('success', 'Product updated successfully.');
     }
 
 

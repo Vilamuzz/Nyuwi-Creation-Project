@@ -106,28 +106,41 @@ const handleImageUpload = (event) => {
 
 // Update the updateProduct function
 const updateProduct = () => {
-    // Form validation
-    if (!form.name || !form.price || !form.stock) {
-        return;
+    // Create FormData object to handle file upload
+    const formData = new FormData();
+
+    // Append all form fields
+    formData.append("name", form.name);
+    formData.append("stock", form.stock);
+    formData.append("price", form.price);
+    formData.append("category_id", form.category_id);
+    formData.append("description", form.description);
+    formData.append("_method", "PUT"); // Required for PUT requests
+
+    // Append colors and sizes as arrays
+    form.colors.forEach((color, index) => {
+        formData.append(`colors[${index}]`, color);
+    });
+
+    form.sizes.forEach((size, index) => {
+        formData.append(`sizes[${index}]`, size);
+    });
+
+    // Only append image if a new one is selected
+    if (form.image) {
+        formData.append("image", form.image);
     }
 
-    // Handle category selection
-    if (form.category_id === "new" && form.new_category) {
-        form.category_id = null; // Clear category_id if creating new category
-    }
-
-    // Submit form
-    form.put(route("products.update", props.product.id), {
+    // Use post() instead of put() for FormData
+    form.post(route("products.update", props.product.id), {
         preserveScroll: true,
         onSuccess: () => {
-            // Redirect to index page on success
             window.location = route("products.index");
         },
         onError: (errors) => {
             console.error("Form submission errors:", errors);
         },
         onFinish: () => {
-            // Clean up
             if (imagePreview.value) {
                 URL.revokeObjectURL(imagePreview.value);
             }
@@ -278,7 +291,7 @@ const updateProduct = () => {
                 >
                 <input
                     type="file"
-                    @input="handleImageUpload"
+                    @change="handleImageUpload"
                     class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
                     :class="{ 'border-red-500': errors.image }"
                     accept="image/*"

@@ -22,6 +22,10 @@ export default {
             type: String,
             required: true,
         },
+        image: {
+            type: String,
+            default: null,
+        },
     },
 };
 </script>
@@ -33,8 +37,12 @@ export default {
         <!-- Container Gambar dan Overlay -->
         <div class="relative w-full h-48">
             <img
-                src="/img/background/category1.svg"
-                alt="Product Image"
+                :src="
+                    image
+                        ? `/storage/products/${image}`
+                        : '/img/background/category1.svg'
+                "
+                :alt="name"
                 class="w-full h-full object-cover rounded-t-md"
             />
             <!-- Overlay untuk tambah ke keranjang -->

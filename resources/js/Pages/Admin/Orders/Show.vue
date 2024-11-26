@@ -1,17 +1,78 @@
 <script setup>
 import { Head, useForm } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
+import { ref } from "vue";
 
 const props = defineProps({
     order: Object,
 });
 
+const showTrackingModal = ref(false);
+const showTrackingInfo = ref(false);
+const trackingInfo = ref(null);
+const trackingError = ref(null);
+
+const form = useForm({
+    status: "processing",
+    tracking_number: "",
+});
+
+// Function to track shipment
+const trackShipment = async () => {
+    try {
+        const response = await axios.get(
+            "https://api.binderbyte.com/v1/track",
+            {
+                params: {
+                    api_key:
+                        "151a782863970433251abbcbf51fe253f4625de1eda00f7a49ba55d90e7419a5",
+                    courier: props.order.shipping_method.toLowerCase(),
+                    awb: props.order.tracking_number,
+                },
+            }
+        );
+
+        if (response.data.status === 200) {
+            trackingInfo.value = response.data.data;
+            showTrackingInfo.value = true;
+        } else {
+            trackingError.value = response.data.message;
+        }
+    } catch (error) {
+        trackingError.value = "Failed to fetch tracking information";
+        console.error("Tracking error:", error);
+    }
+};
+
+const openTrackingModal = () => {
+    if (props.order.shipping_method === "GoSend") {
+        // For GoSend, directly update status without tracking number
+        updateStatus(props.order.id, "processing");
+    } else {
+        showTrackingModal.value = true;
+    }
+};
+
+const closeTrackingModal = () => {
+    showTrackingModal.value = false;
+    form.reset();
+};
+
+const confirmTracking = () => {
+    form.put(route("orders.update", props.order.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            closeTrackingModal();
+        },
+    });
+};
+
 const updateStatus = (orderId, newStatus) => {
-    const form = useForm({
+    const statusForm = useForm({
         status: newStatus,
     });
 
-    form.put(route("orders.update", orderId), {
+    statusForm.put(route("orders.update", orderId), {
         preserveScroll: true,
         onSuccess: () => {},
         onError: (errors) => {
@@ -71,6 +132,12 @@ const formatPrice = (price) => {
                                     >
                                     {{ order.payment_method }}
                                 </p>
+                                <p>
+                                    <span class="font-semibold"
+                                        >Shipping Method:</span
+                                    >
+                                    {{ order.shipping_method || "Not set" }}
+                                </p>
                             </div>
                             <div>
                                 <p>
@@ -114,23 +181,35 @@ const formatPrice = (price) => {
                         <h3 class="text-lg font-semibold mb-4">
                             Shipping Information
                         </h3>
-                        <div class="grid grid-cols-1 gap-2">
-                            <p>
-                                <span class="font-semibold">Address:</span>
-                                {{ order.address }}
-                            </p>
-                            <p>
-                                <span class="font-semibold">City:</span>
-                                {{ order.city }}
-                            </p>
-                            <p>
-                                <span class="font-semibold">Province:</span>
-                                {{ order.province }}
-                            </p>
-                            <p v-if="order.note">
-                                <span class="font-semibold">Note:</span>
-                                {{ order.note }}
-                            </p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p>
+                                    <span class="font-semibold">Address:</span>
+                                    {{ order.address }}
+                                </p>
+                                <p>
+                                    <span class="font-semibold">District:</span>
+                                    {{ order.district }}
+                                </p>
+                                <p>
+                                    <span class="font-semibold">Village:</span>
+                                    {{ order.village }}
+                                </p>
+                            </div>
+                            <div>
+                                <p>
+                                    <span class="font-semibold">City:</span>
+                                    {{ order.city }}
+                                </p>
+                                <p>
+                                    <span class="font-semibold">Province:</span>
+                                    {{ order.province }}
+                                </p>
+                                <p>
+                                    <span class="font-semibold">Phone:</span>
+                                    {{ order.phone }}
+                                </p>
+                            </div>
                         </div>
                     </div>
 
@@ -205,10 +284,91 @@ const formatPrice = (price) => {
                         </table>
                     </div>
 
+                    <!-- Add tracking information section after order details -->
+                    <div
+                        v-if="
+                            order.tracking_number &&
+                            order.shipping_method !== 'GoSend'
+                        "
+                        class="mt-6"
+                    >
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold">
+                                Tracking Information
+                            </h3>
+                            <button
+                                @click="trackShipment"
+                                class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            >
+                                Track Shipment
+                            </button>
+                        </div>
+
+                        <!-- Tracking Number Display -->
+                        <p class="mb-4">
+                            <span class="font-semibold">Tracking Number:</span>
+                            {{ order.tracking_number }}
+                        </p>
+
+                        <!-- Tracking Information Display -->
+                        <div
+                            v-if="showTrackingInfo && trackingInfo"
+                            class="border rounded-lg p-4"
+                        >
+                            <!-- Summary -->
+                            <div class="mb-4">
+                                <p>
+                                    <span class="font-semibold">Status:</span>
+                                    {{ trackingInfo.summary.status }}
+                                </p>
+                                <p>
+                                    <span class="font-semibold">Service:</span>
+                                    {{ trackingInfo.summary.service }}
+                                </p>
+                                <p>
+                                    <span class="font-semibold">Amount:</span>
+                                    {{ trackingInfo.summary.amount }}
+                                </p>
+                                <p>
+                                    <span class="font-semibold">Weight:</span>
+                                    {{ trackingInfo.summary.weight }}
+                                </p>
+                            </div>
+
+                            <!-- Tracking History -->
+                            <div class="space-y-4">
+                                <h4 class="font-semibold">Tracking History</h4>
+                                <div
+                                    v-for="(
+                                        history, index
+                                    ) in trackingInfo.history"
+                                    :key="index"
+                                    class="border-l-2 border-gray-200 pl-4 pb-4 relative"
+                                >
+                                    <div
+                                        class="absolute w-3 h-3 bg-blue-500 rounded-full -left-[7px]"
+                                    ></div>
+                                    <p class="font-semibold">
+                                        {{ history.date }}
+                                    </p>
+                                    <p>{{ history.desc }}</p>
+                                    <p class="text-sm text-gray-500">
+                                        {{ history.location }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Error Message -->
+                        <div v-if="trackingError" class="text-red-500 mt-2">
+                            {{ trackingError }}
+                        </div>
+                    </div>
+
                     <!-- Status Update Buttons -->
                     <div class="mt-6 flex justify-end space-x-4">
                         <button
-                            @click="updateStatus(order.id, 'processing')"
+                            @click="openTrackingModal"
                             :disabled="order.status === 'processing'"
                             class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
                         >
@@ -228,6 +388,90 @@ const formatPrice = (price) => {
                         >
                             Complete Order
                         </button>
+                    </div>
+
+                    <!-- Tracking Number Modal -->
+                    <div
+                        v-if="showTrackingModal"
+                        class="fixed inset-0 z-50 overflow-y-auto"
+                    >
+                        <div
+                            class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+                        ></div>
+
+                        <div
+                            class="flex min-h-full items-center justify-center p-4"
+                        >
+                            <div
+                                class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
+                            >
+                                <!-- Modal Content -->
+                                <div
+                                    class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4"
+                                >
+                                    <div class="sm:flex sm:items-start">
+                                        <div
+                                            class="mt-3 text-center sm:mt-0 sm:text-left w-full"
+                                        >
+                                            <h3
+                                                class="text-lg font-bold leading-6 text-gray-900"
+                                            >
+                                                Enter Tracking Number
+                                            </h3>
+                                            <div class="mt-4">
+                                                <label
+                                                    class="block text-sm font-medium text-gray-700"
+                                                >
+                                                    Tracking Number for
+                                                    {{ order.shipping_method }}
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    v-model="
+                                                        form.tracking_number
+                                                    "
+                                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                                    required
+                                                />
+                                                <div
+                                                    v-if="
+                                                        form.errors
+                                                            .tracking_number
+                                                    "
+                                                    class="text-red-500 text-sm mt-1"
+                                                >
+                                                    {{
+                                                        form.errors
+                                                            .tracking_number
+                                                    }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Modal Actions -->
+                                <div
+                                    class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6"
+                                >
+                                    <button
+                                        type="button"
+                                        class="inline-flex w-full justify-center rounded-md bg-blue-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-600 sm:ml-3 sm:w-auto"
+                                        @click="confirmTracking"
+                                        :disabled="!form.tracking_number"
+                                    >
+                                        Confirm
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                                        @click="closeTrackingModal"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

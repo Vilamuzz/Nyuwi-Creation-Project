@@ -32,31 +32,39 @@ class OrderController extends Controller
 
     public function update(Request $request, $id)
     {
+        $request->validate([
+            'status' => 'required|in:pending,processing,completed,cancelled',
+            'tracking_number' => 'required_if:shipping_method,!=,GoSend'
+        ]);
+
         $order = Order::findOrFail($id);
 
-        // Validate request
-        $request->validate([
-            'status' => 'required|in:pending,processing,completed,cancelled'
-        ]);
-
-        // Update order status
-        $order->update([
+        $updateData = [
             'status' => $request->status
-        ]);
+        ];
 
-        return redirect()->back()->with('success', 'Order status updated successfully');
+        if ($request->has('tracking_number')) {
+            $updateData['tracking_number'] = $request->tracking_number;
+        }
+
+        $order->update($updateData);
+
+        return redirect()->back()->with('success', 'Order updated successfully');
     }
 
     public function store(Request $request)
     {
-        // Validate incoming request
         $request->validate([
             'name' => 'required|string|max:255',
             'address' => 'required|string|max:255',
             'city' => 'required|string|max:255',
+            'district' => 'required|string|max:255',
+            'village' => 'required|string|max:255',
             'province' => 'required|string|max:255',
             'phone' => 'required|string|max:15',
             'payment_method' => 'required|in:E-Wallet,cash_on_delivery',
+            'shipping_method' => 'required|in:JNE,J&T,SiCepat,GoSend',
+            'shipping_cost' => 'required|numeric|min:0', // Add validation for shipping cost
         ]);
 
         try {
@@ -68,22 +76,29 @@ class OrderController extends Controller
                     throw new \Exception('Cart is empty');
                 }
 
-                // Calculate total price from cart items
-                $totalPrice = $cartItems->sum(function ($item) {
+                // Calculate subtotal from cart items
+                $subtotal = $cartItems->sum(function ($item) {
                     return $item->price * $item->quantity;
                 });
 
-                // Create order
+                // Add shipping cost to total
+                $totalPrice = $subtotal + $request->shipping_cost;
+
+                // Create order with total including shipping
                 $order = Order::create([
                     'user_id' => $user->id,
                     'name' => $request->name,
                     'address' => $request->address,
                     'city' => $request->city,
+                    'district' => $request->district,
+                    'village' => $request->village,
                     'province' => $request->province,
                     'phone' => $request->phone,
-                    'total_price' => $totalPrice,
+                    'total_price' => $totalPrice, // Total includes shipping cost
                     'payment_method' => $request->payment_method,
+                    'shipping_method' => $request->shipping_method,
                     'note' => $request->note,
+                    'status' => 'awaiting'
                 ]);
 
                 // Create order items
@@ -94,8 +109,8 @@ class OrderController extends Controller
                         'quantity' => $cartItem->quantity,
                         'price' => $cartItem->price,
                         'total_price' => $cartItem->price * $cartItem->quantity,
-                        'size' => $cartItem->size, // Add size from cart
-                        'color' => $cartItem->color // Add color from cart
+                        'size' => $cartItem->size,
+                        'color' => $cartItem->color
                     ]);
                 }
 

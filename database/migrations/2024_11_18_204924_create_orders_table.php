@@ -16,13 +16,17 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Relasi ke tabel users
             $table->string('name');
             $table->string('address');
+            $table->string('village');
+            $table->string('district');
             $table->string('city');
             $table->string('province');
             $table->string('phone');
             $table->decimal('total_price', 15, 2);
             $table->enum('payment_method', ['E-Wallet', 'cash_on_delivery'])->default('cash_on_delivery');
             $table->text('note')->nullable();
-            $table->enum('status', ['awaiting', 'pending', 'processing', 'completed', 'cancelled'])->default('awaiting');
+            $table->enum('status', ['awaiting', 'pending', 'processing', 'shiping', 'completed', 'cancelled'])->default('processing');
+            $table->string('shipping_method')->nullable();
+            $table->string('tracking_number')->nullable(); // Add tracking number column
             $table->timestamps();
         });
     }

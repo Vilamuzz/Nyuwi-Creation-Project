@@ -14,12 +14,16 @@ class Order extends Model
         'name',
         'address',
         'city',
+        'district',
+        'village',
         'province',
         'phone',
         'total_price',
         'payment_method',
         'note',
         'status',
+        'shipping_method',
+        'tracking_number'
     ];
 
     public function orderItems()
