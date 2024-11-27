@@ -46,8 +46,7 @@ const trackShipment = async () => {
 
 const openTrackingModal = () => {
     if (props.order.shipping_method === "GoSend") {
-        // For GoSend, directly update status without tracking number
-        updateStatus(props.order.id, "processing");
+        updateStatus(props.order.id, "shiping");
     } else {
         showTrackingModal.value = true;
     }
@@ -369,24 +368,13 @@ const formatPrice = (price) => {
                     <div class="mt-6 flex justify-end space-x-4">
                         <button
                             @click="openTrackingModal"
-                            :disabled="order.status === 'processing'"
+                            :disabled="
+                                order.status === 'processing' ||
+                                order.status === 'shiping'
+                            "
                             class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
                         >
                             Accept Order
-                        </button>
-                        <button
-                            @click="updateStatus(order.id, 'cancelled')"
-                            :disabled="order.status === 'cancelled'"
-                            class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
-                        >
-                            Cancel Order
-                        </button>
-                        <button
-                            @click="updateStatus(order.id, 'completed')"
-                            :disabled="order.status === 'completed'"
-                            class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
-                        >
-                            Complete Order
                         </button>
                     </div>
 

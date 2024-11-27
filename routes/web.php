@@ -91,6 +91,7 @@ Route::post('/checkout', [OrderController::class, 'store'])->name('order.store')
 Route::get('/orders', [OrderController::class, 'show'])->name('orders.show');
 Route::get('/orders/{id}', [OrderController::class, 'detail'])->name('orders.detail');
 Route::put('/orders/{id}', [OrderController::class, 'update'])->name('orders.update');
+Route::post('/orders/complete', [OrderController::class, 'complete'])->name('orders.complete');
 
 Route::get('/api/provinces', function () {
     return Province::all();
