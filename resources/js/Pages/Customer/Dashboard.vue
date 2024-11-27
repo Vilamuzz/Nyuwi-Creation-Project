@@ -1,7 +1,7 @@
 <script setup>
 import { Head, useForm } from "@inertiajs/vue3";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import axios from "axios";
 
 const props = defineProps({
@@ -204,6 +204,24 @@ const closeReviewModal = () => {
     showReviewModal.value = false;
     selectedReviewOrder.value = null;
 };
+
+// Add to existing refs
+const userReviews = ref([]);
+
+// Add this function
+const fetchUserReviews = async () => {
+    try {
+        const response = await axios.get("/user/reviews");
+        userReviews.value = response.data;
+    } catch (error) {
+        console.error("Error fetching reviews:", error);
+    }
+};
+
+// Call this in the mounted hook
+onMounted(() => {
+    fetchUserReviews();
+});
 </script>
 
 <template>
@@ -694,59 +712,62 @@ const closeReviewModal = () => {
                                 <div class="p-6">
                                     <div class="space-y-4">
                                         <div
-                                            v-for="item in selectedReviewOrder.order_items"
-                                            :key="item.id"
-                                            class="border rounded p-4"
+                                            v-for="review in userReviews"
+                                            :key="review.id"
+                                            class="border rounded-lg p-4 flex items-center justify-between"
                                         >
                                             <div
-                                                class="flex items-center justify-between"
+                                                class="flex items-center space-x-4"
                                             >
-                                                <div
-                                                    class="flex items-center space-x-4"
-                                                >
-                                                    <img
-                                                        :src="`/storage/products/${item.product.image}`"
-                                                        class="w-16 h-16 object-cover rounded"
-                                                        :alt="item.product.name"
-                                                    />
-                                                    <div>
-                                                        <p class="font-medium">
-                                                            {{
-                                                                item.product
-                                                                    .name
-                                                            }}
-                                                        </p>
+                                                <img
+                                                    :src="`/storage/products/${review.product.image}`"
+                                                    :alt="review.product.name"
+                                                    class="w-16 h-16 object-cover rounded"
+                                                />
+                                                <div>
+                                                    <h3 class="font-semibold">
+                                                        {{
+                                                            review.product.name
+                                                        }}
+                                                    </h3>
+                                                    <div
+                                                        class="flex items-center space-x-1"
+                                                    >
                                                         <div
-                                                            class="flex items-center space-x-1"
+                                                            v-for="star in 5"
+                                                            :key="star"
                                                         >
-                                                            <!-- Display readonly stars -->
-                                                            <div
-                                                                v-for="star in 5"
-                                                                :key="star"
-                                                                class="w-5 h-5"
+                                                            <svg
+                                                                :class="[
+                                                                    'w-5 h-5',
+                                                                    review.rating >=
+                                                                    star
+                                                                        ? 'text-yellow-400'
+                                                                        : 'text-gray-300',
+                                                                ]"
+                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                viewBox="0 0 20 20"
+                                                                fill="currentColor"
                                                             >
-                                                                <svg
-                                                                    :class="[
-                                                                        'w-5 h-5',
-                                                                        item.review &&
-                                                                        item
-                                                                            .review
-                                                                            .rating >=
-                                                                            star
-                                                                            ? 'text-yellow-400'
-                                                                            : 'text-gray-300',
-                                                                    ]"
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    viewBox="0 0 20 20"
-                                                                    fill="currentColor"
-                                                                >
-                                                                    <path
-                                                                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
-                                                                    />
-                                                                </svg>
-                                                            </div>
+                                                                <path
+                                                                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z"
+                                                                />
+                                                            </svg>
                                                         </div>
                                                     </div>
+                                                    <p
+                                                        class="text-sm text-gray-500"
+                                                    >
+                                                        Order #{{
+                                                            review.order_id
+                                                        }}
+                                                        •
+                                                        {{
+                                                            new Date(
+                                                                review.created_at
+                                                            ).toLocaleDateString()
+                                                        }}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
@@ -754,6 +775,61 @@ const closeReviewModal = () => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- My Reviews -->
+                <div v-else-if="selectedAction === 'reviews'" class="space-y-4">
+                    <h2 class="text-xl font-bold mb-4">My Reviews</h2>
+                    <div v-if="userReviews.length" class="grid gap-4">
+                        <div
+                            v-for="review in userReviews"
+                            :key="review.id"
+                            class="border rounded-lg p-4 flex items-center justify-between"
+                        >
+                            <div class="flex items-center space-x-4">
+                                <img
+                                    :src="`/storage/products/${review.product.image}`"
+                                    :alt="review.product.name"
+                                    class="w-16 h-16 object-cover rounded"
+                                />
+                                <div>
+                                    <h3 class="font-semibold">
+                                        {{ review.product.name }}
+                                    </h3>
+                                    <div class="flex items-center space-x-1">
+                                        <div v-for="star in 5" :key="star">
+                                            <svg
+                                                :class="[
+                                                    'w-5 h-5',
+                                                    review.rating >= star
+                                                        ? 'text-yellow-400'
+                                                        : 'text-gray-300',
+                                                ]"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                viewBox="0 0 20 20"
+                                                fill="currentColor"
+                                            >
+                                                <path
+                                                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z"
+                                                />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                    <p class="text-sm text-gray-500">
+                                        Order #{{ review.order_id }} •
+                                        {{
+                                            new Date(
+                                                review.created_at
+                                            ).toLocaleDateString()
+                                        }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="text-gray-500">
+                        You haven't reviewed any products yet.
                     </div>
                 </div>
             </div>
