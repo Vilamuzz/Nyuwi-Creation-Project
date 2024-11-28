@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Cart;
 use Inertia\Inertia;
+use App\Models\ProductReview;
 
 class OrderController extends Controller
 {
@@ -33,21 +34,23 @@ class OrderController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:pending,processing,completed,cancelled',
+            'status' => 'required|in:pending,processing,shiping,completed,cancelled',
             'tracking_number' => 'required_if:shipping_method,!=,GoSend'
         ]);
 
         $order = Order::findOrFail($id);
 
-        $updateData = [
-            'status' => $request->status
-        ];
-
+        // If tracking number is provided, update status to 'shiping'
         if ($request->has('tracking_number')) {
-            $updateData['tracking_number'] = $request->tracking_number;
+            $order->update([
+                'tracking_number' => $request->tracking_number,
+                'status' => 'shiping'
+            ]);
+        } else {
+            $order->update([
+                'status' => $request->status
+            ]);
         }
-
-        $order->update($updateData);
 
         return redirect()->back()->with('success', 'Order updated successfully');
     }
@@ -122,5 +125,32 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to place order: ' . $e->getMessage());
         }
+    }
+
+    public function complete(Request $request)
+    {
+        $request->validate([
+            'order_id' => 'required|exists:orders,id',
+            'reviews' => 'required|array',
+            'reviews.*.product_id' => 'required|exists:products,id',
+            'reviews.*.rating' => 'required|integer|min:1|max:5',
+        ]);
+
+        DB::transaction(function () use ($request) {
+            $order = Order::findOrFail($request->order_id);
+            $order->update(['status' => 'completed']);
+
+            // Save reviews
+            foreach ($request->reviews as $review) {
+                ProductReview::create([
+                    'user_id' => Auth::id(),
+                    'product_id' => $review['product_id'],
+                    'order_id' => $request->order_id,
+                    'rating' => $review['rating']
+                ]);
+            }
+        });
+
+        return redirect()->back()->with('success', 'Order completed and reviews submitted');
     }
 }

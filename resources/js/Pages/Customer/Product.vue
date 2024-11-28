@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, useForm } from "@inertiajs/vue3";
-import { ref, watch } from "vue";
+import { ref, watch, onMounted } from "vue";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 
 // Update form to handle product data
@@ -50,6 +50,27 @@ const getCategoryName = (categoryId) => {
     const category = props.categories.find((cat) => cat.id === categoryId);
     return category ? category.name : "Tidak ada kategori";
 };
+
+const productRating = ref({
+    average_rating: 0,
+    total_reviews: 0,
+    ratings: [],
+});
+
+const fetchProductReviews = async () => {
+    try {
+        const response = await axios.get(
+            `/products/${props.product.id}/reviews`
+        );
+        productRating.value = response.data;
+    } catch (error) {
+        console.error("Error fetching product reviews:", error);
+    }
+};
+
+onMounted(() => {
+    fetchProductReviews();
+});
 </script>
 
 <template>
@@ -74,6 +95,36 @@ const getCategoryName = (categoryId) => {
             <!-- Product Details Section -->
             <div class="w-1/2 flex flex-col ml-16">
                 <h1 class="font-bold text-3xl">{{ product.name }}</h1>
+                <div class="flex items-center mt-2 mb-2">
+                    <div class="flex items-center">
+                        <div v-for="star in 5" :key="star">
+                            <svg
+                                :class="[
+                                    'w-5 h-5',
+                                    star <=
+                                    Math.round(
+                                        productRating.average_rating || 0
+                                    )
+                                        ? 'text-yellow-400'
+                                        : 'text-gray-300',
+                                ]"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z"
+                                />
+                            </svg>
+                        </div>
+                    </div>
+                    <span class="ml-2 text-sm text-gray-600">
+                        {{ productRating.average_rating }}/5 ({{
+                            productRating.total_reviews
+                        }}
+                        reviews)
+                    </span>
+                </div>
                 <h2 class="font-thin text-gray-400 text-2xl">
                     Rp {{ product.price }}
                 </h2>
