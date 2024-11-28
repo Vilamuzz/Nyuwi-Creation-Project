@@ -17,6 +17,7 @@ const selectedOrder = ref(null);
 const trackingInfo = ref(null);
 const trackingError = ref(null);
 const showTrackingInfo = ref(false);
+const expandedOrders = ref(new Set());
 
 const reviewForm = useForm({
     order_id: null,
@@ -68,41 +69,6 @@ const closeOrderModal = () => {
     selectedOrder.value = null;
 };
 
-// Function to track shipment
-const trackShipment = async () => {
-    if (
-        !selectedOrder.value?.tracking_number ||
-        !selectedOrder.value?.shipping_method
-    ) {
-        trackingError.value = "No tracking information available";
-        return;
-    }
-
-    try {
-        const response = await axios.get(
-            "https://api.binderbyte.com/v1/track",
-            {
-                params: {
-                    api_key:
-                        "151a782863970433251abbcbf51fe253f4625de1eda00f7a49ba55d90e7419a5",
-                    courier: selectedOrder.value.shipping_method.toLowerCase(),
-                    awb: selectedOrder.value.tracking_number,
-                },
-            }
-        );
-
-        if (response.data.status === 200) {
-            trackingInfo.value = response.data.data;
-            showTrackingInfo.value = true;
-        } else {
-            trackingError.value = response.data.message;
-        }
-    } catch (error) {
-        trackingError.value = "Failed to fetch tracking information";
-        console.error("Tracking error:", error);
-    }
-};
-
 const actions = [
     { id: "history", label: "Riwayat Belanja" },
     { id: "wishlist", label: "Wishlist" },
@@ -126,9 +92,6 @@ const getStatusClass = (status) => {
         "bg-red-100 text-red-800": status === "cancelled",
     };
 };
-
-// Track expanded orders
-const expandedOrders = ref(new Set());
 
 const toggleOrder = (orderId) => {
     if (expandedOrders.value.has(orderId)) {

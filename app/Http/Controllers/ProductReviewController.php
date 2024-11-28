@@ -29,4 +29,20 @@ class ProductReviewController extends Controller
 
         return response()->json($reviews);
     }
+
+    public function getProductReviews($productId)
+    {
+        $reviews = ProductReview::where('product_id', $productId)
+            ->select('rating')
+            ->get();
+
+        $avgRating = $reviews->avg('rating');
+        $totalReviews = $reviews->count();
+
+        return response()->json([
+            'average_rating' => round($avgRating, 1),
+            'total_reviews' => $totalReviews,
+            'ratings' => $reviews->pluck('rating')
+        ]);
+    }
 }

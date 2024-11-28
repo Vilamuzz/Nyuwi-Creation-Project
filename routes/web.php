@@ -98,6 +98,9 @@ Route::get('/user/reviews', [ProductReviewController::class, 'getUserReviews'])
     ->middleware(['auth'])
     ->name('user.reviews');
 
+Route::get('/products/{id}/reviews', [ProductReviewController::class, 'getProductReviews'])
+    ->name('products.reviews');
+
 Route::get('/api/provinces', function () {
     return Province::all();
 });
