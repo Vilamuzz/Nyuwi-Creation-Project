@@ -28,7 +28,7 @@ Route::get('/', function () {
     ]);
 });
 
-
+Route::get('/about', [ProductController::class, 'about'])->name('about');
 
 Route::get('/shop', [ProductController::class, 'shop'])->name('shop');
 

@@ -224,4 +224,8 @@ class ProductController extends Controller
             'categories' => $categories
         ]);
     }
+    public function about()
+{
+    return Inertia::render('Customer/About');
+}
 }
