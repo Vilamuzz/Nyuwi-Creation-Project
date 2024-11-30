@@ -18,18 +18,7 @@ use App\Models\Regency;
 use App\Models\District;
 use App\Models\Order;
 
-Route::get('/', function () {
-    $products = Product::all();
-    $categories = Category::all();
-    return Inertia::render('Customer/LandingPage', [
-        'products' => $products,
-        'categories' => $categories,
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-    ]);
-});
-
-
+Route::get('/', [ProductController::class, 'landingPage']);
 
 Route::get('/shop', [ProductController::class, 'shop'])->name('shop');
 
@@ -38,30 +27,12 @@ Route::get('/product/{id}', [ProductController::class, 'product'])->name('produc
 Route::get('cart', function () {
     return Inertia::render('Customer/Cart');
 });
-Route::get('customer/profile', function () {
-    $orders = Order::with(['orderItems.product'])
-        ->where('user_id', Auth::id())
-        ->orderBy('created_at', 'desc')
-        ->get();
 
-    return Inertia::render('Customer/Dashboard', [
-        'orders' => $orders
-    ]);
-})->middleware('auth');
+Route::get('customer/profile', [OrderController::class, 'orderUser'])->middleware('auth');
 
 Route::get('dashboard', function () {
     return Inertia::render('Admin/Dashboard');
 })->name('dashboard');
-
-Route::resource('inventory', ProductController::class)->names([
-    'index' => 'products.index',
-    'create' => 'products.create',
-    'store' => 'products.store',
-    'show' => 'products.show',
-    'edit' => 'products.edit',
-    'update' => 'products.update',
-    'destroy' => 'products.destroy',
-]);
 
 Route::resource('inventory', ProductController::class)->names([
     'index' => 'products.index',

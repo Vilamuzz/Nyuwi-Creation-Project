@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Route;
 
 class ProductController extends Controller
 {
@@ -205,15 +206,48 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
     }
 
-    public function shop()
+    public function landingPage()
     {
-        $products = Product::get();
+        $products = Product::all()->take(8);
         $categories = Category::all();
-        return Inertia::render('Customer/ShopingPage', [
+        return Inertia::render('Customer/LandingPage', [
             'products' => $products,
-            'categories' => $categories
+            'categories' => $categories,
+            'canLogin' => Route::has('login'),
+            'canRegister' => Route::has('register'),
         ]);
     }
+
+    public function shop(Request $request)
+    {
+        $query = Product::query();
+
+        // Apply search filter
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('description', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Apply sorting
+        if ($request->has('sortField') && $request->has('sortDirection')) {
+            $query->orderBy($request->sortField, $request->sortDirection);
+        } else {
+            $query->latest(); // Default sorting
+        }
+
+        $products = $query->get();
+        $categories = Category::all();
+
+        return Inertia::render('Customer/ShopingPage', [
+            'products' => $products,
+            'categories' => $categories,
+            'filters' => $request->only(['search', 'sortField', 'sortDirection'])
+        ]);
+    }
+
     public function product($id)
     {
         $product = Product::with(['sizes', 'colors'])->findOrFail($id);

@@ -1,5 +1,8 @@
 <script setup>
 import { Head } from "@inertiajs/vue3";
+import { ref, watch } from "vue";
+import debounce from "lodash/debounce";
+import { router } from "@inertiajs/vue3";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Customer/Main/Hero.vue";
 import Product from "@/Components/Customer/Sub-main/Product.vue";
@@ -7,10 +10,64 @@ import Product from "@/Components/Customer/Sub-main/Product.vue";
 const props = defineProps({
     products: Array,
     categories: Array,
+    filters: Object,
 });
+
+// Add search and sort states
+const search = ref(props.filters?.search || "");
+const sortField = ref(props.filters?.sortField || "");
+const sortDirection = ref(props.filters?.sortDirection || "asc");
+
+// Define sort options
+const sortOptions = [
+    { field: "name", label: "Name (A-Z)", direction: "asc" },
+    { field: "name", label: "Name (Z-A)", direction: "desc" },
+    { field: "created_at", label: "Newest", direction: "desc" },
+    { field: "created_at", label: "Oldest", direction: "asc" },
+    { field: "price", label: "Price (Low-High)", direction: "asc" },
+    { field: "price", label: "Price (High-Low)", direction: "desc" },
+];
+
+// Watch for search changes with debounce
+watch(
+    search,
+    debounce((value) => {
+        updateFilters({ search: value });
+    }, 300)
+);
+
+// Handle sorting
+const handleSort = (event) => {
+    const [field, direction] = event.target.value.split("|");
+    sortField.value = field;
+    sortDirection.value = direction;
+    updateFilters({
+        sortField: field,
+        sortDirection: direction,
+    });
+};
+
+// Update filters and reload data
+const updateFilters = (newFilters) => {
+    router.get(
+        route("shop"),
+        {
+            search: search.value,
+            sortField: sortField.value,
+            sortDirection: sortDirection.value,
+            ...newFilters,
+        },
+        {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        }
+    );
+};
+
 const getCategoryName = (categoryId) => {
     const category = props.categories.find((cat) => cat.id === categoryId);
-    return category ? category.name : "Tidak ada kategori";
+    return category ? category.name : "No category";
 };
 
 const formatPrice = (price) => {
@@ -28,7 +85,7 @@ const formatPrice = (price) => {
         <Hero title="Shop" breadcrumb="Home > Shop" />
         <section class="bg-orange-200">
             <div
-                class="w-full bg-[#fdf7f2] py-4 px-6 flex items-center justify-between border-t border-b border-gray-200"
+                class="w-full bg-[#fdf7f2] py-4 px-24 flex items-center justify-between border-t border-b border-gray-200"
             >
                 <div class="flex items-center space-x-4">
                     <button
@@ -65,30 +122,40 @@ const formatPrice = (price) => {
                     <div class="flex items-center space-x-4 -ml-2">
                         <!-- Vertical Line -->
                         <div
-                            class="border-l h-6 -ml-5 mx-2 border-gray-400"
+                            class="border-l h-6 -ml-3 mx-2 border-gray-400"
                         ></div>
-
-                        <!-- Text -->
-                        <span class="text-black"
-                            >Showing 1–16 of 32 results</span
-                        >
+                    </div>
+                    <!-- Search Input -->
+                    <div class="relative">
+                        <input
+                            type="text"
+                            v-model="search"
+                            placeholder="Search products..."
+                            class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                        />
+                        <img
+                            src="/img/icon/search.svg"
+                            alt="Search Icon"
+                            class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4"
+                        />
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
                     <div class="flex items-center space-x-2">
-                        <span>Show</span>
-                        <input
-                            type="number"
-                            value="16"
-                            class="w-12 text-center text-gray-500 border border-gray-300 rounded-md"
-                        />
-                    </div>
-                    <div class="flex items-center space-x-2">
                         <span>Sort by</span>
                         <select
-                            class="border border-gray-300 text-gray-500 rounded-md"
+                            @change="handleSort"
+                            class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
+                            :value="`${sortField}|${sortDirection}`"
                         >
-                            <option>Default</option>
+                            <option value="">Default</option>
+                            <option
+                                v-for="option in sortOptions"
+                                :key="`${option.field}-${option.direction}`"
+                                :value="`${option.field}|${option.direction}`"
+                            >
+                                {{ option.label }}
+                            </option>
                         </select>
                     </div>
                 </div>

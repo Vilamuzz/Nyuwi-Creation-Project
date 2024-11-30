@@ -38,7 +38,7 @@ const addToWishlist = (e) => {
 <template>
     <Link
         :href="route('product', { id: id })"
-        class="relative flex flex-col items-start w-[200px] bg-gray-200 rounded-md shadow-md"
+        class="relative flex flex-col items-start w-[200px] bg-gray-100 rounded-md hover:shadow-lg hover:scale-105 duration-300"
     >
         <!-- Container Gambar dan Overlay -->
         <div class="relative w-full h-48">

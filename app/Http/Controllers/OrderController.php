@@ -153,4 +153,16 @@ class OrderController extends Controller
 
         return redirect()->back()->with('success', 'Order completed and reviews submitted');
     }
+
+    public function orderUser()
+    {
+        $orders = Order::with(['orderItems.product'])
+            ->where('user_id', Auth::id())
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return Inertia::render('Customer/Dashboard', [
+            'orders' => $orders
+        ]);
+    }
 }
