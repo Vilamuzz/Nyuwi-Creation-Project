@@ -1,40 +1,34 @@
-<script setup>
-import { Link, useForm } from "@inertiajs/vue3";
-import { ref } from "vue";
+<script>
+import { Link } from "@inertiajs/vue3";
 
-const props = defineProps({
-    id: {
-        type: Number,
-        required: true,
+export default {
+    components: {
+        Link,
     },
-    name: {
-        type: String,
-        required: true,
+    props: {
+        id: {
+            type: Number,
+            required: true,
+        },
+        name: {
+            type: String,
+            required: true,
+        },
+        price: {
+            type: String,
+            required: true,
+        },
+        category: {
+            type: String,
+            required: true,
+        },
+        image: {
+            type: String,
+            default: null,
+        },
     },
-    price: {
-        type: String,
-        required: true,
-    },
-    category: {
-        type: String,
-        required: true,
-    },
-    image: {
-        type: String,
-        default: null,
-    },
-});
-
-const form = useForm({
-    product_id: props.id,
-});
-
-const addToWishlist = (e) => {
-    e.preventDefault();
-    form.post(route("wishlist.store"));
 };
 </script>
-
 <template>
     <Link
         :href="route('product', { id: id })"
@@ -57,15 +51,9 @@ const addToWishlist = (e) => {
             >
                 <button
                     @click.stop="addToCart"
-                    class="p-2 px-8 bg-white text-orange-500 text-sm mb-2"
-                >
-                    Add To Cart
-                </button>
-                <button
-                    @click.stop="addToWishlist"
                     class="p-2 px-8 bg-white text-orange-500 text-sm"
                 >
-                    Add To Wishlist
+                    Add To Cart
                 </button>
             </div>
         </div>

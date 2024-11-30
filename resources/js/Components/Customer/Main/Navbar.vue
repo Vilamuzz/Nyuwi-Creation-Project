@@ -54,14 +54,12 @@ const role = props.auth?.user?.role || null;
                 </div>
 
                 <!-- Wishlist -->
-                <Link :href="route('wishlist.index')"
-                    ><span
-                        role="button"
-                        class="btn btn-ghost m-1 hover:bg-transparent"
-                    >
-                        <img :src="'/img/icon/wishlist.svg'" alt="" />
-                    </span>
-                </Link>
+                <span
+                    role="button"
+                    class="btn btn-ghost m-1 hover:bg-transparent"
+                >
+                    <img :src="'/img/icon/wishlist.svg'" alt="" />
+                </span>
 
                 <!-- Cart -->
                 <Link
