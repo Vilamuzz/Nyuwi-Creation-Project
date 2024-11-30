@@ -57,7 +57,7 @@ const formatPrice = (price) => {
 <template>
     <Head title="Shoping Cart" />
     <CustomersLayout>
-        <Hero />
+        <Hero title="Cart" breadcrumb="Home > Cart" />
         <section class="mx-24 flex flex-row my-16 gap-x-8">
             <!-- Bagian Tabel Produk -->
             <div class="w-3/4">

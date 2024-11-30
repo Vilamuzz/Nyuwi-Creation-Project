@@ -215,7 +215,7 @@ const totalWithShipping = computed(() => {
 <template>
     <Head title="Checkout" />
     <CustomersLayout>
-        <Hero />
+        <Hero title="Checkout" breadcrumb="Home > Cart > Checkout" />
         <form @submit.prevent="submitCheckout">
             <section class="mx-24 flex flex-row my-16 gap-x-8">
                 <div class="felx flex-col space-y-4 w-1/2">

@@ -22,6 +22,7 @@ const removeFromWishlist = (itemId) => {
 <template>
     <CustomersLayout>
         <Head title="My Wishlist" />
+        <Hero title="Wishlist" breadcrumb="Home > Wishlist" />
 
         <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <h1 class="text-2xl font-semibold mb-6">My Wishlist</h1>
