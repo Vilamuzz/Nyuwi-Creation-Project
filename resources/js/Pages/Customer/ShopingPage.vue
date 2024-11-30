@@ -75,5 +75,59 @@ const formatPrice = (price) => {
                 </nav>
             </div>
         </section>
+        <section class="bg-[#fdf7f2]">
+            <div class="flex justify-center py-20">
+                <div class="flex space-x-20">
+                    <div class="flex items-center space-x-2">
+                        <img
+                            src="/img/icon/trophy.svg"
+                            alt="High Quality"
+                            class="w-11 h-11"
+                        />
+                        <div>
+                            <h4 class="text-lg font-bold">High Quality</h4>
+                            <p class="text-gray-600">
+                                Crafted from top materials
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <img
+                            src="/img/icon/check-badge.svg"
+                            alt="Warranty Protection"
+                            class="w-12 h-12"
+                        />
+                        <div>
+                            <h4 class="text-lg font-bold">
+                                Warranty Protection
+                            </h4>
+                            <p class="text-gray-600">1 day</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <img
+                            src="/img/icon/boxheart.svg"
+                            alt="Free Shipping"
+                            class="w-10 h-10"
+                        />
+                        <div>
+                            <h4 class="text-lg font-bold">Free Shipping</h4>
+                            <p class="text-gray-600">Order over 10 $</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <img
+                            src="/img/icon/support.svg"
+                            alt="24/7 Support"
+                            class="w-11 h-11"
+                        />
+                        <div>
+                            <h4 class="text-lg font-bold">24 / 7 Support</h4>
+                            <p class="text-gray-600">Dedicated support</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </CustomersLayout>
 </template>
