@@ -1,8 +1,7 @@
-// resources/js/Pages/Customer/Wishlist.vue
-
 <script setup>
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
+import Hero from "@/Components/Customer/Main/Hero.vue";
 
 const props = defineProps({
     wishlistItems: Array,

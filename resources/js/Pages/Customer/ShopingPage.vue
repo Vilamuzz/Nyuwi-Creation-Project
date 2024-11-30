@@ -25,16 +25,72 @@ const formatPrice = (price) => {
 <template>
     <Head title="Shoping Page" />
     <CustomersLayout>
-        <Hero />
+        <Hero title="Shop" breadcrumb="Home > Shop" />
         <section class="bg-orange-200">
-            <div class="mx-24 flex flex-row justify-between py-8">
-                <div class="flex flex-row space-x-10">
-                    <div><h1 class="font-bold">Filter</h1></div>
-                    <div class="font-bold">Showing 1-16 of 32 Results</div>
+            <div
+                class="w-full bg-[#fdf7f2] py-4 px-6 flex items-center justify-between border-t border-b border-gray-200"
+            >
+                <div class="flex items-center space-x-4">
+                    <button
+                        class="flex items-center space-x-2 text-black hover:text-gray-800"
+                    >
+                        <!-- Icon -->
+                        <img
+                            src="/img/icon/filter.svg"
+                            alt="Filter Icon"
+                            class="h-5 w-5"
+                        />
+
+                        <!-- Text -->
+                        <span
+                            class="text-1xl"
+                            style="font-family: '', sans-serif"
+                            >Filter</span
+                        >
+                    </button>
+                    <button
+                        class="flex items-center text-gray-600 hover:text-gray-800"
+                    >
+                        <!-- Icon -->
+                        <img
+                            src="/img/icon/more.svg"
+                            alt="Filter Icon"
+                            class="w-5"
+                        />
+                    </button>
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-th-large text-gray-600"></i>
+                        <i class="fas fa-th-list text-gray-600"></i>
+                    </div>
+                    <div class="flex items-center space-x-4 -ml-2">
+                        <!-- Vertical Line -->
+                        <div
+                            class="border-l h-6 -ml-5 mx-2 border-gray-400"
+                        ></div>
+
+                        <!-- Text -->
+                        <span class="text-black"
+                            >Showing 1–16 of 32 results</span
+                        >
+                    </div>
                 </div>
-                <div class="flex flex-row space-x-10">
-                    <div>Show</div>
-                    <div>Short By</div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <span>Show</span>
+                        <input
+                            type="number"
+                            value="16"
+                            class="w-12 text-center text-gray-500 border border-gray-300 rounded-md"
+                        />
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span>Sort by</span>
+                        <select
+                            class="border border-gray-300 text-gray-500 rounded-md"
+                        >
+                            <option>Default</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </section>
