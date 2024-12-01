@@ -9,6 +9,7 @@ use App\Models\Category;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Route;
+use App\Models\ProductReview;
 
 class ProductController extends Controller
 {
@@ -208,10 +209,26 @@ class ProductController extends Controller
 
     public function landingPage()
     {
-        $products = Product::all()->take(8);
+        $products = Product::query()
+            ->withCount('reviews as total_reviews')
+            ->withAvg('reviews as average_rating', 'rating')
+            ->take(8)
+            ->get();
+
         $categories = Category::all();
+
         return Inertia::render('Customer/LandingPage', [
-            'products' => $products,
+            'products' => $products->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'price' => $product->price,
+                    'image' => $product->image,
+                    'category_id' => $product->category_id,
+                    'average_rating' => round($product->average_rating ?? 0, 1),
+                    'total_reviews' => $product->total_reviews ?? 0
+                ];
+            }),
             'categories' => $categories,
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
@@ -220,7 +237,9 @@ class ProductController extends Controller
 
     public function shop(Request $request)
     {
-        $query = Product::query();
+        $query = Product::query()
+            ->withCount('reviews as total_reviews')
+            ->withAvg('reviews as average_rating', 'rating');
 
         // Apply search filter
         if ($request->has('search')) {
@@ -242,7 +261,17 @@ class ProductController extends Controller
         $categories = Category::all();
 
         return Inertia::render('Customer/ShopingPage', [
-            'products' => $products,
+            'products' => $products->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'price' => $product->price,
+                    'image' => $product->image,
+                    'category_id' => $product->category_id,
+                    'average_rating' => round($product->average_rating ?? 0, 1),
+                    'total_reviews' => $product->total_reviews ?? 0
+                ];
+            }),
             'categories' => $categories,
             'filters' => $request->only(['search', 'sortField', 'sortDirection'])
         ]);
@@ -253,9 +282,22 @@ class ProductController extends Controller
         $product = Product::with(['sizes', 'colors'])->findOrFail($id);
         $categories = Category::all();
 
+        // Get reviews directly
+        $reviews = ProductReview::where('product_id', $id)
+            ->select('rating')
+            ->get();
+
+        $avgRating = $reviews->avg('rating');
+        $totalReviews = $reviews->count();
+
         return Inertia::render('Customer/Product', [
             'product' => $product,
-            'categories' => $categories
+            'categories' => $categories,
+            'productRating' => [
+                'average_rating' => round($avgRating, 1),
+                'total_reviews' => $totalReviews,
+                'ratings' => $reviews->pluck('rating')
+            ]
         ]);
     }
 }

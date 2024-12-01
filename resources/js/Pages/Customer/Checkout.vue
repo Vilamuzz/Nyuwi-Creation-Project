@@ -17,7 +17,7 @@ const form = useForm({
     province: "",
     phone: "",
     note: "",
-    payment_method: "",
+    payment_method: "", // Will be either 'digital_wallet' or 'cash_on_delivery'
     shipping_method: "",
     shipping_cost: 0, // Add shipping cost field
 });

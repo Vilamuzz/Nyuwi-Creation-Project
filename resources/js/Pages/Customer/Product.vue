@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, useForm } from "@inertiajs/vue3";
-import { ref, watch, onMounted } from "vue";
+import { ref, watch } from "vue";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 
 // Update form to handle product data
@@ -12,9 +12,17 @@ const form = useForm({
     color: "",
 });
 
+const wishlistForm = useForm({
+    product_id: null,
+});
+
 const quantity = ref(1);
 const selectedSize = ref("");
 const selectedColor = ref("");
+const errorMessage = ref("");
+const successMessage = ref("");
+const wishlistSuccessMessage = ref("");
+const wishlistErrorMessage = ref("");
 
 // Watch for quantity changes
 watch(quantity, (newValue) => {
@@ -36,14 +44,51 @@ const addToCart = () => {
             quantity.value = 1;
             selectedSize.value = "";
             selectedColor.value = "";
+            errorMessage.value = "";
+            // Set success message
+            successMessage.value = "Produk berhasil ditambahkan ke keranjang!";
+            // Clear success message after 3 seconds
+            setTimeout(() => {
+                successMessage.value = "";
+            }, 3000);
+        },
+        onError: (errors) => {
+            if (errors.quantity) {
+                errorMessage.value = errors.quantity;
+            }
+        },
+    });
+};
+
+const addToWishlist = (e) => {
+    e.preventDefault();
+    wishlistForm.product_id = props.product.id;
+
+    wishlistForm.post(route("wishlist.store"), {
+        preserveScroll: true,
+        onSuccess: () => {
+            wishlistForm.reset();
+            wishlistSuccessMessage.value =
+                "Produk berhasil ditambahkan ke wishlist!";
+            setTimeout(() => {
+                wishlistSuccessMessage.value = "";
+            }, 3000);
+        },
+        onError: (errors) => {
+            if (errors.message) {
+                wishlistErrorMessage.value = errors.message;
+                setTimeout(() => {
+                    wishlistErrorMessage.value = "";
+                }, 3000);
+            }
         },
     });
 };
 
 const props = defineProps({
-    errors: Object,
     product: Object,
     categories: Array,
+    productRating: Object,
 });
 
 const getCategoryName = (categoryId) => {
@@ -51,26 +96,7 @@ const getCategoryName = (categoryId) => {
     return category ? category.name : "Tidak ada kategori";
 };
 
-const productRating = ref({
-    average_rating: 0,
-    total_reviews: 0,
-    ratings: [],
-});
-
-const fetchProductReviews = async () => {
-    try {
-        const response = await axios.get(
-            `/products/${props.product.id}/reviews`
-        );
-        productRating.value = response.data;
-    } catch (error) {
-        console.error("Error fetching product reviews:", error);
-    }
-};
-
-onMounted(() => {
-    fetchProductReviews();
-});
+// Remove fetchProductReviews function and onMounted hook since we now get data directly
 </script>
 
 <template>
@@ -189,14 +215,14 @@ onMounted(() => {
                         <button
                             type="button"
                             @click="quantity > 1 ? quantity-- : null"
-                            class="p-4 hover:bg-orange-500 rounded-l-md hover:text-white duration-300"
+                            class="p-4 border-l border-y border-gray-300 hover:bg-orange-500 rounded-l-md hover:text-white duration-300"
                         >
                             -
                         </button>
                         <input
                             type="number"
                             v-model="quantity"
-                            class="p-4 hover:bg-orange-500 hover:text-white duration-300 w-16"
+                            class="border-x-0 border-y border-gray-300 text-center p-4 hover:bg-orange-500 hover:text-white duration-300 w-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             min="1"
                             :max="product.stock"
                         />
@@ -205,18 +231,20 @@ onMounted(() => {
                             @click="
                                 quantity < product.stock ? quantity++ : null
                             "
-                            class="p-4 hover:bg-orange-500 rounded-r-md hover:text-white duration-300"
+                            class="p-4 border-r border-y border-gray-300 hover:bg-orange-500 rounded-r-md hover:text-white duration-300"
                         >
                             +
                         </button>
                     </div>
+
                     <button
                         @click="addToCart"
                         class="rounded-md border border-gray-300 px-10 py-4 hover:bg-orange-500 hover:text-white duration-300"
                         :disabled="
                             product.stock < 1 ||
                             (!selectedSize && product.sizes?.length) ||
-                            (!selectedColor && product.colors?.length)
+                            (!selectedColor && product.colors?.length) ||
+                            quantity > product.stock
                         "
                     >
                         {{
@@ -226,9 +254,199 @@ onMounted(() => {
                                 ? "Please select size"
                                 : !selectedColor && product.colors?.length
                                 ? "Please select color"
+                                : quantity > product.stock
+                                ? "Not enough stock"
                                 : "Add To Cart"
                         }}
                     </button>
+
+                    <button
+                        @click.prevent="addToWishlist"
+                        class="rounded-md border border-gray-300 px-10 py-4 hover:bg-orange-500 hover:text-white duration-300"
+                    >
+                        Add To Wishlist
+                    </button>
+
+                    <!-- Toast notification with close button -->
+                    <div
+                        v-if="errorMessage"
+                        class="fixed top-24 right-24 z-50 rounded-md bg-red-50 p-4 shadow-lg"
+                    >
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <svg
+                                        class="h-5 w-5 text-red-400"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                            clip-rule="evenodd"
+                                        />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-red-800">
+                                        {{ errorMessage }}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                @click="errorMessage = ''"
+                                class="ml-4 text-red-400 hover:text-red-500"
+                            >
+                                <svg
+                                    class="h-5 w-5"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Success notification -->
+                    <div
+                        v-if="successMessage"
+                        class="fixed top-24 right-24 z-50 rounded-md bg-green-50 p-4 shadow-lg"
+                    >
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <svg
+                                        class="h-5 w-5 text-green-400"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                            clip-rule="evenodd"
+                                        />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <p
+                                        class="text-sm font-medium text-green-800"
+                                    >
+                                        {{ successMessage }}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                @click="successMessage = ''"
+                                class="ml-4 text-green-400 hover:text-green-500"
+                            >
+                                <svg
+                                    class="h-5 w-5"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div
+                        v-if="wishlistSuccessMessage"
+                        class="fixed top-24 right-24 z-50 rounded-md bg-green-50 p-4 shadow-lg"
+                    >
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <svg
+                                        class="h-5 w-5 text-green-400"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                            clip-rule="evenodd"
+                                        />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <p
+                                        class="text-sm font-medium text-green-800"
+                                    >
+                                        {{ wishlistSuccessMessage }}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                @click="wishlistSuccessMessage = ''"
+                                class="ml-4 text-green-400 hover:text-green-500"
+                            >
+                                <svg
+                                    class="h-5 w-5"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Add error message toast -->
+                    <div
+                        v-if="wishlistErrorMessage"
+                        class="fixed top-24 right-24 z-50 rounded-md bg-red-50 p-4 shadow-lg"
+                    >
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0">
+                                    <svg
+                                        class="h-5 w-5 text-red-400"
+                                        viewBox="0 0 20 20"
+                                        fill="currentColor"
+                                    >
+                                        <path
+                                            fill-rule="evenodd"
+                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                            clip-rule="evenodd"
+                                        />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-red-800">
+                                        {{ wishlistErrorMessage }}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                @click="wishlistErrorMessage = ''"
+                                class="ml-4 text-red-400 hover:text-red-500"
+                            >
+                                <svg
+                                    class="h-5 w-5"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                        clip-rule="evenodd"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

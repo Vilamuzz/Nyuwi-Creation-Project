@@ -15,10 +15,17 @@ const props = defineProps({
         type: String,
         required: true,
     },
-
     image: {
         type: String,
         default: null,
+    },
+    rating: {
+        type: Number,
+        default: 0,
+    },
+    totalReviews: {
+        type: Number,
+        default: 0,
     },
 });
 
@@ -53,12 +60,6 @@ const addToWishlist = (e) => {
                 class="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 text-white text-lg font-semibold rounded-t-md opacity-0 hover:opacity-100 transition-opacity duration-300"
             >
                 <button
-                    @click.stop="addToCart"
-                    class="p-2 px-8 bg-white text-orange-500 text-sm mb-2"
-                >
-                    Add To Cart
-                </button>
-                <button
                     @click.stop="addToWishlist"
                     class="p-2 px-8 bg-white text-orange-500 text-sm"
                 >
@@ -70,7 +71,33 @@ const addToWishlist = (e) => {
         <div class="p-4">
             <h2 class="text-lg font-bold">{{ name }}</h2>
 
-            <h2 class="text-lg font-bold">{{ price }}</h2>
+            <!-- Add rating display -->
+            <div class="flex items-center mt-1">
+                <div class="flex">
+                    <div v-for="star in 5" :key="star">
+                        <svg
+                            :class="[
+                                'w-4 h-4',
+                                star <= Math.round(rating)
+                                    ? 'text-yellow-400'
+                                    : 'text-gray-300',
+                            ]"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.462a1 1 0 00.95-.69l1.07-3.292z"
+                            />
+                        </svg>
+                    </div>
+                </div>
+                <span class="text-sm text-gray-600 ml-1"
+                    >({{ totalReviews }})</span
+                >
+            </div>
+
+            <h2 class="text-lg font-bold mt-2">{{ price }}</h2>
         </div>
     </Link>
 </template>

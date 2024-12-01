@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('province');
             $table->string('phone');
             $table->decimal('total_price', 15, 2);
-            $table->enum('payment_method', ['E-Wallet', 'cash_on_delivery'])->default('cash_on_delivery');
+            $table->enum('payment_method', ['digital_wallet', 'cash_on_delivery'])->default('cash_on_delivery');
             $table->text('note')->nullable();
             $table->enum('status', ['awaiting', 'pending', 'processing', 'shiping', 'completed', 'cancelled'])->default('processing');
             $table->string('shipping_method')->nullable();

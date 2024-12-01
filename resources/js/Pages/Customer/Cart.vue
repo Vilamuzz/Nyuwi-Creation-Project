@@ -106,13 +106,15 @@ const formatPrice = (price) => {
                                         </span>
                                     </div>
                                 </td>
-                                <td class="px-4 py-4">{{ item.price }}</td>
+                                <td class="px-4 py-4">
+                                    {{ formatPrice(item.price) }}
+                                </td>
                                 <td class="px-4 py-4">
                                     <input
                                         type="number"
                                         :value="item.quantity"
                                         min="1"
-                                        class="w-16 px-2 py-1 border rounded-md"
+                                        class="text-center w-16 px-2 py-1 border rounded-md [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                         @change="
                                             updateQuantity(
                                                 item,
@@ -122,7 +124,9 @@ const formatPrice = (price) => {
                                     />
                                 </td>
                                 <td class="px-4 py-4">
-                                    {{ item.price * item.quantity }}
+                                    {{
+                                        formatPrice(item.price * item.quantity)
+                                    }}
                                 </td>
                                 <td class="px-4 py-4">
                                     <button
@@ -153,11 +157,19 @@ const formatPrice = (price) => {
                 <p>Total: {{ formatPrice(cartTotal) }}</p>
                 <div class="mt-4 flex items-center">
                     <Link
-                        :href="route('order.store')"
+                        v-if="cartItems && cartItems.length > 0"
+                        :href="route('checkout')"
                         class="w-full text-center px-8 py-2 border border-black hover:border-transparent hover:text-white rounded-md hover:bg-orange-500 duration-150"
                     >
                         Checkout
                     </Link>
+                    <button
+                        v-else
+                        disabled
+                        class="w-full text-center px-8 py-2 border border-gray-300 text-gray-500 rounded-md bg-gray-100 cursor-not-allowed"
+                    >
+                        Checkout
+                    </button>
                 </div>
             </div>
         </section>

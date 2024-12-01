@@ -110,6 +110,8 @@ const formatPrice = (price) => {
                         :price="formatPrice(item.price)"
                         :category="getCategoryName(item.category_id)"
                         :image="item.image"
+                        :rating="item.average_rating || 0"
+                        :total-reviews="item.total_reviews || 0"
                     />
                 </div>
                 <Link

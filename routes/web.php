@@ -98,4 +98,11 @@ Route::get('/api/villages/{districtId}', function ($districtId) {
     return $district->villages;
 });
 
+Route::middleware(['auth'])->group(function () {
+    // Add new middleware to check cart
+    Route::get('/checkout', [CartController::class, 'showCheckout'])
+        ->middleware('check.cart')
+        ->name('checkout');
+});
+
 require __DIR__ . '/auth.php';

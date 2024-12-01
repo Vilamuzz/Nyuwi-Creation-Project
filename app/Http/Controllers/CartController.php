@@ -24,21 +24,36 @@ class CartController extends Controller
             'color' => 'nullable|string'
         ]);
 
-        // Cek apakah produk dengan size dan color yang sama sudah ada di cart
-        $cartItem = Cart::where([
+        // Get product and check stock
+        $product = Product::findOrFail($request->product_id);
+
+        // Check if adding this quantity would exceed available stock
+        $existingCartItem = Cart::where([
             'user_id' => Auth::id(),
             'product_id' => $request->product_id,
             'size' => $request->size,
             'color' => $request->color
         ])->first();
 
-        if ($cartItem) {
-            // Update quantity jika item sudah ada
-            $cartItem->update([
-                'quantity' => $cartItem->quantity + $request->quantity
+        $totalQuantity = $request->quantity;
+        if ($existingCartItem) {
+            $totalQuantity += $existingCartItem->quantity;
+        }
+
+        // Validate against available stock
+        if ($totalQuantity > $product->stock) {
+            return back()->withErrors([
+                'quantity' => 'Jumlah melebihi stok yang tersedia. Stok tersedia: ' . $product->stock
+            ]);
+        }
+
+        if ($existingCartItem) {
+            // Update quantity if item exists
+            $existingCartItem->update([
+                'quantity' => $totalQuantity
             ]);
         } else {
-            // Buat item baru jika belum ada
+            // Create new cart item
             Cart::create([
                 'user_id' => Auth::id(),
                 'product_id' => $request->product_id,
@@ -84,6 +99,15 @@ class CartController extends Controller
         ]);
 
         $cartItem = Cart::findOrFail($id);
+        $product = Product::findOrFail($cartItem->product_id);
+
+        // Check if new quantity exceeds available stock
+        if ($request->quantity > $product->stock) {
+            return back()->withErrors([
+                'quantity' => 'Jumlah melebihi stok yang tersedia. Stok tersedia: ' . $product->stock
+            ]);
+        }
+
         $cartItem->update([
             'quantity' => $request->quantity
         ]);
@@ -96,6 +120,11 @@ class CartController extends Controller
         $cartItems = Cart::with('product')
             ->where('user_id', Auth::id())
             ->get();
+
+        // Redirect back if cart is empty
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('cart.show')->with('error', 'Keranjang belanja kosong. Silakan tambahkan produk terlebih dahulu.');
+        }
 
         return Inertia::render('Customer/Checkout', [
             'cartItems' => $cartItems
