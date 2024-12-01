@@ -25,6 +25,9 @@ const role = props.auth?.user?.role || null;
                 >Shop</Link
             >
             <Link href="#" class="font-bold hover:text-orange-500">About</Link>
+            <Link href="#" class="font-bold hover:text-orange-500"
+                >Contact</Link
+            >
         </div>
 
         <!-- Icons or Actions -->

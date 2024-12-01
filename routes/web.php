@@ -24,10 +24,6 @@ Route::get('/shop', [ProductController::class, 'shop'])->name('shop');
 
 Route::get('/product/{id}', [ProductController::class, 'product'])->name('product');
 
-Route::get('cart', function () {
-    return Inertia::render('Customer/Cart');
-});
-
 Route::get('customer/profile', [OrderController::class, 'orderUser'])->middleware('auth');
 
 Route::get('dashboard', function () {

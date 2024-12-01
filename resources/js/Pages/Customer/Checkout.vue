@@ -1,5 +1,5 @@
 <script setup>
-import { Head, useForm } from "@inertiajs/vue3";
+import { Head, useForm, router } from "@inertiajs/vue3";
 import { computed, ref, onMounted, watch } from "vue";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Customer/Main/Hero.vue";
@@ -52,16 +52,29 @@ const closeModal = () => {
     showModal.value = false;
 };
 
-// Update confirmCheckout to include shipping cost
+// Di Checkout.vue, modifikasi fungsi confirmCheckout
 const confirmCheckout = () => {
+    if (!form.payment_method) {
+        form.setError("payment_method", "Payment method is required");
+        return;
+    }
+
     form.shipping_cost = selectedShippingRate.value
         ? parseInt(selectedShippingRate.value.price)
         : 0;
+
     form.post(route("order.store"), {
         preserveScroll: true,
         onSuccess: () => {
             closeModal();
-            form.reset();
+            if (form.payment_method === "digital_wallet") {
+                localStorage.setItem("showPaymentInfo", "true");
+                localStorage.setItem("paymentAmount", totalWithShipping.value);
+            }
+            // Ganti dengan router Inertia
+            router.visit(route("cart.show"), {
+                preserveScroll: true,
+            });
         },
     });
 };
