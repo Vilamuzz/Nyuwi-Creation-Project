@@ -15,10 +15,7 @@ const props = defineProps({
         type: String,
         required: true,
     },
-    category: {
-        type: String,
-        required: true,
-    },
+
     image: {
         type: String,
         default: null,
@@ -72,7 +69,7 @@ const addToWishlist = (e) => {
 
         <div class="p-4">
             <h2 class="text-lg font-bold">{{ name }}</h2>
-            <p class="text-gray-500">{{ category }}</p>
+
             <h2 class="text-lg font-bold">{{ price }}</h2>
         </div>
     </Link>

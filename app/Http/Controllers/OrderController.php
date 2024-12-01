@@ -161,8 +161,13 @@ class OrderController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $reviews = ProductReview::with(['product', 'order'])
+            ->where('user_id', Auth::id())
+            ->get();
+
         return Inertia::render('Customer/Dashboard', [
-            'orders' => $orders
+            'orders' => $orders,
+            'reviews' => $reviews
         ]);
     }
 }

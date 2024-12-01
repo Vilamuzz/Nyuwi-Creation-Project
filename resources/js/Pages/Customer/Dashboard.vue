@@ -3,13 +3,16 @@ import { Head, useForm } from "@inertiajs/vue3";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
+import Hero from "@/Components/Customer/Main/Hero.vue";
 
 const props = defineProps({
     orders: Array,
+    reviews: Array, // Tambahkan props reviews
 });
 
-// Create a ref from props.orders
+// Create refs from props
 const orders = ref(props.orders);
+const userReviews = ref(props.reviews); // Gunakan data reviews dari props
 
 const selectedAction = ref("history");
 const showOrderModal = ref(false);
@@ -18,6 +21,7 @@ const trackingInfo = ref(null);
 const trackingError = ref(null);
 const showTrackingInfo = ref(false);
 const expandedOrders = ref(new Set());
+const isLoadingTracking = ref(false); // Tambahkan state untuk loading
 
 const reviewForm = useForm({
     order_id: null,
@@ -39,6 +43,7 @@ const openOrderModal = async (order) => {
 
     // Immediately fetch tracking info if available
     if (order.tracking_number && order.shipping_method) {
+        isLoadingTracking.value = true; // Set loading true
         try {
             const response = await axios.get(
                 "https://api.binderbyte.com/v1/track",
@@ -60,6 +65,8 @@ const openOrderModal = async (order) => {
         } catch (error) {
             trackingError.value = "Failed to fetch tracking information";
             console.error("Tracking error:", error);
+        } finally {
+            isLoadingTracking.value = false; // Set loading false
         }
     }
 };
@@ -160,6 +167,10 @@ const selectedReviewOrder = ref(null);
 
 const openReviewModal = (order) => {
     selectedReviewOrder.value = order;
+    // Filter reviews for this specific order
+    const orderReviews = userReviews.value.filter(
+        (review) => review.order_id === order.id
+    );
     showReviewModal.value = true;
 };
 
@@ -167,29 +178,13 @@ const closeReviewModal = () => {
     showReviewModal.value = false;
     selectedReviewOrder.value = null;
 };
-
-// Add to existing refs
-const userReviews = ref([]);
-
-// Add this function
-const fetchUserReviews = async () => {
-    try {
-        const response = await axios.get("/user/reviews");
-        userReviews.value = response.data;
-    } catch (error) {
-        console.error("Error fetching reviews:", error);
-    }
-};
-
-// Call this in the mounted hook
-onMounted(() => {
-    fetchUserReviews();
-});
 </script>
 
 <template>
-    <Head title="Dashboard" />
-    <CustomersLayout>
+    <Head title="Profile" />
+
+    <CustomersLayout
+        ><Hero title="Profile" breadcrumb="Home > Profile" />
         <section class="mx-16 flex flex-row my-8 gap-x-8">
             <!-- Sidebar -->
             <div class="w-1/4">
@@ -414,24 +409,25 @@ onMounted(() => {
                                     v-if="selectedOrder?.tracking_number"
                                     class="mt-6"
                                 >
+                                    <!-- Loading Indicator -->
                                     <div
-                                        class="flex justify-between items-center mb-4"
+                                        v-if="isLoadingTracking"
+                                        class="flex justify-center items-center py-4"
                                     >
-                                        <h4 class="font-semibold">
-                                            Tracking Information
-                                        </h4>
+                                        <div
+                                            class="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"
+                                        ></div>
+                                        <span class="ml-2"
+                                            >Loading tracking
+                                            information...</span
+                                        >
                                     </div>
 
-                                    <p class="mb-4">
-                                        <span class="font-semibold"
-                                            >Tracking Number:</span
-                                        >
-                                        {{ selectedOrder.tracking_number }}
-                                    </p>
-
-                                    <!-- Tracking Results -->
+                                    <!-- Tracking Information -->
                                     <div
-                                        v-if="showTrackingInfo && trackingInfo"
+                                        v-else-if="
+                                            showTrackingInfo && trackingInfo
+                                        "
                                         class="border rounded-lg p-4"
                                     >
                                         <div class="mb-4">
@@ -481,8 +477,9 @@ onMounted(() => {
                                         </div>
                                     </div>
 
+                                    <!-- Error Message -->
                                     <div
-                                        v-if="trackingError"
+                                        v-else-if="trackingError"
                                         class="text-red-500 mt-2"
                                     >
                                         {{ trackingError }}
@@ -553,7 +550,7 @@ onMounted(() => {
                                                                 fill="currentColor"
                                                             >
                                                                 <path
-                                                                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                                                                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118l-2.8-2.034c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
                                                                 />
                                                             </svg>
                                                         </button>
@@ -610,7 +607,6 @@ onMounted(() => {
                             v-for="order in reviewedOrders"
                             :key="order.id"
                             class="border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
-                            @click="openReviewModal(order)"
                         >
                             <div class="flex justify-between items-center">
                                 <div>
@@ -675,7 +671,11 @@ onMounted(() => {
                                 <div class="p-6">
                                     <div class="space-y-4">
                                         <div
-                                            v-for="review in userReviews"
+                                            v-for="review in userReviews.filter(
+                                                (r) =>
+                                                    r.order_id ===
+                                                    selectedReviewOrder.id
+                                            )"
                                             :key="review.id"
                                             class="border rounded-lg p-4 flex items-center justify-between"
                                         >
@@ -696,6 +696,7 @@ onMounted(() => {
                                                     <div
                                                         class="flex items-center space-x-1"
                                                     >
+                                                        <!-- Star rating -->
                                                         <div
                                                             v-for="star in 5"
                                                             :key="star"
