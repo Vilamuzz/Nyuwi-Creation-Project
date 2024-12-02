@@ -170,4 +170,33 @@ class OrderController extends Controller
             'reviews' => $reviews
         ]);
     }
+
+    public function getInfo()
+    {
+        $orders = Order::where('user_id', Auth::id())->get();
+        return response()->json(['orders' => $orders]);
+    }
+
+    public function uploadPaymentProof(Request $request)
+    {
+        $request->validate([
+            'order_id' => 'required|exists:orders,id',
+            'payment_proof' => 'required|image|mimes:jpeg,png,jpg|max:2048'
+        ]);
+
+        $order = Order::findOrFail($request->order_id);
+
+        if ($request->hasFile('payment_proof')) {
+            $proof = $request->file('payment_proof');
+            $proofName = time() . '.' . $proof->getClientOriginalExtension();
+            $proof->storeAs('payment_proofs', $proofName, 'public');
+
+            $order->update([
+                'payment_proof' => $proofName,
+                'status' => 'pending'
+            ]);
+        }
+
+        return back()->with('success', 'Bukti pembayaran berhasil diunggah');
+    }
 }

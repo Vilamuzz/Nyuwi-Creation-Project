@@ -60,26 +60,23 @@ const addToCart = () => {
     });
 };
 
-const addToWishlist = (e) => {
+const addToFavorites = (e) => {
     e.preventDefault();
-    wishlistForm.product_id = props.product.id;
+    favoriteForm.product_id = props.product.id;
 
-    wishlistForm.post(route("wishlist.store"), {
+    favoriteForm.post(route("favorites.store"), {
         preserveScroll: true,
         onSuccess: () => {
-            wishlistForm.reset();
-            wishlistSuccessMessage.value =
-                "Produk berhasil ditambahkan ke wishlist!";
+            favoriteForm.reset();
+            favoriteSuccessMessage.value =
+                "Produk berhasil ditambahkan ke favorit!";
             setTimeout(() => {
-                wishlistSuccessMessage.value = "";
+                favoriteSuccessMessage.value = "";
             }, 3000);
         },
         onError: (errors) => {
             if (errors.message) {
-                wishlistErrorMessage.value = errors.message;
-                setTimeout(() => {
-                    wishlistErrorMessage.value = "";
-                }, 3000);
+                favoriteErrorMessage.value = errors.message;
             }
         },
     });

@@ -28,6 +28,16 @@ const reviewForm = useForm({
     reviews: [], // Will contain {product_id, rating} objects
 });
 
+// Add new form for payment proof
+const paymentProofForm = useForm({
+    order_id: null,
+    payment_proof: null,
+});
+
+// Add new state for payment proof modal
+const showPaymentProofModal = ref(false);
+const selectedPaymentOrder = ref(null);
+
 const openOrderModal = async (order) => {
     selectedOrder.value = order;
     showOrderModal.value = true;
@@ -90,10 +100,12 @@ const formatPrice = (price) => {
     }).format(price);
 };
 
+// Modify getStatusClass to add awaiting payment style
 const getStatusClass = (status) => {
     return {
         "px-2 py-1 text-xs font-semibold rounded-full": true,
         "bg-yellow-100 text-yellow-800": status === "awaiting",
+        "bg-orange-100 text-orange-800": status === "awaiting_payment",
         "bg-blue-100 text-blue-800": status === "processing",
         "bg-green-100 text-green-800": status === "completed",
         "bg-red-100 text-red-800": status === "cancelled",
@@ -178,6 +190,34 @@ const closeReviewModal = () => {
     showReviewModal.value = false;
     selectedReviewOrder.value = null;
 };
+
+// Add methods for payment proof handling
+const openPaymentProofModal = (order) => {
+    selectedPaymentOrder.value = order;
+    showPaymentProofModal.value = true;
+};
+
+const closePaymentProofModal = () => {
+    showPaymentProofModal.value = false;
+    selectedPaymentOrder.value = null;
+    paymentProofForm.reset();
+};
+
+const handlePaymentProofUpload = (e) => {
+    paymentProofForm.payment_proof = e.target.files[0];
+};
+
+const submitPaymentProof = () => {
+    paymentProofForm.order_id = selectedPaymentOrder.value.id;
+    paymentProofForm.post(route("orders.upload-proof"), {
+        preserveScroll: true,
+        onSuccess: () => {
+            closePaymentProofModal();
+            // Optionally refresh orders
+            window.location.reload();
+        },
+    });
+};
 </script>
 
 <template>
@@ -245,6 +285,20 @@ const closeReviewModal = () => {
                                     <span :class="getStatusClass(order.status)">
                                         {{ order.status }}
                                     </span>
+
+                                    <!-- Add payment proof button for digital wallet orders -->
+                                    <button
+                                        v-if="
+                                            order.payment_method ===
+                                                'digital_wallet' &&
+                                            order.status === 'awaiting'
+                                        "
+                                        @click="openPaymentProofModal(order)"
+                                        class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+                                    >
+                                        Upload Bukti Pembayaran
+                                    </button>
+
                                     <button
                                         @click="openOrderModal(order)"
                                         class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
@@ -799,4 +853,81 @@ const closeReviewModal = () => {
             </div>
         </section>
     </CustomersLayout>
+
+    <!-- Payment Proof Modal -->
+    <div
+        v-if="showPaymentProofModal"
+        class="fixed inset-0 z-50 overflow-y-auto"
+    >
+        <div
+            class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+        ></div>
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative bg-white rounded-lg max-w-md w-full shadow-xl">
+                <!-- Modal Header -->
+                <div class="px-6 py-4 border-b">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xl font-semibold">
+                            Upload Bukti Pembayaran
+                        </h3>
+                        <button
+                            @click="closePaymentProofModal"
+                            class="text-gray-400 hover:text-gray-500"
+                        >
+                            ×
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Content -->
+                <form @submit.prevent="submitPaymentProof" class="p-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700"
+                            >
+                                Order #{{ selectedPaymentOrder?.id }}
+                            </label>
+                            <div class="mt-2">
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    @input="handlePaymentProofUpload"
+                                    class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                                    required
+                                />
+                            </div>
+                            <div
+                                v-if="paymentProofForm.errors.payment_proof"
+                                class="text-red-500 text-sm mt-1"
+                            >
+                                {{ paymentProofForm.errors.payment_proof }}
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button
+                                type="button"
+                                @click="closePaymentProofModal"
+                                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+                                :disabled="paymentProofForm.processing"
+                            >
+                                {{
+                                    paymentProofForm.processing
+                                        ? "Uploading..."
+                                        : "Upload"
+                                }}
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </template>

@@ -12,6 +12,9 @@ const showTrackingInfo = ref(false);
 const trackingInfo = ref(null);
 const trackingError = ref(null);
 
+// Add new state for payment proof modal
+const showPaymentProofModal = ref(false);
+
 const form = useForm({
     status: "processing",
     tracking_number: "",
@@ -86,6 +89,26 @@ const formatPrice = (price) => {
         currency: "IDR",
         minimumFractionDigits: 0,
     }).format(price);
+};
+
+// Add method to open/close payment proof modal
+const openPaymentProofModal = () => {
+    showPaymentProofModal.value = true;
+};
+
+const closePaymentProofModal = () => {
+    showPaymentProofModal.value = false;
+};
+
+// Add method to approve payment and update status
+const approvePayment = () => {
+    form.status = "processing";
+    form.put(route("orders.update", props.order.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            closePaymentProofModal();
+        },
+    });
 };
 </script>
 
@@ -457,6 +480,105 @@ const formatPrice = (price) => {
                                     >
                                         Cancel
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add button to view payment proof -->
+                    <div
+                        v-if="order.payment_method === 'digital_wallet'"
+                        class="mt-4"
+                    >
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold">Payment Proof:</p>
+                                <p
+                                    v-if="order.payment_proof"
+                                    class="text-sm text-gray-600"
+                                >
+                                    Payment proof uploaded
+                                </p>
+                                <p v-else class="text-sm text-red-500">
+                                    Waiting for payment proof
+                                </p>
+                            </div>
+                            <button
+                                v-if="order.payment_proof"
+                                @click="openPaymentProofModal"
+                                class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            >
+                                View Payment Proof
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Payment Proof Modal -->
+                    <div
+                        v-if="showPaymentProofModal"
+                        class="fixed inset-0 z-50 overflow-y-auto"
+                    >
+                        <div
+                            class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+                        ></div>
+                        <div
+                            class="flex min-h-full items-center justify-center p-4"
+                        >
+                            <div
+                                class="relative bg-white rounded-lg max-w-3xl w-full shadow-xl"
+                            >
+                                <!-- Modal Header -->
+                                <div class="px-6 py-4 border-b">
+                                    <div
+                                        class="flex justify-between items-center"
+                                    >
+                                        <h3 class="text-xl font-semibold">
+                                            Payment Proof
+                                        </h3>
+                                        <button
+                                            @click="closePaymentProofModal"
+                                            class="text-gray-400 hover:text-gray-500"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Modal Content -->
+                                <div class="p-6">
+                                    <div class="space-y-4">
+                                        <div class="aspect-w-16 aspect-h-9">
+                                            <img
+                                                :src="`/storage/payment_proofs/${order.payment_proof}`"
+                                                :alt="
+                                                    'Payment proof for order #' +
+                                                    order.id
+                                                "
+                                                class="object-contain w-full h-full"
+                                            />
+                                        </div>
+
+                                        <!-- Action buttons for admin -->
+                                        <div
+                                            class="flex justify-end space-x-3 mt-4"
+                                        >
+                                            <button
+                                                @click="closePaymentProofModal"
+                                                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                                            >
+                                                Close
+                                            </button>
+                                            <button
+                                                v-if="
+                                                    order.status === 'awaiting'
+                                                "
+                                                @click="approvePayment"
+                                                class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+                                            >
+                                                Approve Payment
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

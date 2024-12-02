@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\WishlistController;
@@ -30,6 +31,9 @@ Route::get('dashboard', function () {
     return Inertia::render('Admin/Dashboard');
 })->name('dashboard');
 
+Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+
 Route::resource('inventory', ProductController::class)->names([
     'index' => 'products.index',
     'create' => 'products.create',
@@ -54,6 +58,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/cart', [CartController::class, 'showCart'])->name('cart.show');
     Route::delete('/cart/{id}', [CartController::class, 'removeFromCart'])->name('cart.remove');
     Route::put('/cart/{id}', [CartController::class, 'updateCart'])->name('cart.update');
+    Route::get('orders/info', [OrderController::class, 'getInfo'])->name('orders.info');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -67,6 +72,7 @@ Route::get('/orders', [OrderController::class, 'show'])->name('orders.show');
 Route::get('/orders/{id}', [OrderController::class, 'detail'])->name('orders.detail');
 Route::put('/orders/{id}', [OrderController::class, 'update'])->name('orders.update');
 Route::post('/orders/complete', [OrderController::class, 'complete'])->name('orders.complete');
+Route::post('orders/upload-proof', [OrderController::class, 'uploadPaymentProof'])->name('orders.upload-proof');
 
 Route::get('/user/reviews', [ProductReviewController::class, 'getUserReviews'])
     ->middleware(['auth'])

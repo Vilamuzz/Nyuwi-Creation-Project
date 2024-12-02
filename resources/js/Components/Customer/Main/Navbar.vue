@@ -1,11 +1,17 @@
 <script setup>
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
-
 import { usePage, Link } from "@inertiajs/vue3";
+import { computed } from "vue";
 
-const { props } = usePage();
-const isLoggedIn = props.auth.user;
-const role = props.auth?.user?.role || null;
+const props = defineProps({
+    isLoggedIn: Boolean,
+    orders: Array, // Tambahkan prop orders
+});
+
+// Computed property untuk cek order awaiting
+const hasAwaitingOrders = computed(() => {
+    return props.orders?.some((order) => order.status === "awaiting");
+});
 </script>
 
 <template>
@@ -35,20 +41,34 @@ const role = props.auth?.user?.role || null;
             <!-- Only show these items if user is logged in -->
             <template v-if="isLoggedIn">
                 <!-- Dropdown -->
-                <div class="dropdown">
+                <div class="dropdown relative">
                     <span
                         tabindex="0"
                         role="button"
-                        class="btn btn-ghost m-1 hover:bg-transparent"
+                        class="btn btn-ghost m-1 hover:bg-transparent relative"
                     >
                         <img :src="'/img/icon/profile.svg'" alt="" />
+                        <!-- Badge Notifikasi -->
+                        <div
+                            v-if="hasAwaitingOrders"
+                            class="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"
+                        ></div>
                     </span>
                     <ul
                         tabindex="0"
                         class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow"
                     >
                         <li>
-                            <Link href="customer/profile">Profile</Link>
+                            <Link href="customer/profile" class="relative">
+                                Profile
+                                <!-- Badge di menu dropdown -->
+                                <span
+                                    v-if="hasAwaitingOrders"
+                                    class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-500 rounded-full ml-2"
+                                >
+                                    !
+                                </span>
+                            </Link>
                         </li>
                         <li>
                             <Link :href="route('logout')" method="post"

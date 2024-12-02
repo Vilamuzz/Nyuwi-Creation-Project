@@ -20,6 +20,7 @@ class Order extends Model
         'phone',
         'total_price',
         'payment_method',
+        'payment_proof',
         'note',
         'status',
         'shipping_method',
