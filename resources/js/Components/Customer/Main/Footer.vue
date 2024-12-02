@@ -1,3 +1,19 @@
+<script setup>
+import { Link } from "@inertiajs/vue3";
+import { ref } from "vue";
+import PaymentInformationModal from "@/Components/Customer/Sub-main/PaymentInformationModal.vue";
+
+const showPaymentModal = ref(false);
+
+const openPaymentModal = () => {
+    showPaymentModal.value = true;
+};
+
+const closePaymentModal = () => {
+    showPaymentModal.value = false;
+};
+</script>
+
 <template>
     <div class="flex flex-row space-x-4 px-24 py-20 justify-between item-start">
         <div class="flex flex-col items-start space-y-10 w-1/4">
@@ -9,22 +25,55 @@
         </div>
         <div class="flex flex-col space-y-10">
             <h1>Link</h1>
-            <a href="" class="font-bold">Home</a>
-            <a href="" class="font-bold">Shop</a>
-            <a href="" class="font-bold">About</a>
-            <a href="" class="font-bold">Contact</a>
+            <Link href="/" class="font-bold hover:text-orange-500"> Home </Link>
+            <Link href="/shop" class="font-bold hover:text-orange-500">
+                Shop
+            </Link>
+            <Link href="#" class="font-bold hover:text-orange-500">
+                About
+            </Link>
         </div>
         <div class="flex flex-col space-y-10">
             <h1>Help</h1>
-            <a href="" class="font-bold">Payment Option</a>
-            <a href="" class="font-bold">Returns</a>
-            <a href="" class="font-bold">Privacy Policies</a>
+            <button
+                @click="openPaymentModal"
+                class="font-bold hover:text-orange-500 text-left"
+            >
+                Payment Information
+            </button>
         </div>
-        <div class="flex flex-col space-y-10">
-            <h1>Newsletter</h1>
-            <form action="">
-                <input type="text" name="" id="" />
-            </form>
+        <div class="flex flex-col space-y-6">
+            <h1 class="text-center">Contact</h1>
+            <div class="flex flex-row">
+                <a href="https://wa.me/+6289514923727" target="_blank"
+                    ><span
+                        role="button"
+                        class="btn btn-ghost m-1 hover:bg-transparent"
+                    >
+                        <img
+                            :src="'/img/icon/whatsapp.svg'"
+                            class="w-5"
+                            alt=""
+                        />
+                    </span>
+                </a>
+                <a href="https://instagram.com/nyuwi.creation" target="_blank"
+                    ><span
+                        role="button"
+                        class="btn btn-ghost m-1 hover:bg-transparent"
+                    >
+                        <img
+                            :src="'/img/icon/instagram.svg'"
+                            class="w-5"
+                            alt=""
+                        />
+                    </span>
+                </a>
+            </div>
         </div>
     </div>
+    <PaymentInformationModal
+        v-if="showPaymentModal"
+        :on-close="closePaymentModal"
+    />
 </template>

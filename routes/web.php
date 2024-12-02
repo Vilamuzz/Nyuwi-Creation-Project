@@ -25,7 +25,7 @@ Route::get('/shop', [ProductController::class, 'shop'])->name('shop');
 
 Route::get('/product/{id}', [ProductController::class, 'product'])->name('product');
 
-Route::get('customer/profile', [OrderController::class, 'orderUser'])->middleware('auth');
+Route::get('customer/profile', [OrderController::class, 'orderUser'])->middleware('auth')->name('customer.profile');
 
 Route::get('dashboard', function () {
     return Inertia::render('Admin/Dashboard');

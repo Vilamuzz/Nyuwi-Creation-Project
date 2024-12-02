@@ -11,15 +11,15 @@ const props = defineProps({
 });
 
 const search = ref(props.filters?.search || "");
-const sortField = ref(props.filters?.sortField || "");
-const sortDirection = ref(props.filters?.sortDirection || "asc");
+const sortField = ref("created_at");
+const sortDirection = ref("desc");
 
 // Available sort options
 const sortOptions = [
+    { field: "created_at", label: "Terbaru", direction: "desc", default: true }, // Default option
+    { field: "created_at", label: "Terlama", direction: "asc" },
     { field: "name", label: "Nama (A-Z)", direction: "asc" },
     { field: "name", label: "Nama (Z-A)", direction: "desc" },
-    { field: "created_at", label: "Terbaru", direction: "desc" },
-    { field: "created_at", label: "Terlama", direction: "asc" },
     { field: "price", label: "Harga (Rendah-Tinggi)", direction: "asc" },
     { field: "price", label: "Harga (Tinggi-Rendah)", direction: "desc" },
     { field: "stock", label: "Stok (Rendah-Tinggi)", direction: "asc" },
@@ -114,11 +114,14 @@ const formatPrice = (price) => {
                                 class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 :value="`${sortField}|${sortDirection}`"
                             >
-                                <option value="">Urutkan Berdasarkan</option>
                                 <option
                                     v-for="option in sortOptions"
                                     :key="`${option.field}-${option.direction}`"
                                     :value="`${option.field}|${option.direction}`"
+                                    :selected="
+                                        option.field === sortField &&
+                                        option.direction === sortDirection
+                                    "
                                 >
                                     {{ option.label }}
                                 </option>

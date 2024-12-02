@@ -31,9 +31,6 @@ const hasAwaitingOrders = computed(() => {
                 >Shop</Link
             >
             <Link href="#" class="font-bold hover:text-orange-500">About</Link>
-            <Link href="#" class="font-bold hover:text-orange-500"
-                >Contact</Link
-            >
         </div>
 
         <!-- Icons or Actions -->
@@ -59,7 +56,10 @@ const hasAwaitingOrders = computed(() => {
                         class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow"
                     >
                         <li>
-                            <Link href="customer/profile" class="relative">
+                            <Link
+                                :href="route('customer.profile')"
+                                class="relative"
+                            >
                                 Profile
                                 <!-- Badge di menu dropdown -->
                                 <span

@@ -72,7 +72,7 @@ const formatPrice = (price) => {
                     <!-- Category Card (Reusable) -->
                     <div class="flex flex-col items-center space-y-4 w-[300px]">
                         <img
-                            :src="'/img/background/category1.svg'"
+                            :src="'/img/products/acc.jpg'"
                             alt="Category Image"
                             class="rounded-lg w-full object-cover"
                         />
@@ -80,19 +80,19 @@ const formatPrice = (price) => {
                     </div>
                     <div class="flex flex-col items-center space-y-4 w-[300px]">
                         <img
-                            :src="'/img/background/category1.svg'"
+                            :src="'/img/products/deco.jpg'"
                             alt="Category Image"
                             class="rounded-lg w-full object-cover"
                         />
-                        <h2 class="text-2xl font-bold">Clothing</h2>
+                        <h2 class="text-2xl font-bold">Decoration</h2>
                     </div>
                     <div class="flex flex-col items-center space-y-4 w-[300px]">
                         <img
-                            :src="'/img/background/category1.svg'"
+                            :src="'/img/products/buck.jpg'"
                             alt="Category Image"
                             class="rounded-lg w-full object-cover"
                         />
-                        <h2 class="text-2xl font-bold">Footwear</h2>
+                        <h2 class="text-2xl font-bold">Bucket</h2>
                     </div>
                 </div>
             </div>

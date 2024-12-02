@@ -241,8 +241,13 @@ class ProductController extends Controller
             ->withCount('reviews as total_reviews')
             ->withAvg('reviews as average_rating', 'rating');
 
+        // Apply category filter
+        if ($request->has('category') && !empty($request->category)) {
+            $query->where('category_id', $request->category);
+        }
+
         // Apply search filter
-        if ($request->has('search')) {
+        if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'LIKE', "%{$search}%")
@@ -254,26 +259,16 @@ class ProductController extends Controller
         if ($request->has('sortField') && $request->has('sortDirection')) {
             $query->orderBy($request->sortField, $request->sortDirection);
         } else {
-            $query->latest(); // Default sorting
+            $query->latest();
         }
 
         $products = $query->get();
         $categories = Category::all();
 
         return Inertia::render('Customer/ShopingPage', [
-            'products' => $products->map(function ($product) {
-                return [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'price' => $product->price,
-                    'image' => $product->image,
-                    'category_id' => $product->category_id,
-                    'average_rating' => round($product->average_rating ?? 0, 1),
-                    'total_reviews' => $product->total_reviews ?? 0
-                ];
-            }),
+            'products' => $products,
             'categories' => $categories,
-            'filters' => $request->only(['search', 'sortField', 'sortDirection'])
+            'filters' => $request->only(['search', 'sortField', 'sortDirection', 'category'])
         ]);
     }
 

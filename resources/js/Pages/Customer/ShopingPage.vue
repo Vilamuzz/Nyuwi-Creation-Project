@@ -13,19 +13,20 @@ const props = defineProps({
     filters: Object,
 });
 
-// Add search and sort states
+// Add search, sort and category states
 const search = ref(props.filters?.search || "");
-const sortField = ref(props.filters?.sortField || "");
-const sortDirection = ref(props.filters?.sortDirection || "asc");
+const sortField = ref(props.filters?.sortField || "created_at");
+const sortDirection = ref(props.filters?.sortDirection || "desc");
+const selectedCategory = ref(props.filters?.category || ""); // Add category filter
 
 // Define sort options
 const sortOptions = [
-    { field: "name", label: "Name (A-Z)", direction: "asc" },
-    { field: "name", label: "Name (Z-A)", direction: "desc" },
-    { field: "created_at", label: "Newest", direction: "desc" },
-    { field: "created_at", label: "Oldest", direction: "asc" },
-    { field: "price", label: "Price (Low-High)", direction: "asc" },
-    { field: "price", label: "Price (High-Low)", direction: "desc" },
+    { field: "created_at", label: "Terbaru", direction: "desc", default: true },
+    { field: "created_at", label: "Terlama", direction: "asc" },
+    { field: "name", label: "Nama (A-Z)", direction: "asc" },
+    { field: "name", label: "Nama (Z-A)", direction: "desc" },
+    { field: "price", label: "Harga (Rendah-Tinggi)", direction: "asc" },
+    { field: "price", label: "Harga (Tinggi-Rendah)", direction: "desc" },
 ];
 
 // Watch for search changes with debounce
@@ -35,6 +36,11 @@ watch(
         updateFilters({ search: value });
     }, 300)
 );
+
+// Watch for category changes
+watch(selectedCategory, (value) => {
+    updateFilters({ category: value });
+});
 
 // Handle sorting
 const handleSort = (event) => {
@@ -55,6 +61,7 @@ const updateFilters = (newFilters) => {
             search: search.value,
             sortField: sortField.value,
             sortDirection: sortDirection.value,
+            category: selectedCategory.value,
             ...newFilters,
         },
         {
@@ -88,43 +95,22 @@ const formatPrice = (price) => {
                 class="w-full bg-[#fdf7f2] py-4 px-24 flex items-center justify-between border-t border-b border-gray-200"
             >
                 <div class="flex items-center space-x-4">
-                    <button
-                        class="flex items-center space-x-2 text-black hover:text-gray-800"
+                    <span>Filter by</span>
+                    <!-- Category Filter Dropdown -->
+                    <select
+                        v-model="selectedCategory"
+                        class="px-4 py-2 border w-32 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                     >
-                        <!-- Icon -->
-                        <img
-                            src="/img/icon/filter.svg"
-                            alt="Filter Icon"
-                            class="h-5 w-5"
-                        />
-
-                        <!-- Text -->
-                        <span
-                            class="text-1xl"
-                            style="font-family: '', sans-serif"
-                            >Filter</span
+                        <option value="">All</option>
+                        <option
+                            v-for="category in categories"
+                            :key="category.id"
+                            :value="category.id"
                         >
-                    </button>
-                    <button
-                        class="flex items-center text-gray-600 hover:text-gray-800"
-                    >
-                        <!-- Icon -->
-                        <img
-                            src="/img/icon/more.svg"
-                            alt="Filter Icon"
-                            class="w-5"
-                        />
-                    </button>
-                    <div class="flex items-center space-x-2">
-                        <i class="fas fa-th-large text-gray-600"></i>
-                        <i class="fas fa-th-list text-gray-600"></i>
-                    </div>
-                    <div class="flex items-center space-x-4 -ml-2">
-                        <!-- Vertical Line -->
-                        <div
-                            class="border-l h-6 -ml-3 mx-2 border-gray-400"
-                        ></div>
-                    </div>
+                            {{ category.name }}
+                        </option>
+                    </select>
+
                     <!-- Search Input -->
                     <div class="relative">
                         <input
@@ -153,6 +139,10 @@ const formatPrice = (price) => {
                                 v-for="option in sortOptions"
                                 :key="`${option.field}-${option.direction}`"
                                 :value="`${option.field}|${option.direction}`"
+                                :selected="
+                                    option.field === sortField &&
+                                    option.direction === sortDirection
+                                "
                             >
                                 {{ option.label }}
                             </option>
