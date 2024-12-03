@@ -100,7 +100,6 @@ const formatPrice = (price) => {
     }).format(price);
 };
 
-// Modify getStatusClass to add awaiting payment style
 const getStatusClass = (status) => {
     return {
         "px-2 py-1 text-xs font-semibold rounded-full": true,
@@ -293,7 +292,7 @@ const submitPaymentProof = () => {
                                         v-if="
                                             order.payment_method ===
                                                 'digital_wallet' &&
-                                            order.status === 'awaiting'
+                                            order.status === 'waiting'
                                         "
                                         @click="openPaymentProofModal(order)"
                                         class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"

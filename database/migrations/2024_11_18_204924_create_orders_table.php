@@ -26,8 +26,8 @@ return new class extends Migration
             $table->string('payment_proof')->nullable();
             $table->text('note')->nullable();
             $table->enum('status', [
-                'waiting',      // Ganti dari awaiting
-                'checking',     // Status baru
+                'waiting',
+                'checking',
                 'pending',
                 'processing',
                 'shiping',

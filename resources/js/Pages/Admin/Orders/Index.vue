@@ -79,7 +79,7 @@ const formatPrice = (price) => {
                                         :class="{
                                             'px-2 py-1 text-xs font-semibold rounded-full': true,
                                             'bg-yellow-100 text-yellow-800':
-                                                order.status === 'awaiting',
+                                                order.status === 'waiting',
                                             'bg-orange-100 text-orange-800':
                                                 order.status === 'pending',
                                             'bg-green-100 text-green-800':

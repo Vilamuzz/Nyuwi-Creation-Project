@@ -235,7 +235,7 @@ const totalWithShipping = computed(() => {
                     <h1 class="font-bold text-2xl">Billing details</h1>
 
                     <div class="flex flex-col space-y-2">
-                        <label for="first_name">First Name</label>
+                        <label for="first_name">Name</label>
                         <input
                             v-model="form.name"
                             type="text"

@@ -695,7 +695,7 @@ const cancelOrder = () => {
                                             </button>
                                             <button
                                                 v-if="
-                                                    order.status === 'awaiting'
+                                                    order.status === 'waiting'
                                                 "
                                                 @click="approvePayment"
                                                 class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
