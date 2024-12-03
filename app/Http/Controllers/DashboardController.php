@@ -15,7 +15,7 @@ class DashboardController extends Controller
         // Get top selling products
         $topSelling = Product::withCount(['orderItems as total_sold' => function ($query) {
             $query->whereHas('order', function ($q) {
-                $q->whereNotIn('status', ['cancelled']);
+                $q->whereNotIn('status', ['cancelled', 'waiting', 'checking']);
             });
         }])
             ->orderByDesc('total_sold')

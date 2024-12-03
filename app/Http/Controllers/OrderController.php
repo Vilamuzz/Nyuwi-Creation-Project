@@ -34,13 +34,17 @@ class OrderController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:pending,processing,shiping,completed,cancelled',
+            'status' => 'required_if:tracking_number,null|in:pending,processing,shiping,completed,cancelled',
             'tracking_number' => 'required_if:shipping_method,!=,GoSend'
         ]);
 
         $order = Order::findOrFail($id);
 
-        // If tracking number is provided, update status to 'shiping'
+        // Don't allow cancellation if order is shipping
+        if ($request->status === 'cancelled' && $order->status === 'shiping') {
+            return back()->with('error', 'Cannot cancel order that is already being shipped');
+        }
+
         if ($request->has('tracking_number')) {
             $order->update([
                 'tracking_number' => $request->tracking_number,
@@ -101,7 +105,7 @@ class OrderController extends Controller
                     'payment_method' => $request->payment_method,
                     'shipping_method' => $request->shipping_method,
                     'note' => $request->note,
-                    'status' => 'awaiting'
+                    'status' => 'waiting'
                 ]);
 
                 // Create order items
@@ -193,7 +197,7 @@ class OrderController extends Controller
 
             $order->update([
                 'payment_proof' => $proofName,
-                'status' => 'pending'
+                'status' => 'checking'
             ]);
         }
 

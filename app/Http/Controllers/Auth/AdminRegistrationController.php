@@ -13,45 +13,33 @@ use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class RegisteredUserController extends Controller
+class AdminRegistrationController extends Controller
 {
-    /**
-     * Display the registration view.
-     */
     public function create(): Response
     {
-        return Inertia::render('Auth/Register');
+        return Inertia::render('Auth/AdminRegister');
     }
 
-    /**
-     * Handle an incoming registration request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:' . User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'admin_code' => 'required|in:' . env('ADMIN_REGISTRATION_CODE')
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'pelanggan' // Set default role sebagai pelanggan
+            'role' => 'admin'
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        // Redirect berdasarkan role
-        if ($user->role === 'pelanggan') {
-            return redirect('/'); // Redirect ke landing page
-        }
-
-        return redirect(route('dashboard', absolute: false));
+        return redirect()->route('dashboard');
     }
 }

@@ -10,7 +10,7 @@ const props = defineProps({
 
 // Computed property untuk cek order awaiting
 const hasAwaitingOrders = computed(() => {
-    return props.orders?.some((order) => order.status === "awaiting");
+    return props.orders?.some((order) => order.status === "waiting");
 });
 </script>
 

@@ -110,6 +110,39 @@ const approvePayment = () => {
         },
     });
 };
+
+const showEditTrackingModal = ref(false);
+const editTrackingForm = useForm({
+    tracking_number: "",
+});
+
+const openEditTrackingModal = () => {
+    editTrackingForm.tracking_number = props.order.tracking_number;
+    showEditTrackingModal.value = true;
+};
+
+const closeEditTrackingModal = () => {
+    showEditTrackingModal.value = false;
+    editTrackingForm.reset();
+};
+
+const updateTrackingNumber = () => {
+    editTrackingForm.put(route("orders.update", props.order.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            closeEditTrackingModal();
+        },
+    });
+};
+
+const cancelOrder = () => {
+    if (confirm("Are you sure you want to cancel this order?")) {
+        form.status = "cancelled";
+        form.put(route("orders.update", props.order.id), {
+            preserveScroll: true,
+        });
+    }
+};
 </script>
 
 <template>
@@ -168,7 +201,13 @@ const approvePayment = () => {
                                         :class="{
                                             'px-2 py-1 text-xs font-semibold rounded-full': true,
                                             'bg-yellow-100 text-yellow-800':
-                                                order.status === 'awaiting',
+                                                order.status === 'waiting',
+                                            'bg-purple-100 text-purple-800':
+                                                order.status === 'checking',
+                                            'bg-purple-100 text-cyan-800':
+                                                order.status === 'shiping',
+                                            'bg-orange-100 text-orange-800':
+                                                order.status === 'pending',
                                             'bg-blue-100 text-blue-800':
                                                 order.status === 'processing',
                                             'bg-green-100 text-green-800':
@@ -330,6 +369,16 @@ const approvePayment = () => {
                         <p class="mb-4">
                             <span class="font-semibold">Tracking Number:</span>
                             {{ order.tracking_number }}
+                            <button
+                                v-if="
+                                    order.tracking_number &&
+                                    order.shipping_method !== 'GoSend'
+                                "
+                                @click="openEditTrackingModal"
+                                class="ml-2 px-2 py-1 text-sm bg-yellow-500 text-white rounded hover:bg-yellow-600"
+                            >
+                                Edit
+                            </button>
                         </p>
 
                         <!-- Tracking Information Display -->
@@ -389,6 +438,19 @@ const approvePayment = () => {
 
                     <!-- Status Update Buttons -->
                     <div class="mt-6 flex justify-end space-x-4">
+                        <button
+                            v-if="
+                                order.status !== 'shiping' &&
+                                order.status !== 'completed' &&
+                                order.status !== 'cancelled'
+                            "
+                            @click="cancelOrder"
+                            class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                        >
+                            Cancel Order
+                        </button>
+
+                        <!-- Existing Accept Order button -->
                         <button
                             @click="openTrackingModal"
                             :disabled="
@@ -480,6 +542,69 @@ const approvePayment = () => {
                                     >
                                         Cancel
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Edit Tracking Number Modal -->
+                    <div
+                        v-if="showEditTrackingModal"
+                        class="fixed inset-0 z-50 overflow-y-auto"
+                    >
+                        <div
+                            class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+                        ></div>
+                        <div
+                            class="flex min-h-full items-center justify-center p-4"
+                        >
+                            <div
+                                class="relative bg-white rounded-lg max-w-lg w-full shadow-xl"
+                            >
+                                <div class="px-6 py-4 border-b">
+                                    <h3 class="text-lg font-semibold">
+                                        Edit Tracking Number
+                                    </h3>
+                                </div>
+
+                                <div class="p-6">
+                                    <div class="mb-4">
+                                        <label
+                                            class="block text-sm font-medium text-gray-700"
+                                        >
+                                            New Tracking Number
+                                        </label>
+                                        <input
+                                            v-model="
+                                                editTrackingForm.tracking_number
+                                            "
+                                            type="text"
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div class="flex justify-end space-x-3">
+                                        <button
+                                            @click="closeEditTrackingModal"
+                                            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            @click="updateTrackingNumber"
+                                            class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                                            :disabled="
+                                                editTrackingForm.processing
+                                            "
+                                        >
+                                            {{
+                                                editTrackingForm.processing
+                                                    ? "Updating..."
+                                                    : "Update"
+                                            }}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

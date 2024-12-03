@@ -25,7 +25,15 @@ return new class extends Migration
             $table->enum('payment_method', ['digital_wallet', 'cash_on_delivery'])->default('cash_on_delivery');
             $table->string('payment_proof')->nullable();
             $table->text('note')->nullable();
-            $table->enum('status', ['awaiting', 'pending', 'processing', 'shiping', 'completed', 'cancelled'])->default('processing');
+            $table->enum('status', [
+                'waiting',      // Ganti dari awaiting
+                'checking',     // Status baru
+                'pending',
+                'processing',
+                'shiping',
+                'completed',
+                'cancelled'
+            ])->default('waiting'); // Ubah default juga
             $table->string('shipping_method')->nullable();
             $table->string('tracking_number')->nullable(); // Add tracking number column
             $table->timestamps();

@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\Auth\AdminRegistrationController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -105,6 +106,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/checkout', [CartController::class, 'showCheckout'])
         ->middleware('check.cart')
         ->name('checkout');
+});
+
+Route::middleware('guest')->group(function () {
+    // Add new admin registration route
+    Route::get('admin/register', [AdminRegistrationController::class, 'create'])
+        ->name('admin.register');
+    Route::post('admin/register', [AdminRegistrationController::class, 'store']);
 });
 
 require __DIR__ . '/auth.php';
