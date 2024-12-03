@@ -82,37 +82,5 @@ import CustomersLayout from "@/Layouts/CustomersLayout.vue";
                 </div>
             </div>
         </section>
-
-        <section class="bg-white py-20 px-10">
-            <div class="flex items-center justify-between">
-                <!-- Kontak WhatsApp -->
-                <div class="flex items-center space-x-4">
-                    <img
-                        src="/img/icon/whatsapp.svg"
-                        alt="whatsapp"
-                        class="w-10 h-10"
-                    />
-                    <div>
-                        <h4 class="text-lg text-[#b5853b]">
-                            +62 895-5417-5120
-                        </h4>
-                    </div>
-                </div>
-
-                <!-- Gambar di Samping -->
-                <div class="flex space-x-7 mr-10">
-                    <img
-                        src="/img/product/aksesoris6.jpg"
-                        alt="Product 1"
-                        class="w-80 h-81 rounded-lg object-cover"
-                    />
-                    <img
-                        src="/img/product/aksesoris5.jpg"
-                        alt="Product 2"
-                        class="w-80 h-81 rounded-lg object-cover"
-                    />
-                </div>
-            </div>
-        </section>
     </CustomersLayout>
 </template>
