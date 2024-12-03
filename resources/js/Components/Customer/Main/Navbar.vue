@@ -30,7 +30,9 @@ const hasAwaitingOrders = computed(() => {
             <Link href="/shop" class="font-bold hover:text-orange-500"
                 >Shop</Link
             >
-            <Link href="#" class="font-bold hover:text-orange-500">About</Link>
+            <Link href="/about" class="font-bold hover:text-orange-500">
+                About
+            </Link>
         </div>
 
         <!-- Icons or Actions -->

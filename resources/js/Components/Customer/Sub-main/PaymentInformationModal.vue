@@ -36,11 +36,6 @@ defineProps({
                 <div class="p-6">
                     <div class="space-y-4">
                         <div class="text-center">
-                            <img
-                                src="/img/dana-logo.png"
-                                alt="DANA"
-                                class="h-16 mx-auto mb-4"
-                            />
                             <p class="text-lg font-semibold mb-2">
                                 Silakan transfer ke:
                             </p>

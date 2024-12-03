@@ -34,6 +34,9 @@ Route::get('dashboard', function () {
 
 Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+Route::get('/about', function () {
+    return Inertia::render('Customer/About');
+})->name('about');
 
 Route::resource('inventory', ProductController::class)->names([
     'index' => 'products.index',

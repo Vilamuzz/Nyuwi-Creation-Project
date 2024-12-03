@@ -19,8 +19,8 @@ const closePaymentModal = () => {
         <div class="flex flex-col items-start space-y-10 w-1/4">
             <h1 class="font-bold text-2xl">Nyuwi.</h1>
             <p>
-                Margorejo RT.04/RW.03, Karanganom, North Klaten, Klaten Central
-                Java 57438.
+                Margorejo RT.04/RW.03, Karanganom, Klaten Utara, Kabupaten
+                Klaten 57438.
             </p>
         </div>
         <div class="flex flex-col space-y-10">
@@ -29,7 +29,7 @@ const closePaymentModal = () => {
             <Link href="/shop" class="font-bold hover:text-orange-500">
                 Shop
             </Link>
-            <Link href="#" class="font-bold hover:text-orange-500">
+            <Link href="/about" class="font-bold hover:text-orange-500">
                 About
             </Link>
         </div>
