@@ -1,5 +1,6 @@
 <script setup>
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
+
 import { usePage, Link } from "@inertiajs/vue3";
 
 const { props } = usePage();
@@ -19,9 +20,20 @@ const role = props.auth?.user?.role || null;
 
         <!-- Links -->
         <div class="hidden md:flex space-x-10 text-gray-700">
+<<<<<<< HEAD
             <Link href="/" class="font-bold hover:text-[#b5853b]">Home</Link>
             <Link href="/shop" class="font-bold hover:text-[#b5853b]">Shop</Link>
             <Link href="/about" class="font-bold hover:text-[#b5853b]">About</Link>
+=======
+            <Link href="/" class="font-bold hover:text-orange-500">Home</Link>
+            <Link href="/shop" class="font-bold hover:text-orange-500"
+                >Shop</Link
+            >
+            <Link href="#" class="font-bold hover:text-orange-500">About</Link>
+            <Link href="#" class="font-bold hover:text-orange-500"
+                >Contact</Link
+            >
+>>>>>>> parent of 9235155 (edit hero.vue)
         </div>
 
         <!-- Icons or Actions -->
