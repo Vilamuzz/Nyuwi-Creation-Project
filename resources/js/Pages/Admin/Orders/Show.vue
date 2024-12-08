@@ -137,9 +137,19 @@ const updateTrackingNumber = () => {
 
 const cancelOrder = () => {
     if (confirm("Are you sure you want to cancel this order?")) {
-        form.status = "cancelled";
-        form.put(route("orders.update", props.order.id), {
+        const cancelForm = useForm({
+            status: "cancelled",
+        });
+
+        cancelForm.put(route("orders.update", props.order.id), {
             preserveScroll: true,
+            onSuccess: () => {
+                // Optional: tambahkan feedback sukses
+            },
+            onError: (errors) => {
+                // Optional: tambahkan handling error
+                console.error("Error cancelling order:", errors);
+            },
         });
     }
 };

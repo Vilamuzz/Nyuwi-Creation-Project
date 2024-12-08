@@ -121,8 +121,19 @@ const toggleOrder = (orderId) => {
     }
 };
 
-// Add new computed property
+// Modifikasi computed property isDelivered
 const isDelivered = computed(() => {
+    if (!selectedOrder.value) return false;
+
+    // Jika menggunakan GoSend dan status shiping, langsung bisa review
+    if (
+        selectedOrder.value.shipping_method === "GoSend" &&
+        selectedOrder.value.status === "shiping"
+    ) {
+        return true;
+    }
+
+    // Untuk kurir lain, cek status tracking
     return trackingInfo.value?.summary?.status?.toLowerCase() === "delivered";
 });
 

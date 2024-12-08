@@ -45,12 +45,13 @@ class OrderController extends Controller
             return back()->with('error', 'Cannot cancel order that is already being shipped');
         }
 
+        // Perbaiki logika update
         if ($request->has('tracking_number')) {
             $order->update([
                 'tracking_number' => $request->tracking_number,
                 'status' => 'shiping'
             ]);
-        } else {
+        } else if ($request->has('status')) { // Tambahkan pengecekan status
             $order->update([
                 'status' => $request->status
             ]);
