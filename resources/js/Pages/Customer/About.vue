@@ -9,7 +9,7 @@ import CustomersLayout from "@/Layouts/CustomersLayout.vue";
     <CustomersLayout>
         <Hero
             title="About"
-            :subtitle="'Home > About'"
+            breadcrumb="Home > About"
             backgroundImage="/img/background/hero.svg"
         />
         <section class="bg-[#ffffff] py-20">
