@@ -20,7 +20,7 @@ const formatPrice = (price) => {
 </script>
 
 <template>
-    <Head title="Dashboard Admin" />
+    <Head title="Dashboard" />
     <AdminLayout>
         <div class="p-6">
             <h1 class="text-2xl font-semibold text-gray-800 mb-6">Dashboard</h1>

@@ -26,15 +26,6 @@ const hasAwaitingOrders = computed(() => {
 
         <!-- Links -->
         <div class="hidden md:flex space-x-10 text-gray-700">
-            <<<<<<< HEAD
-            <Link href="/" class="font-bold hover:text-[#b5853b]">Home</Link>
-            <Link href="/shop" class="font-bold hover:text-[#b5853b]"
-                >Shop</Link
-            >
-            <Link href="/about" class="font-bold hover:text-[#b5853b]"
-                >About</Link
-            >
-            =======
             <Link href="/" class="font-bold hover:text-orange-500">Home</Link>
             <Link href="/shop" class="font-bold hover:text-orange-500"
                 >Shop</Link
@@ -90,12 +81,14 @@ const hasAwaitingOrders = computed(() => {
                 </div>
 
                 <!-- Wishlist -->
-                <span
-                    role="button"
-                    class="btn btn-ghost m-1 hover:bg-transparent"
-                >
-                    <img :src="'/img/icon/wishlist.svg'" alt="" />
-                </span>
+                <Link :href="route('wishlist.index')"
+                    ><span
+                        role="button"
+                        class="btn btn-ghost m-1 hover:bg-transparent"
+                    >
+                        <img :src="'/img/icon/wishlist.svg'" alt="" />
+                    </span>
+                </Link>
 
                 <!-- Cart -->
                 <Link
