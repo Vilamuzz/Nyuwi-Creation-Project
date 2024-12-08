@@ -38,6 +38,7 @@ const addToWishlist = (e) => {
     form.post(route("wishlist.store"));
 };
 </script>
+
 <template>
     <Link
         :href="route('product', { id: id })"

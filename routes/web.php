@@ -62,6 +62,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/cart', [CartController::class, 'showCart'])->name('cart.show');
     Route::delete('/cart/{id}', [CartController::class, 'removeFromCart'])->name('cart.remove');
     Route::put('/cart/{id}', [CartController::class, 'updateCart'])->name('cart.update');
+    Route::get('orders/info', [OrderController::class, 'getInfo'])->name('orders.info');
 });
 
 Route::middleware(['auth'])->group(function () {
