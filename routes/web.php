@@ -8,6 +8,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\Auth\AdminRegistrationController;
+use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -116,6 +117,21 @@ Route::middleware('guest')->group(function () {
     Route::get('admin/register', [AdminRegistrationController::class, 'create'])
         ->name('admin.register');
     Route::post('admin/register', [AdminRegistrationController::class, 'store']);
+});
+
+// Group all admin routes under admin middleware
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+    Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
+    Route::post('/products', [ProductController::class, 'store'])->name('products.store');
+    Route::get('/products/{id}/edit', [ProductController::class, 'edit'])->name('products.edit');
+    Route::put('/products/{id}', [ProductController::class, 'update'])->name('products.update');
+    Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('products.destroy');
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('verify-email', EmailVerificationPromptController::class)
+        ->name('verification.notice');
 });
 
 require __DIR__ . '/auth.php';

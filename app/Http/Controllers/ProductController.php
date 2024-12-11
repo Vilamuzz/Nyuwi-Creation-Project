@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Route;
 use App\Models\ProductReview;
+use App\Models\OrderItem;
 
 class ProductController extends Controller
 {
@@ -203,8 +204,21 @@ class ProductController extends Controller
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
+
+        // Check if product is in any active orders
+        $hasActiveOrders = OrderItem::whereHas('order', function ($query) {
+            $query->whereNotIn('status', ['completed', 'cancelled']);
+        })->where('product_id', $id)->exists();
+
+        if ($hasActiveOrders) {
+            return redirect()->back()
+                ->with('error', 'Cannot delete product that is part of an active order');
+        }
+
+        // Delete product if no active orders
         $product->delete();
-        return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
+        return redirect()->route('products.index')
+            ->with('success', 'Product deleted successfully.');
     }
 
     public function landingPage()
