@@ -20,59 +20,74 @@ use App\Models\Regency;
 use App\Models\District;
 use App\Models\Order;
 
-Route::get('/', [ProductController::class, 'landingPage']);
-
-Route::get('/shop', [ProductController::class, 'shop'])->name('shop');
-
-Route::get('/product/{id}', [ProductController::class, 'product'])->name('product');
-
-Route::get('customer/profile', [OrderController::class, 'orderUser'])->middleware('auth')->name('customer.profile');
-
-Route::get('dashboard', function () {
-    return Inertia::render('Admin/Dashboard');
-})->name('dashboard');
-
-Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-Route::get('/about', function () {
-    return Inertia::render('Customer/About');
-})->name('about');
-
-Route::resource('inventory', ProductController::class)->names([
-    'index' => 'products.index',
-    'create' => 'products.create',
-    'store' => 'products.store',
-    'show' => 'products.show',
-    'edit' => 'products.edit',
-    'update' => 'products.update',
-    'destroy' => 'products.destroy',
-]);
-
-Route::get('/checkout', [CartController::class, 'showCheckout'])->name('checkout');
-
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+// Public Routes (Add customer middleware to prevent admin access)
+Route::middleware(['customer'])->group(function () {
+    Route::get('/', [ProductController::class, 'landingPage']);
+    Route::get('/about', function () {
+        return Inertia::render('Customer/About');
+    })->name('about');
+    Route::get('/shop', [ProductController::class, 'shop'])->name('shop');
+    Route::get('/product/{id}', [ProductController::class, 'product'])->name('product');
 });
 
-// Cart routes
+// Customer Only Routes
+Route::middleware(['auth', 'customer'])->group(function () {
+    // Customer Profile
+    Route::prefix('customer')->name('customer.')->group(function () {
+        Route::get('profile', [OrderController::class, 'orderUser'])->name('profile');
+    });
+
+    // Cart Routes
+    Route::prefix('cart')->name('cart.')->group(function () {
+        Route::get('/', [CartController::class, 'showCart'])->name('show');
+        Route::post('/add', [CartController::class, 'addToCart'])->name('add');
+        Route::put('/{id}', [CartController::class, 'updateCart'])->name('update');
+        Route::delete('/{id}', [CartController::class, 'removeFromCart'])->name('remove');
+    });
+
+    // Checkout Route
+    Route::get('/checkout', [CartController::class, 'showCheckout'])
+        ->middleware('check.cart')
+        ->name('checkout');
+
+    // Wishlist Routes
+    Route::prefix('wishlist')->name('wishlist.')->group(function () {
+        Route::get('/', [WishlistController::class, 'index'])->name('index');
+        Route::post('/', [WishlistController::class, 'store'])->name('store');
+        Route::delete('/{id}', [WishlistController::class, 'destroy'])->name('destroy');
+    });
+});
+
+// Admin Routes
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::resource('inventory', ProductController::class)->names([
+        'index' => 'products.index',
+        'create' => 'products.create',
+        'store' => 'products.store',
+        'show' => 'products.show',
+        'edit' => 'products.edit',
+        'update' => 'products.update',
+        'destroy' => 'products.destroy',
+    ]);
+    Route::get('/orders', [OrderController::class, 'show'])->name('orders.show');
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [ProfileController::class, 'edit'])->name('edit');
+        Route::patch('/', [ProfileController::class, 'update'])->name('update');
+        Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
+    });
+});
+
 Route::middleware(['auth'])->group(function () {
-    Route::post('/cart/add', [CartController::class, 'addToCart'])->name('cart.add');
-    Route::get('/cart', [CartController::class, 'showCart'])->name('cart.show');
-    Route::delete('/cart/{id}', [CartController::class, 'removeFromCart'])->name('cart.remove');
-    Route::put('/cart/{id}', [CartController::class, 'updateCart'])->name('cart.update');
     Route::get('orders/info', [OrderController::class, 'getInfo'])->name('orders.info');
-});
-
-Route::middleware(['auth'])->group(function () {
     Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
     Route::post('/wishlist', [WishlistController::class, 'store'])->name('wishlist.store');
     Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy'])->name('wishlist.destroy');
 });
 
 Route::post('/checkout', [OrderController::class, 'store'])->name('order.store');
-Route::get('/orders', [OrderController::class, 'show'])->name('orders.show');
+
 Route::get('/orders/{id}', [OrderController::class, 'detail'])->name('orders.detail');
 Route::put('/orders/{id}', [OrderController::class, 'update'])->name('orders.update');
 Route::post('/orders/complete', [OrderController::class, 'complete'])->name('orders.complete');
@@ -102,13 +117,6 @@ Route::get('/api/districts/{cityId}', function ($cityId) {
 Route::get('/api/villages/{districtId}', function ($districtId) {
     $district = District::findOrFail($districtId);
     return $district->villages;
-});
-
-Route::middleware(['auth'])->group(function () {
-    // Add new middleware to check cart
-    Route::get('/checkout', [CartController::class, 'showCheckout'])
-        ->middleware('check.cart')
-        ->name('checkout');
 });
 
 Route::middleware('guest')->group(function () {

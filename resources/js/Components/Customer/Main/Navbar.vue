@@ -5,7 +5,7 @@ import { computed } from "vue";
 
 const props = defineProps({
     isLoggedIn: Boolean,
-    orders: Array, // Tambahkan prop orders
+    orders: Array,
 });
 
 // Computed property untuk cek order awaiting
@@ -73,7 +73,10 @@ const hasAwaitingOrders = computed(() => {
                             </Link>
                         </li>
                         <li>
-                            <Link :href="route('logout')" method="post"
+                            <Link
+                                :href="route('logout')"
+                                method="post"
+                                as="button"
                                 >Logout</Link
                             >
                         </li>

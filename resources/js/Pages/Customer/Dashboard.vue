@@ -1,13 +1,23 @@
 <script setup>
-import { Head, useForm } from "@inertiajs/vue3";
+import { Head, useForm, Link } from "@inertiajs/vue3";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import { ref, computed, onMounted } from "vue";
 import axios from "axios";
 import Hero from "@/Components/Customer/Main/Hero.vue";
+import UpdateProfileInformationForm from "@/Pages/Admin/Profile/Partials/UpdateProfileInformationForm.vue";
+import UpdatePasswordForm from "@/Pages/Admin/Profile/Partials/UpdatePasswordForm.vue";
+import DeleteUserForm from "@/Pages/Admin/Profile/Partials/DeleteUserForm.vue";
 
 const props = defineProps({
     orders: Array,
     reviews: Array, // Tambahkan props reviews
+    wishlistItems: Array, // Add this prop
+    mustVerifyEmail: {
+        type: Boolean,
+    },
+    status: {
+        type: String,
+    },
 });
 
 // Create refs from props
@@ -90,6 +100,7 @@ const actions = [
     { id: "history", label: "Riwayat Belanja" },
     { id: "wishlist", label: "Wishlist" },
     { id: "reviews", label: "Ulasan Belanja" },
+    { id: "settings", label: "Pengaturan" }, // Add settings option
 ];
 
 const formatPrice = (price) => {
@@ -229,6 +240,23 @@ const submitPaymentProof = () => {
             window.location.reload();
         },
     });
+};
+
+// Add form for wishlist operations
+const wishlistForm = useForm({});
+
+// Add function to remove from wishlist
+const removeFromWishlist = (id) => {
+    if (
+        confirm("Are you sure you want to remove this item from your wishlist?")
+    ) {
+        wishlistForm.delete(route("wishlist.destroy", id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                // Optional: Add success notification
+            },
+        });
+    }
 };
 </script>
 
@@ -649,17 +677,59 @@ const submitPaymentProof = () => {
                     </div>
                 </div>
 
-                <!-- Wishlist -->
+                <!-- Wishlist Section -->
                 <div
                     v-else-if="selectedAction === 'wishlist'"
                     class="space-y-4"
                 >
                     <h2 class="text-xl font-bold mb-4">Wishlist</h2>
-                    <div v-if="wishlist?.length" class="grid grid-cols-3 gap-4">
-                        <!-- Add wishlist items here -->
-                        <p>Your wishlist items will appear here</p>
+                    <div
+                        v-if="wishlistItems?.length"
+                        class="grid grid-cols-1 md:grid-cols-3 gap-6"
+                    >
+                        <div
+                            v-for="item in wishlistItems"
+                            :key="item.id"
+                            class="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                        >
+                            <img
+                                :src="`/storage/products/${item.product.image}`"
+                                :alt="item.product.name"
+                                class="w-full h-48 object-cover"
+                            />
+
+                            <div class="p-4">
+                                <h3 class="text-lg font-semibold">
+                                    {{ item.product.name }}
+                                </h3>
+                                <p class="text-gray-600 mt-2">
+                                    {{ formatPrice(item.product.price) }}
+                                </p>
+
+                                <div
+                                    class="mt-4 flex justify-between items-center"
+                                >
+                                    <Link
+                                        :href="
+                                            route('product', {
+                                                id: item.product.id,
+                                            })
+                                        "
+                                        class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+                                    >
+                                        View Product
+                                    </Link>
+                                    <button
+                                        @click="removeFromWishlist(item.id)"
+                                        class="text-red-500 hover:text-red-700"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div v-else class="text-gray-500">
+                    <div v-else class="text-gray-500 text-center py-8">
                         Your wishlist is empty
                     </div>
                 </div>
@@ -860,6 +930,41 @@ const submitPaymentProof = () => {
                     </div>
                     <div v-else class="text-gray-500">
                         You haven't reviewed any products yet.
+                    </div>
+                </div>
+
+                <!-- Profile Settings -->
+                <div
+                    v-else-if="selectedAction === 'settings'"
+                    class="space-y-4"
+                >
+                    <div class="py-12">
+                        <div class="mx-auto max-w-7xl space-y-6">
+                            <!-- Profile Information -->
+                            <div
+                                class="bg-white p-4 shadow sm:rounded-lg sm:p-8"
+                            >
+                                <UpdateProfileInformationForm
+                                    :must-verify-email="mustVerifyEmail"
+                                    :status="status"
+                                    class="max-w-xl"
+                                />
+                            </div>
+
+                            <!-- Update Password -->
+                            <div
+                                class="bg-white p-4 shadow sm:rounded-lg sm:p-8"
+                            >
+                                <UpdatePasswordForm class="max-w-xl" />
+                            </div>
+
+                            <!-- Delete Account -->
+                            <div
+                                class="bg-white p-4 shadow sm:rounded-lg sm:p-8"
+                            >
+                                <DeleteUserForm class="max-w-xl" />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

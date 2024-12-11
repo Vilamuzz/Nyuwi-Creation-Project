@@ -262,12 +262,12 @@ class ProductController extends Controller
             $query->latest();
         }
 
-        $products = $query->get();
-        $categories = Category::all();
+        // Add pagination with 16 items per page
+        $products = $query->paginate(16);
 
         return Inertia::render('Customer/ShopingPage', [
             'products' => $products,
-            'categories' => $categories,
+            'categories' => Category::all(),
             'filters' => $request->only(['search', 'sortField', 'sortDirection', 'category'])
         ]);
     }

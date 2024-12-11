@@ -51,12 +51,12 @@ const formatPrice = (price) => {
                 </p>
 
                 <!-- Call-to-Action Button -->
-                <a
-                    href="#shop"
+                <Link
+                    href="/shop"
                     class="inline-block bg-orange-500 text-white text-lg font-semibold py-3 px-8 rounded-full hover:bg-orange-600 transition duration-300"
                 >
                     Shop Now
-                </a>
+                </Link>
             </div>
         </section>
         <section class="my-10">
@@ -127,15 +127,14 @@ const formatPrice = (price) => {
                 <div class="flex flex-col space-y-4">
                     <h1 class="text-3xl font-bold">50+ Beautiful Products</h1>
                     <p>We offer a wide selection of items</p>
-                    <button
+                    <Link
+                        href="/shop"
                         class="bg-orange-500 py-2 px-4 w-1/2 text-center text-white text-md font-bold hover:bg-orange-700 duration-300"
                     >
                         Explore More
-                    </button>
+                    </Link>
                 </div>
-                <div></div>
             </div>
         </section>
-        <section></section>
     </CustomersLayout>
 </template>

@@ -71,10 +71,7 @@ const confirmCheckout = () => {
                 localStorage.setItem("showPaymentInfo", "true");
                 localStorage.setItem("paymentAmount", totalWithShipping.value);
             }
-            // Ganti dengan router Inertia
-            router.visit(route("cart.show"), {
-                preserveScroll: true,
-            });
+            router.visit(route("cart.show"));
         },
     });
 };
@@ -180,11 +177,13 @@ const isGoSendAvailable = computed(() => {
 
 const shippingRates = ref([]);
 const selectedShippingRate = ref(null);
+const isLoadingRates = ref(false);
 
 // Modify fetchShippingRates function
 const fetchShippingRates = async (destination) => {
     try {
         const cleanDestination = cleanCityName(destination);
+        isLoadingRates.value = true;
 
         const response = await axios.get(`https://api.binderbyte.com/v1/cost`, {
             params: {
@@ -203,6 +202,8 @@ const fetchShippingRates = async (destination) => {
         }
     } catch (error) {
         console.error("Error fetching shipping rates:", error);
+    } finally {
+        isLoadingRates.value = false;
     }
 };
 
@@ -438,6 +439,71 @@ const totalWithShipping = computed(() => {
                                     >JNE</label
                                 >
                             </div>
+                            <div
+                                v-if="isLoadingRates"
+                                class="flex items-center space-x-2 text-gray-500 ml-6"
+                            >
+                                <svg
+                                    class="animate-spin h-5 w-5"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <circle
+                                        class="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        stroke-width="4"
+                                    ></circle>
+                                    <path
+                                        class="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                </svg>
+                                <span>Loading shipping rates...</span>
+                            </div>
+                            <div
+                                v-if="shippingRates.length > 0"
+                                class="mt-4 ml-6"
+                            >
+                                <h3 class="font-semibold mb-2">
+                                    Shipping Options
+                                </h3>
+                                <div class="space-y-2">
+                                    <div
+                                        v-for="rate in shippingRates"
+                                        :key="rate.service"
+                                        class="flex items-center space-x-2"
+                                    >
+                                        <input
+                                            type="radio"
+                                            :id="rate.service"
+                                            :value="rate"
+                                            v-model="selectedShippingRate"
+                                            name="shipping_rate"
+                                            class="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300"
+                                        />
+                                        <label
+                                            :for="rate.service"
+                                            class="flex justify-between w-full"
+                                        >
+                                            <span
+                                                >{{ rate.service }} ({{
+                                                    rate.estimated
+                                                }})</span
+                                            >
+                                            <span>{{
+                                                formatPrice(
+                                                    parseInt(rate.price)
+                                                )
+                                            }}</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="space-x-2">
                                 <input
                                     type="radio"
@@ -474,38 +540,7 @@ const totalWithShipping = computed(() => {
                             {{ form.errors.shipping_method }}
                         </div>
                     </div>
-                    <div v-if="shippingRates.length > 0" class="mt-4">
-                        <h3 class="font-semibold mb-2">Shipping Options</h3>
-                        <div class="space-y-2">
-                            <div
-                                v-for="rate in shippingRates"
-                                :key="rate.service"
-                                class="flex items-center space-x-2"
-                            >
-                                <input
-                                    type="radio"
-                                    :id="rate.service"
-                                    :value="rate"
-                                    v-model="selectedShippingRate"
-                                    name="shipping_rate"
-                                    class="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300"
-                                />
-                                <label
-                                    :for="rate.service"
-                                    class="flex justify-between w-full"
-                                >
-                                    <span
-                                        >{{ rate.service }} ({{
-                                            rate.estimated
-                                        }})</span
-                                    >
-                                    <span>{{
-                                        formatPrice(parseInt(rate.price))
-                                    }}</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
+
                     <div class="flex flex-col space-y-3">
                         <h1 class="font-bold text-2xl">Payment Method</h1>
                         <div class="flex flex-col space-y-2">

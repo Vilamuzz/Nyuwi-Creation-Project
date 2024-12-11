@@ -13,7 +13,7 @@ class WishlistController extends Controller
     {
         $wishlistItems = Whislist::with('product')
             ->where('user_id', Auth::id())
-            ->get();
+            ->paginate(9); // Set 9 items per page
 
         return Inertia::render('Customer/Wishlist', [
             'wishlistItems' => $wishlistItems

@@ -8,18 +8,12 @@ use Illuminate\Support\Facades\Auth;
 
 class EnsureAdmin
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @param  \Closure $next
-     * @return mixed
-     */
     public function handle(Request $request, Closure $next)
     {
-        return $next($request);
-        if (Auth::check() && Auth::user()->role === 'admin') {
-            return $next($request);
+        if (!Auth::check() || Auth::user()->role !== 'admin') {
+            abort(403, 'Unauthorized action.');
         }
+
+        return $next($request);
     }
 }

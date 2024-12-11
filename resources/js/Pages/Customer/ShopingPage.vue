@@ -8,7 +8,7 @@ import Hero from "@/Components/Customer/Main/Hero.vue";
 import Product from "@/Components/Customer/Sub-main/Product.vue";
 
 const props = defineProps({
-    products: Array,
+    products: Object,
     categories: Array,
     filters: Object,
 });
@@ -58,6 +58,7 @@ const updateFilters = (newFilters) => {
     router.get(
         route("shop"),
         {
+            page: newFilters.page || props.products.current_page,
             search: search.value,
             sortField: sortField.value,
             sortDirection: sortDirection.value,
@@ -153,41 +154,38 @@ const formatPrice = (price) => {
         </section>
         <section>
             <div class="flex flex-col items-center space-y-8 my-14">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    <Product
-                        v-for="(item, index) in products"
-                        :key="index"
-                        :id="item.id"
-                        :name="item.name"
-                        :price="formatPrice(item.price)"
-                        :category="getCategoryName(item.category_id)"
-                        :image="item.image"
-                        :rating="item.average_rating || 0"
-                        :total-reviews="item.total_reviews || 0"
-                    />
+                <div class="flex flex-col items-center space-y-8 my-14">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                        <Product
+                            v-for="item in products.data"
+                            :key="item.id"
+                            :id="item.id"
+                            :name="item.name"
+                            :price="formatPrice(item.price)"
+                            :category="getCategoryName(item.category_id)"
+                            :image="item.image"
+                            :rating="Number(item.average_rating) || 0"
+                            :total-reviews="Number(item.total_reviews) || 0"
+                        />
+                    </div>
+
+                    <!-- Pagination -->
+                    <div v-if="products.last_page > 1" class="flex gap-2">
+                        <button
+                            v-for="page in products.last_page"
+                            :key="page"
+                            @click="updateFilters({ page })"
+                            :class="[
+                                'py-2 px-4 rounded-md border',
+                                page === products.current_page
+                                    ? 'bg-orange-500 text-white border-orange-500'
+                                    : 'bg-orange-100 hover:bg-orange-500 hover:text-white duration-300',
+                            ]"
+                        >
+                            {{ page }}
+                        </button>
+                    </div>
                 </div>
-                <nav class="space-x-4">
-                    <a
-                        href=""
-                        class="bg-orange-100 py-3 px-4 rounded-md hover:bg-orange-500 hover:text-white duration-300"
-                        >1</a
-                    >
-                    <a
-                        href=""
-                        class="bg-orange-100 py-3 px-4 rounded-md hover:bg-orange-500 hover:text-white duration-300"
-                        >2</a
-                    >
-                    <a
-                        href=""
-                        class="bg-orange-100 py-3 px-4 rounded-md hover:bg-orange-500 hover:text-white duration-300"
-                        >3</a
-                    >
-                    <a
-                        href=""
-                        class="bg-orange-100 py-3 px-4 rounded-md hover:bg-orange-500 hover:text-white duration-300"
-                        >Next</a
-                    >
-                </nav>
             </div>
         </section>
         <section class="bg-[#fdf7f2]">

@@ -4,6 +4,8 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\EnsureCartNotEmpty;
+use App\Http\Middleware\EnsureAdmin;
+use App\Http\Middleware\EnsureCustomer;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -18,7 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'check.cart' => EnsureCartNotEmpty::class
+            'admin' => EnsureAdmin::class,
+            'check.cart' => EnsureCartNotEmpty::class,
+            'customer' => EnsureCustomer::class,
         ]);
 
         //

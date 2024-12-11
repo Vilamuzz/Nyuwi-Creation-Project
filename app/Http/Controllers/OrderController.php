@@ -7,9 +7,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use App\Models\Cart;
 use Inertia\Inertia;
 use App\Models\ProductReview;
+use App\Models\Whislist;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 class OrderController extends Controller
 {
@@ -45,17 +48,40 @@ class OrderController extends Controller
             return back()->with('error', 'Cannot cancel order that is already being shipped');
         }
 
-        // Perbaiki logika update
-        if ($request->has('tracking_number')) {
-            $order->update([
-                'tracking_number' => $request->tracking_number,
-                'status' => 'shiping'
-            ]);
-        } else if ($request->has('status')) { // Tambahkan pengecekan status
-            $order->update([
-                'status' => $request->status
-            ]);
-        }
+        DB::transaction(function () use ($request, $order) {
+            if ($request->has('tracking_number')) {
+                // Update order to shipping status
+                $order->update([
+                    'tracking_number' => $request->tracking_number,
+                    'status' => 'shiping'
+                ]);
+
+                // Reduce product stock for each order item
+                foreach ($order->orderItems as $item) {
+                    $product = Product::find($item->product_id);
+                    if ($product) {
+                        $product->update([
+                            'stock' => $product->stock - $item->quantity
+                        ]);
+                    }
+                }
+            } else if ($request->has('status')) {
+                if ($request->status === 'shiping') {
+                    // Reduce product stock for each order item
+                    foreach ($order->orderItems as $item) {
+                        $product = Product::find($item->product_id);
+                        if ($product) {
+                            $product->update([
+                                'stock' => $product->stock - $item->quantity
+                            ]);
+                        }
+                    }
+                }
+                $order->update([
+                    'status' => $request->status
+                ]);
+            }
+        });
 
         return redirect()->back()->with('success', 'Order updated successfully');
     }
@@ -72,7 +98,7 @@ class OrderController extends Controller
             'phone' => 'required|string|max:15',
             'payment_method' => 'required|in:digital_wallet,cash_on_delivery',
             'shipping_method' => 'required|in:JNE,GoSend',
-            'shipping_cost' => 'required|numeric|min:0', // Add validation for shipping cost
+            'shipping_cost' => 'required|numeric|min:0',
         ]);
 
         try {
@@ -84,15 +110,16 @@ class OrderController extends Controller
                     throw new \Exception('Cart is empty');
                 }
 
-                // Calculate subtotal from cart items
+                // Calculate total price
                 $subtotal = $cartItems->sum(function ($item) {
                     return $item->price * $item->quantity;
                 });
-
-                // Add shipping cost to total
                 $totalPrice = $subtotal + $request->shipping_cost;
 
-                // Create order with total including shipping
+                // Set initial status based on payment method
+                $initialStatus = $request->payment_method === 'cash_on_delivery' ? 'processing' : 'waiting';
+
+                // Create order
                 $order = Order::create([
                     'user_id' => $user->id,
                     'name' => $request->name,
@@ -102,14 +129,14 @@ class OrderController extends Controller
                     'village' => $request->village,
                     'province' => $request->province,
                     'phone' => $request->phone,
-                    'total_price' => $totalPrice, // Total includes shipping cost
+                    'total_price' => $totalPrice,
                     'payment_method' => $request->payment_method,
                     'shipping_method' => $request->shipping_method,
                     'note' => $request->note,
-                    'status' => 'waiting'
+                    'status' => $initialStatus // Use dynamic initial status
                 ]);
 
-                // Create order items
+                // Create order items and clear cart
                 foreach ($cartItems as $cartItem) {
                     OrderItem::create([
                         'order_id' => $order->id,
@@ -159,20 +186,27 @@ class OrderController extends Controller
         return redirect()->back()->with('success', 'Order completed and reviews submitted');
     }
 
-    public function orderUser()
+    public function orderUser(Request $request)
     {
         $orders = Order::with(['orderItems.product'])
             ->where('user_id', Auth::id())
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $reviews = ProductReview::with(['product', 'order'])
+        $reviews = ProductReview::with('product')
+            ->where('user_id', Auth::id())
+            ->get();
+
+        $wishlistItems = Whislist::with('product')
             ->where('user_id', Auth::id())
             ->get();
 
         return Inertia::render('Customer/Dashboard', [
             'orders' => $orders,
-            'reviews' => $reviews
+            'reviews' => $reviews,
+            'wishlistItems' => $wishlistItems,
+            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'status' => session('status'),
         ]);
     }
 
