@@ -6,6 +6,7 @@ import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import TextInput from "@/Components/TextInput.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
+import { onMounted } from "vue";
 
 defineProps({
     canResetPassword: {
@@ -20,11 +21,31 @@ const form = useForm({
     email: "",
     password: "",
     remember: false,
+    "g-recaptcha-response": "",
+});
+
+onMounted(() => {
+    // Load reCAPTCHA script
+    const script = document.createElement("script");
+    script.src = "https://www.google.com/recaptcha/api.js";
+    document.head.appendChild(script);
+
+    // Add recaptcha callback
+    window.onRecaptchaSuccess = (token) => {
+        form["g-recaptcha-response"] = token;
+    };
 });
 
 const submit = () => {
     form.post(route("login"), {
-        onFinish: () => form.reset("password"),
+        preserveScroll: true,
+        onSuccess: () => {
+            form.reset("password");
+            grecaptcha.reset();
+        },
+        onError: () => {
+            grecaptcha.reset();
+        },
     });
 };
 </script>
@@ -74,6 +95,18 @@ const submit = () => {
                     <Checkbox name="remember" v-model:checked="form.remember" />
                     <span class="ms-2 text-sm text-gray-600">Remember me</span>
                 </label>
+            </div>
+
+            <div class="mt-4">
+                <div
+                    class="g-recaptcha"
+                    :data-sitekey="$page.props.recaptchaSiteKey"
+                    data-callback="onRecaptchaSuccess"
+                ></div>
+                <InputError
+                    class="mt-2"
+                    :message="form.errors['g-recaptcha-response']"
+                />
             </div>
 
             <div class="mt-4 flex items-center justify-between">
