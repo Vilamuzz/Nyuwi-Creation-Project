@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,8 +33,9 @@ class RegisteredUserController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:' . User::class,
+            'email' => 'required|string|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'g-recaptcha-response' => ['required', 'recaptcha'],
         ]);
 
         $user = User::create([
@@ -47,12 +49,7 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        // Redirect berdasarkan role
-        if ($user->role === 'pelanggan') {
-            return redirect('/'); // Redirect ke landing page
-        }
-
-        return redirect(route('dashboard', absolute: false));
+        return redirect()->route('verification.notice');
     }
 
     protected function validator(array $data)

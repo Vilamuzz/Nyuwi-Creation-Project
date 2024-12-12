@@ -12,20 +12,26 @@ const form = useForm({
     email: "",
     password: "",
     password_confirmation: "",
-    recaptcha: "",
+    "g-recaptcha-response": "",
 });
 
 onMounted(() => {
-    // Load reCAPTCHA script
     const script = document.createElement("script");
     script.src = "https://www.google.com/recaptcha/api.js";
     document.head.appendChild(script);
+
+    window.onRecaptchaSuccess = (token) => {
+        form["g-recaptcha-response"] = token;
+    };
 });
 
 const submit = () => {
     form.post(route("register"), {
         onSuccess: () => {
             form.reset();
+            grecaptcha.reset();
+        },
+        onError: () => {
             grecaptcha.reset();
         },
     });
@@ -108,8 +114,12 @@ const submit = () => {
                 <div
                     class="g-recaptcha"
                     :data-sitekey="$page.props.recaptchaSiteKey"
+                    data-callback="onRecaptchaSuccess"
                 ></div>
-                <InputError class="mt-2" :message="form.errors.recaptcha" />
+                <InputError
+                    class="mt-2"
+                    :message="form.errors['g-recaptcha-response']"
+                />
             </div>
 
             <div class="mt-4 flex items-center justify-end space-x-4">

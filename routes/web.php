@@ -86,6 +86,15 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/wishlist/{id}', [WishlistController::class, 'destroy'])->name('wishlist.destroy');
 });
 
+Route::middleware(['auth', 'verified'])->group(function () {
+    // Protected routes that require email verification
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->name('dashboard');
+
+    // Add other routes that need verification
+});
+
 Route::post('/checkout', [OrderController::class, 'store'])->name('order.store');
 
 Route::get('/orders/{id}', [OrderController::class, 'detail'])->name('orders.detail');
