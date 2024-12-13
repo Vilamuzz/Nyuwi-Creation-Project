@@ -77,6 +77,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
         Route::patch('/', [ProfileController::class, 'update'])->name('update');
         Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
     });
+    Route::get('/data', function () {
+        return Inertia::render('Admin/Database');
+    })->name('data');
 });
 
 Route::middleware(['auth'])->group(function () {
@@ -88,9 +91,7 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Protected routes that require email verification
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Add other routes that need verification
 });

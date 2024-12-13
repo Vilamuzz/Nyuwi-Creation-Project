@@ -24,12 +24,17 @@ const navigation = [
         href: route("profile.edit"), // Points to /customers (customers.index)
         icon: "fas fa-users",
     },
+    {
+        name: "Database",
+        href: route("data"),
+        icon: "fas fa-users",
+    },
 ];
 </script>
 
 <template>
     <aside
-        class="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0 bg-orange-100"
+        class="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0 bg-orange-100 shadow-2xl"
     >
         <!-- Logo Section -->
         <div class="flex items-center justify-center h-16">
@@ -60,12 +65,12 @@ const navigation = [
             </ul>
 
             <!-- Bottom Section -->
-            <div class="absolute bottom-0 left-0 w-full p-4 border-t">
+            <div class="absolute bottom-0 left-0 p-4 border-t">
                 <Link
                     :href="route('logout')"
                     method="post"
                     as="button"
-                    class="flex items-center p-3 text-gray-400 rounded-lg hover:bg-orange-200 hover:text-black duration-200"
+                    class="flex items-center p-3 text-gray-400 rounded-lg hover:bg-orange-200 hover:text-black duration-200 w-[220px]"
                 >
                     <i class="fas fa-sign-out-alt w-5 h-5 text-gray-500"></i>
                     <span class="ml-3">Logout</span>
