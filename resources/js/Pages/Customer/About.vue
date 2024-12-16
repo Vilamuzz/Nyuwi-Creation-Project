@@ -13,20 +13,29 @@ import CustomersLayout from "@/Layouts/CustomersLayout.vue";
             backgroundImage="/img/background/hero.svg"
         />
         <section class="bg-[#ffffff] py-20">
-            <div class="max-w-6xl mx-auto">
-                <h1 class="text-4xl font-bold">Our Story</h1>
-                <p class="text-black mt-4 max-w-80">
-                    Nyuwi Creation percaya bahwa setiap benda buatan tangan
-                    menceritakan sebuah kisah tentang seni. Dibuat dengan
-                    semangat untuk kreativitas, Nyuwi Creation menghadirkan
-                    produk-produk unik dan bermakna yang mengubah bahan-bahan
-                    sederhana menjadi keindahan abadi. Dari perhiasan yang
-                    elegan hingga karangan bunga yang menawan, setiap bagian
-                    dibuat dengan hati untuk membangkitkan kegembiraan dan
-                    kekaguman terhadap seni kreasi buatan tangan.
-                </p>
-            </div>
-        </section>
+    <div class="max-w-6xl mx-auto flex items-center">
+        <!-- Teks di sebelah kiri -->
+        <div class="flex-1">
+            <h1 class="text-4xl font-bold">Our Story</h1>
+            <p class="text-black mt-6 max-w-100">
+                Nyuwi Creation percaya bahwa setiap benda buatan tangan
+                menceritakan sebuah kisah tentang seni. Dibuat dengan
+                semangat untuk kreativitas, Nyuwi Creation menghadirkan
+                produk-produk unik dan bermakna yang mengubah bahan-bahan
+                sederhana menjadi keindahan abadi. Dari perhiasan yang
+                elegan hingga karangan bunga yang menawan, setiap bagian
+                dibuat dengan hati untuk membangkitkan kegembiraan dan
+                kekaguman terhadap seni kreasi buatan tangan.
+            </p>
+        </div>
+
+        <!-- Gambar di sebelah kanan -->
+        <div class="flex-1 ml-10">
+            <img src="img\products\buck.jpg" alt="Nyuwi Creation Story" class="w-90 ml-20 h-auto rounded-lg shadow-md" />
+        </div>
+    </div>
+</section>
+
 
         <section class="bg-[#fdf7f2]">
             <div class="flex justify-center py-20">

@@ -20,7 +20,7 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 3.     php artisan migrate
-4.     php artisan db:seed --class=IndoRegionSeeder
+4.     php artisan db:seed --class=IndoRegionSeederz
 
 ## Usage
 
