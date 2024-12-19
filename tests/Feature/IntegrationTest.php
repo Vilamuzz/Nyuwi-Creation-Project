@@ -193,4 +193,115 @@ class IntegrationTest extends TestCase
             'product_id' => $this->product->id
         ]);
     }
+
+    public function test_wishlist_to_order_flow()
+    {
+        // 1. Add product to wishlist
+        $response = $this->actingAs($this->user)
+            ->post(route('wishlist.store'), [
+                'product_id' => $this->product->id
+            ]);
+
+        $response->assertRedirect();
+
+        // 2. Verify product is in wishlist
+        $this->assertDatabaseHas('whislists', [
+            'user_id' => $this->user->id,
+            'product_id' => $this->product->id
+        ]);
+
+        // 3. Add same product to cart
+        $response = $this->actingAs($this->user)
+            ->post(route('cart.add'), [
+                'product_id' => $this->product->id,
+                'quantity' => 2,
+                'price' => $this->product->price
+            ]);
+
+        $response->assertRedirect();
+
+        // 4. Verify cart has item
+        $this->assertDatabaseHas('carts', [
+            'user_id' => $this->user->id,
+            'product_id' => $this->product->id,
+            'quantity' => 2
+        ]);
+
+        // 5. Place order
+        $response = $this->actingAs($this->user)
+            ->post(route('order.store'), [
+                'name' => 'Test User',
+                'address' => 'Test Address',
+                'city' => 'Test City',
+                'district' => 'Test District',
+                'village' => 'Test Village',
+                'province' => 'Test Province',
+                'phone' => '08123456789',
+                'payment_method' => 'digital_wallet',
+                'shipping_method' => 'JNE',
+                'shipping_cost' => 10000
+            ]);
+
+        $response->assertRedirect();
+        $order = Order::first();
+
+        // 6. Upload payment proof
+        Storage::fake('public');
+        $image = UploadedFile::fake()->image('payment.jpg');
+
+        $response = $this->actingAs($this->user)
+            ->post(route('orders.upload-proof'), [
+                'order_id' => $order->id,
+                'payment_proof' => $image
+            ]);
+
+        $response->assertRedirect();
+        $this->assertNotNull($order->fresh()->payment_proof);
+
+        // 7. Admin processes order
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($admin)
+            ->put(route('orders.update', $order->id), [
+                'status' => 'processing'
+            ]);
+
+        $this->assertEquals('processing', $order->fresh()->status);
+
+        // 8. Admin adds tracking
+        $response = $this->actingAs($admin)
+            ->put(route('orders.update', $order->id), [
+                'tracking_number' => '12345678',
+                'status' => 'shiping'
+            ]);
+
+        $order->refresh();
+
+        // 9. Verify final state
+        $this->assertEquals('shiping', $order->status);
+        $this->assertEquals('12345678', $order->tracking_number);
+        $this->assertDatabaseEmpty('carts');
+
+        // 10. Customer completes order and adds review
+        $response = $this->actingAs($this->user)
+            ->post(route('orders.complete'), [
+                'order_id' => $order->id,
+                'reviews' => [
+                    [
+                        'product_id' => $this->product->id,
+                        'rating' => 5
+                    ]
+                ]
+            ]);
+
+        $this->assertEquals('completed', $order->fresh()->status);
+
+        // 11. Verify review was created
+        $this->assertDatabaseHas('product_reviews', [
+            'user_id' => $this->user->id,
+            'product_id' => $this->product->id,
+            'order_id' => $order->id,
+            'rating' => 5
+        ]);
+    }
 }
