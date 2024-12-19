@@ -52,7 +52,7 @@ class IntegrationTest extends TestCase
     {
         // Initial stock is 10
         $initialStock = $this->product->stock;
-        $orderQuantity = 2;
+        $orderQuantity = 10;
 
         // 1. Customer adds product to cart
         $response = $this->actingAs($this->user)
@@ -66,7 +66,7 @@ class IntegrationTest extends TestCase
         $this->assertDatabaseHas('carts', [
             'user_id' => $this->user->id,
             'product_id' => $this->product->id,
-            'quantity' => 2
+            'quantity' => 10
         ]);
 
         // 2. Customer places order
