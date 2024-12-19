@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Cart;
+use App\Models\Product;
 use Inertia\Inertia;
 use App\Models\ProductReview;
 
@@ -45,17 +46,26 @@ class OrderController extends Controller
             return back()->with('error', 'Cannot cancel order that is already being shipped');
         }
 
-        // Perbaiki logika update
-        if ($request->has('tracking_number')) {
-            $order->update([
-                'tracking_number' => $request->tracking_number,
-                'status' => 'shiping'
-            ]);
-        } else if ($request->has('status')) { // Tambahkan pengecekan status
-            $order->update([
-                'status' => $request->status
-            ]);
-        }
+        DB::transaction(function () use ($request, $order) {
+            if ($request->has('tracking_number')) {
+                // When adding tracking number, reduce stock
+                foreach ($order->orderItems as $item) {
+                    $product = Product::find($item->product_id);
+                    if ($product) {
+                        $product->decrement('stock', $item->quantity);
+                    }
+                }
+
+                $order->update([
+                    'tracking_number' => $request->tracking_number,
+                    'status' => 'shiping'
+                ]);
+            } elseif ($request->has('status')) {
+                $order->update([
+                    'status' => $request->status
+                ]);
+            }
+        });
 
         return redirect()->back()->with('success', 'Order updated successfully');
     }
