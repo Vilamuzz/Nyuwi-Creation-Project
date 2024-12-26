@@ -37,6 +37,6 @@ class VerifyEmailController extends Controller
         }
 
         // Default for customers
-        return redirect()->route('/');
+        return redirect()->route('home'); // or whichever route name you use for homepage
     }
 }

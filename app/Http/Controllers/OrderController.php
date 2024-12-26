@@ -43,6 +43,15 @@ class OrderController extends Controller
 
         $order = Order::findOrFail($id);
 
+        // Prevent accepting digital wallet orders without payment proof
+        if (
+            $request->status === 'processing' &&
+            $order->payment_method === 'digital_wallet' &&
+            $order->status === 'waiting'
+        ) {
+            return back()->with('error', 'Cannot accept order without payment proof verification');
+        }
+
         // Don't allow cancellation if order is shipping
         if ($request->status === 'cancelled' && $order->status === 'shiping') {
             return back()->with('error', 'Cannot cancel order that is already being shipped');

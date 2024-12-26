@@ -466,7 +466,9 @@ const cancelOrder = () => {
                             :disabled="
                                 order.status === 'shiping' ||
                                 order.status === 'completed' ||
-                                order.status === 'cancelled'
+                                order.status === 'cancelled' ||
+                                (order.payment_method === 'digital_wallet' &&
+                                    order.status === 'waiting')
                             "
                             class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
                         >

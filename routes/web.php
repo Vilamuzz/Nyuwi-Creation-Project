@@ -22,7 +22,7 @@ use App\Models\Order;
 
 // Public Routes (Add customer middleware to prevent admin access)
 Route::middleware(['customer'])->group(function () {
-    Route::get('/', [ProductController::class, 'landingPage']);
+    Route::get('/', [ProductController::class, 'landingPage'])->name('home'); // Add the route name here
     Route::get('/about', function () {
         return Inertia::render('Customer/About');
     })->name('about');
