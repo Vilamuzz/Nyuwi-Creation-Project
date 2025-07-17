@@ -41,7 +41,7 @@ class ProductController extends Controller
             $query->latest();
         }
 
-        $products = $query->get();
+        $products = $query->paginate(10);
 
         return Inertia::render('Admin/Products/Index', [
             'products' => $products,

@@ -1,11 +1,11 @@
 <script setup>
 import { Head, Link, useForm, router } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import debounce from "lodash/debounce";
 
 const props = defineProps({
-    products: Array,
+    products: Object, // Change from Array to Object for pagination
     categories: Array,
     filters: Object,
 });
@@ -16,7 +16,7 @@ const sortDirection = ref("desc");
 
 // Available sort options
 const sortOptions = [
-    { field: "created_at", label: "Terbaru", direction: "desc", default: true }, // Default option
+    { field: "created_at", label: "Terbaru", direction: "desc", default: true },
     { field: "created_at", label: "Terlama", direction: "asc" },
     { field: "name", label: "Nama (A-Z)", direction: "asc" },
     { field: "name", label: "Nama (Z-A)", direction: "desc" },
@@ -26,22 +26,32 @@ const sortOptions = [
     { field: "stock", label: "Stok (Tinggi-Rendah)", direction: "desc" },
 ];
 
+// Get current sort label
+const currentSortLabel = computed(() => {
+    const currentOption = sortOptions.find(
+        (option) =>
+            option.field === sortField.value &&
+            option.direction === sortDirection.value
+    );
+    return currentOption ? currentOption.label : "Terbaru";
+});
+
 // Watch for search changes with debounce
 watch(
     search,
     debounce((value) => {
-        updateFilters({ search: value });
+        updateFilters({ search: value, page: 1 }); // Reset to page 1 on search
     }, 300)
 );
 
 // Function to handle sorting
-const handleSort = (event) => {
-    const [field, direction] = event.target.value.split("|");
+const handleSort = (field, direction) => {
     sortField.value = field;
     sortDirection.value = direction;
     updateFilters({
         sortField: field,
         sortDirection: direction,
+        page: 1, // Reset to page 1 on sort
     });
 };
 
@@ -53,6 +63,7 @@ const updateFilters = (newFilters) => {
             search: search.value,
             sortField: sortField.value,
             sortDirection: sortDirection.value,
+            page: props.products.current_page, // Keep current page unless specified
             ...newFilters,
         },
         {
@@ -61,6 +72,11 @@ const updateFilters = (newFilters) => {
             replace: true,
         }
     );
+};
+
+// Add pagination function
+const changePage = (page) => {
+    updateFilters({ page });
 };
 
 const form = useForm({});
@@ -84,60 +100,90 @@ const formatPrice = (price) => {
     }).format(price);
 };
 </script>
+
 <template>
-    <Head title="Products" />
+    <Head title="Inventory" />
 
-    <AdminLayout>
-        <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Dashboard
-            </h2>
-        </template>
-
-        <div class="py-12">
+    <AdminLayout pageTitle="Inventory Management">
+        <div class="mt-4">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                     <!-- Search and Sort section -->
                     <div class="flex justify-between items-center p-4">
                         <div class="flex items-center space-x-4 w-full">
                             <!-- Search input -->
-                            <input
-                                type="text"
-                                v-model="search"
-                                placeholder="Search products..."
-                                class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-1/3"
-                            />
+                            <label
+                                class="input input-bordered flex items-center gap-2 w-1/3"
+                            >
+                                <svg
+                                    class="h-[1em] opacity-50"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <g
+                                        stroke-linejoin="round"
+                                        stroke-linecap="round"
+                                        stroke-width="2.5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                    >
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <path d="m21 21-4.3-4.3"></path>
+                                    </g>
+                                </svg>
+                                <input
+                                    type="search"
+                                    class="grow border-none focus:ring-0"
+                                    placeholder="Search products..."
+                                    v-model="search"
+                                />
+                            </label>
 
                             <!-- Sort dropdown -->
-                            <select
-                                @change="handleSort"
-                                class="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                :value="`${sortField}|${sortDirection}`"
-                            >
-                                <option
-                                    v-for="option in sortOptions"
-                                    :key="`${option.field}-${option.direction}`"
-                                    :value="`${option.field}|${option.direction}`"
-                                    :selected="
-                                        option.field === sortField &&
-                                        option.direction === sortDirection
-                                    "
+                            <div class="dropdown dropdown-center">
+                                <div tabindex="0" role="button" class="btn m-1">
+                                    {{ currentSortLabel }}
+                                </div>
+                                <ul
+                                    tabindex="0"
+                                    class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow-sm gap-y-1"
                                 >
-                                    {{ option.label }}
-                                </option>
-                            </select>
+                                    <li
+                                        v-for="option in sortOptions"
+                                        :key="`${option.field}-${option.direction}`"
+                                    >
+                                        <a
+                                            @click="
+                                                handleSort(
+                                                    option.field,
+                                                    option.direction
+                                                )
+                                            "
+                                            :class="{
+                                                active:
+                                                    option.field ===
+                                                        sortField &&
+                                                    option.direction ===
+                                                        sortDirection,
+                                            }"
+                                        >
+                                            {{ option.label }}
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
 
                         <!-- Add Product button -->
                         <Link
                             :href="route('products.create')"
-                            class="px-4 py-2 text-white w-1/5 text-center bg-green-500 rounded hover:bg-green-700"
+                            class="text-white w-1/5 btn btn-neutral"
                         >
                             Tambah Produk
                         </Link>
                     </div>
 
-                    <!-- Table content remains the same -->
+                    <!-- Table content -->
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
@@ -162,29 +208,36 @@ const formatPrice = (price) => {
                                     Kategori
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-700 uppercase hover:bg-gray-100"
+                                    class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-700 uppercase"
                                 >
                                     Jumlah Stok
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-700 uppercase hover:bg-gray-100"
+                                    class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-700 uppercase"
                                 >
                                     Harga
                                 </th>
-
                                 <th
-                                    class="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-700 uppercase"
+                                    class="px-6 py-3 text-xs font-medium tracking-wider text-gray-700 uppercase text-center"
                                 >
                                     Aksi
                                 </th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="(item, index) in products" :key="index">
+                            <tr
+                                v-for="(item, index) in products.data"
+                                :key="item.id"
+                            >
                                 <td
                                     class="px-6 py-4 text-sm text-gray-900 whitespace-nowrap"
                                 >
-                                    {{ index + 1 }}
+                                    {{
+                                        (products.current_page - 1) *
+                                            products.per_page +
+                                        index +
+                                        1
+                                    }}
                                 </td>
                                 <td class="px-6 py-4">
                                     <img
@@ -213,20 +266,19 @@ const formatPrice = (price) => {
                                 >
                                     {{ formatPrice(item.price) }}
                                 </td>
-
                                 <td
-                                    class="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap"
+                                    class="flex items-center justify-center px-6 py-6 space-x-2"
                                 >
                                     <Link
                                         :href="route('products.edit', item.id)"
-                                        class="px-4 py-2 mr-2 text-white bg-blue-500 rounded hover:bg-blue-700"
+                                        class="text-white btn btn-info"
                                     >
                                         Edit
                                     </Link>
                                     <button
                                         @click="deleteProduct(item.id)"
                                         type="submit"
-                                        class="px-4 py-2 text-white bg-red-500 rounded hover:bg-red-700"
+                                        class="text-white btn btn-error"
                                     >
                                         Hapus
                                     </button>
@@ -234,6 +286,55 @@ const formatPrice = (price) => {
                             </tr>
                         </tbody>
                     </table>
+
+                    <!-- Pagination Controls -->
+                    <div
+                        v-if="products.last_page > 1"
+                        class="flex justify-center items-center p-4 space-x-2"
+                    >
+                        <!-- Previous Button -->
+                        <button
+                            @click="changePage(products.current_page - 1)"
+                            :disabled="products.current_page === 1"
+                            class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-orange-500 hover:text-white hover:border-orange-500 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Previous
+                        </button>
+
+                        <!-- Page Numbers -->
+                        <button
+                            v-for="page in products.last_page"
+                            :key="page"
+                            @click="changePage(page)"
+                            :class="[
+                                'px-3 py-2 text-sm font-medium border rounded-md',
+                                page === products.current_page
+                                    ? 'bg-orange-500 text-white border-orange-500'
+                                    : 'text-gray-700 bg-white border-gray-300 hover:bg-orange-500 hover:text-white hover:border-orange-500 transition duration-300 ease-in-out',
+                            ]"
+                        >
+                            {{ page }}
+                        </button>
+
+                        <!-- Next Button -->
+                        <button
+                            @click="changePage(products.current_page + 1)"
+                            :disabled="
+                                products.current_page === products.last_page
+                            "
+                            class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-orange-500 hover:text-white hover:border-orange-500 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Next
+                        </button>
+                    </div>
+
+                    <!-- Pagination Info -->
+                    <div
+                        class="px-4 py-3 text-sm text-gray-700 border-t border-gray-200"
+                    >
+                        Showing {{ products.from }} to {{ products.to }} of
+                        {{ products.total }} results
+                    </div>
                 </div>
             </div>
         </div>

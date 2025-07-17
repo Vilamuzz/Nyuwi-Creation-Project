@@ -20,8 +20,11 @@ const hasAwaitingOrders = computed(() => {
     >
         <!-- Logo -->
         <div class="flex items-center space-x-4">
-            <ApplicationLogo class="h-10 w-auto fill-current text-gray-800" />
-            <h1 class="font-bold text-2xl">Nyuwi</h1>
+            <Link href="/">
+                <ApplicationLogo
+                    class="h-10 w-auto fill-current text-gray-800"
+                />
+            </Link>
         </div>
 
         <!-- Links -->
@@ -107,20 +110,24 @@ const hasAwaitingOrders = computed(() => {
                 </Link>
             </template>
 
-            <!-- Show login/register links if user is not logged in -->
+            <!-- Show login/register buttons if user is not logged in -->
             <template v-else>
-                <Link
-                    :href="route('login')"
-                    class="font-bold hover:text-orange-500 mr-4"
-                >
-                    Login
-                </Link>
-                <Link
-                    :href="route('register')"
-                    class="font-bold hover:text-orange-500"
-                >
-                    Register
-                </Link>
+                <div class="flex space-x-4">
+                    <Link :href="route('register')">
+                        <button
+                            class="btn btn-outline border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
+                        >
+                            Register
+                        </button>
+                    </Link>
+                    <Link :href="route('login')">
+                        <button
+                            class="btn bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
+                        >
+                            Login
+                        </button>
+                    </Link>
+                </div>
             </template>
         </div>
     </div>

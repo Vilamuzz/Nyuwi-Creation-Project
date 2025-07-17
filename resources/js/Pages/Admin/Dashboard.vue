@@ -21,9 +21,11 @@ const formatPrice = (price) => {
 
 <template>
     <Head title="Dashboard" />
-    <AdminLayout>
+    <AdminLayout pageTitle="Dashboard">
         <div class="p-6">
-            <h1 class="text-2xl font-semibold text-gray-800 mb-6">Dashboard</h1>
+            <h1 class="text-2xl font-semibold text-gray-800 mb-6">
+                Selamat Datang, {{ $page.props.auth.user.name }}
+            </h1>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Top Selling Products -->

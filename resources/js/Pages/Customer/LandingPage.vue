@@ -122,19 +122,19 @@ const formatPrice = (price) => {
                 </Link>
             </div>
         </section>
-        <section class="bg-orange-100 py-20">
-    <div class="flex justify-center items-center mx-20">
-        <div class="flex flex-col space-y-4 ml-5 text-center">
-            <h1 class="text-3xl font-bold">50+ Beautiful Products</h1>
-            <p>We offer a wide selection of items</p>
-            <Link
-                href="/shop"
-                class="bg-orange-500 py-2 w-1/2 ml-20 text-center text-white text-md font-bold hover:bg-orange-700 duration-300"
-            >
-                Explore More
-            </Link>
-        </div>
-    </div>
-</section>
+        <section class="bg-gray-600 py-20">
+            <div class="flex justify-center items-center mx-20 text-white">
+                <div class="flex flex-col space-y-4 ml-5 text-center">
+                    <h1 class="text-3xl font-bold">50+ Beautiful Products</h1>
+                    <p>We offer a wide selection of items</p>
+                    <Link
+                        href="/shop"
+                        class="bg-orange-500 py-2 w-1/2 ml-20 text-center text-white text-md font-bold hover:bg-orange-700 duration-300"
+                    >
+                        Explore More
+                    </Link>
+                </div>
+            </div>
+        </section>
     </CustomersLayout>
 </template>

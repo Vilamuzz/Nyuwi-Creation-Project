@@ -16,15 +16,9 @@ const formatPrice = (price) => {
 </script>
 
 <template>
-    <Head title="Orders Management" />
+    <Head title="Orders" />
 
-    <AdminLayout>
-        <template #header>
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">
-                Orders Management
-            </h2>
-        </template>
-
+    <AdminLayout pageTitle="Orders Management">
         <div class="py-12">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
@@ -57,7 +51,7 @@ const formatPrice = (price) => {
                                     Date
                                 </th>
                                 <th
-                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                                    class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
                                 >
                                     Actions
                                 </th>
@@ -78,15 +72,15 @@ const formatPrice = (price) => {
                                     <span
                                         :class="{
                                             'px-2 py-1 text-xs font-semibold rounded-full': true,
-                                            'bg-yellow-100 text-yellow-800':
+                                            'badge badge-warning text-white':
                                                 order.status === 'waiting',
-                                            'bg-orange-100 text-orange-800':
+                                            'badge badge-secondary text-white':
                                                 order.status === 'pending',
-                                            'bg-green-100 text-green-800':
+                                            'badge badge-info text-white':
                                                 order.status === 'processing',
-                                            'bg-blue-100 text-blue-800':
+                                            'badge badge-success text-white':
                                                 order.status === 'completed',
-                                            'bg-red-100 text-red-800':
+                                            'badge badge-error text-white':
                                                 order.status === 'cancelled',
                                         }"
                                     >
@@ -101,11 +95,11 @@ const formatPrice = (price) => {
                                     }}
                                 </td>
                                 <td
-                                    class="px-6 py-4 whitespace-nowrap space-x-2"
+                                    class="px-6 py-4 whitespace-nowrap flex justify-center"
                                 >
                                     <Link
                                         :href="route('orders.detail', order.id)"
-                                        class="px-3 py-1 text-sm text-white bg-blue-500 rounded hover:bg-blue-600"
+                                        class="btn btn-info text-white"
                                     >
                                         Show Details
                                     </Link>

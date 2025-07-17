@@ -13,7 +13,8 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,
             ProductColorSeeder::class,
             ProductSizeSeeder::class,
-            UserSeeder::class
+            UserSeeder::class,
+            IndoRegionSeeder::class,
         ]);
     }
 }

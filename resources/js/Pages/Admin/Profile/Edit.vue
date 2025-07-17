@@ -19,7 +19,7 @@ defineProps({
 <template>
     <Head title="Profile" />
 
-    <AdminLayout>
+    <AdminLayout pageTitle="Profile">
         <template #header>
             <h2 class="text-xl font-semibold leading-tight text-gray-800">
                 Profile

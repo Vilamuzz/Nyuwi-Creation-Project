@@ -1,81 +1,161 @@
 <script setup>
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import { Link } from "@inertiajs/vue3";
+import { ref, watch } from "vue";
+import {
+    LayoutDashboard,
+    Package,
+    ShoppingCart,
+    Settings,
+    ChevronsRight,
+    ChevronsLeft,
+} from "lucide-vue-next";
 
-// Updated navigation items array to match web.php routes
+// Initialize sidebar state from localStorage, default to true if not found
+const isSidebarOpen = ref(
+    localStorage.getItem("sidebarOpen") === "true" ||
+        localStorage.getItem("sidebarOpen") === null
+);
+
+// Toggle sidebar
+const toggleSidebar = () => {
+    isSidebarOpen.value = !isSidebarOpen.value;
+    // Emit custom event for layout to listen
+    window.dispatchEvent(
+        new CustomEvent("sidebarToggle", {
+            detail: { isOpen: isSidebarOpen.value },
+        })
+    );
+};
+
+// Watch for changes in sidebar state and save to localStorage
+watch(
+    isSidebarOpen,
+    (newValue) => {
+        localStorage.setItem("sidebarOpen", newValue.toString());
+        // Emit event when state changes
+        window.dispatchEvent(
+            new CustomEvent("sidebarToggle", {
+                detail: { isOpen: newValue },
+            })
+        );
+    },
+    { immediate: true }
+);
+
+// Updated navigation items array with Lucide icons
 const navigation = [
     {
         name: "Dashboard",
-        href: route("dashboard"), // Points to /dashboard
-        icon: "fas fa-home",
+        href: route("dashboard"),
+        icon: LayoutDashboard,
     },
     {
         name: "Inventory",
-        href: route("products.index"), // Points to /inventory (products.index)
-        icon: "fas fa-box",
+        href: route("products.index"),
+        icon: Package,
     },
     {
         name: "Orders",
-        href: route("orders.show"), // Points to /inventory (products.index)
-        icon: "fas fa-box",
-    },
-    {
-        name: "Profile",
-        href: route("profile.edit"), // Points to /customers (customers.index)
-        icon: "fas fa-users",
-    },
-    {
-        name: "Database",
-        href: route("data"),
-        icon: "fas fa-users",
+        href: route("orders.show"),
+        icon: ShoppingCart,
     },
 ];
 </script>
 
 <template>
-    <aside
-        class="fixed top-0 left-0 z-40 w-64 h-screen transition-transform -translate-x-full sm:translate-x-0 bg-orange-100 shadow-2xl"
-    >
-        <!-- Logo Section -->
-        <div class="flex items-center justify-center h-16">
-            <ApplicationLogo class="w-12 h-12" />
-        </div>
-        <hr class="h-px bg-gray-200 border-0 dark:bg-gray-700" />
-
-        <!-- Navigation Menu -->
-        <div class="h-full px-3 py-4 overflow-y-auto border-r">
-            <ul class="space-y-2">
-                <li v-for="item in navigation" :key="item.name">
-                    <Link
-                        :href="item.href"
-                        class="flex items-center p-3 text-gray-400 rounded-lg hover:bg-orange-200 hover:text-black duration-200 group"
-                        :class="{
-                            'bg-orange-100': $page.url.startsWith(item.href),
-                        }"
-                    >
-                        <i
-                            :class="[
-                                item.icon,
-                                'w-5 h-5 text-gray-500 transition duration-75 group-hover:text-orange-500',
-                            ]"
-                        ></i>
-                        <span class="ml-3">{{ item.name }}</span>
-                    </Link>
-                </li>
-            </ul>
-
-            <!-- Bottom Section -->
-            <div class="absolute bottom-0 left-0 p-4 border-t">
-                <Link
-                    :href="route('logout')"
-                    method="post"
-                    as="button"
-                    class="flex items-center p-3 text-gray-400 rounded-lg hover:bg-orange-200 hover:text-black duration-200 w-[220px]"
-                >
-                    <i class="fas fa-sign-out-alt w-5 h-5 text-gray-500"></i>
-                    <span class="ml-3">Logout</span>
-                </Link>
+    <div class="relative">
+        <!-- Sidebar -->
+        <aside
+            :class="[
+                'fixed top-0 left-0 z-40 h-screen transition-all duration-300 bg-[#ffedd5] shadow-2xl pt-5',
+                isSidebarOpen ? 'w-[230px]' : 'w-16',
+            ]"
+        >
+            <!-- Logo Section -->
+            <div class="flex items-center justify-center h-16">
+                <ApplicationLogo
+                    :class="[
+                        'transition-all duration-300',
+                        isSidebarOpen ? 'w-12 h-12' : 'w-8 h-8',
+                    ]"
+                />
             </div>
-        </div>
-    </aside>
+
+            <!-- Navigation Menu -->
+            <div class="h-full px-3 py-4 overflow-y-auto border-r">
+                <ul class="space-y-4">
+                    <li v-for="item in navigation" :key="item.name">
+                        <Link
+                            :href="item.href"
+                            :class="[
+                                'flex items-center p-3 text-[#ffedd5] rounded-lg hover:bg-orange-200 hover:text-[#381d21] duration-200 group bg-[#ea580c]',
+                                {
+                                    'bg-orange-100': $page.url.startsWith(
+                                        item.href
+                                    ),
+                                    'justify-center': !isSidebarOpen,
+                                },
+                            ]"
+                            :title="!isSidebarOpen ? item.name : ''"
+                        >
+                            <component
+                                :is="item.icon"
+                                class="w-5 h-5 flex-shrink-0"
+                            />
+                            <span
+                                v-if="isSidebarOpen"
+                                class="ml-3 transition-opacity duration-300"
+                            >
+                                {{ item.name }}
+                            </span>
+                        </Link>
+                    </li>
+                </ul>
+
+                <!-- Overlay Image -->
+                <img
+                    src="/img/overlay/flower2.png"
+                    class="absolute bottom-0 left-0 w-auto h-96 object-cover opacity-20 pointer-events-none -z-10"
+                />
+                <!-- Bottom Section -->
+                <div
+                    :class="[
+                        'absolute bottom-0 left-0 px-3 my-10 transition-all duration-300',
+                        isSidebarOpen ? 'w-64' : 'w-16',
+                    ]"
+                >
+                    <Link
+                        :href="route('data')"
+                        as="button"
+                        :class="[
+                            'flex items-center p-3 text-[#ffedd5] rounded-lg hover:bg-orange-200 hover:text-[#381d21] bg-[#ea580c] duration-200',
+                            isSidebarOpen ? 'w-[200px]' : 'w-10 justify-center',
+                        ]"
+                        :title="!isSidebarOpen ? 'Setting' : ''"
+                    >
+                        <Settings class="w-5 h-5 flex-shrink-0" />
+                        <span
+                            v-if="isSidebarOpen"
+                            class="ml-3 transition-opacity duration-300"
+                        >
+                            Setting
+                        </span>
+                    </Link>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Toggle Button Outside Sidebar -->
+        <button
+            @click="toggleSidebar"
+            :class="[
+                'fixed z-50 top-1/2 p-2 bg-white shadow-lg border border-gray-200 text-gray-600 hover:text-black hover:bg-gray-50 transition-all duration-300',
+                isSidebarOpen ? 'left-[210px]' : 'left-[44px]',
+            ]"
+        >
+            <ChevronsRight v-if="!isSidebarOpen" class="w-5 h-5" />
+            <ChevronsLeft v-else class="w-5 h-5" />
+        </button>
+    </div>
 </template>

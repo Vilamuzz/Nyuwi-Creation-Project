@@ -2,6 +2,8 @@
 import { Head, Link, useForm } from "@inertiajs/vue3";
 import { ref, watch } from "vue";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
+import ToastNotification from "@/Components/Customer/Sub-main/ToastNotification.vue";
+import { HeartPlus, ShoppingCart } from "lucide-vue-next";
 
 // Update form to handle product data
 const form = useForm({
@@ -12,22 +14,39 @@ const form = useForm({
     color: "",
 });
 
-const wishlistForm = useForm({
+const favoriteForm = useForm({
     product_id: null,
 });
 
 const quantity = ref(1);
 const selectedSize = ref("");
 const selectedColor = ref("");
-const errorMessage = ref("");
-const successMessage = ref("");
-const wishlistSuccessMessage = ref("");
-const wishlistErrorMessage = ref("");
+
+// Toast notification states
+const toast = ref({
+    show: false,
+    message: "",
+    type: "info",
+});
 
 // Watch for quantity changes
 watch(quantity, (newValue) => {
     form.quantity = newValue;
 });
+
+// Show toast function
+const showToast = (message, type = "info", duration = 3000) => {
+    toast.value = {
+        show: true,
+        message,
+        type,
+    };
+};
+
+// Hide toast function
+const hideToast = () => {
+    toast.value.show = false;
+};
 
 // Add to cart handler
 const addToCart = () => {
@@ -44,23 +63,17 @@ const addToCart = () => {
             quantity.value = 1;
             selectedSize.value = "";
             selectedColor.value = "";
-            errorMessage.value = "";
-            // Set success message
-            successMessage.value = "Produk berhasil ditambahkan ke keranjang!";
-            // Clear success message after 3 seconds
-            setTimeout(() => {
-                successMessage.value = "";
-            }, 3000);
+            showToast("Produk berhasil ditambahkan ke keranjang!", "success");
         },
         onError: (errors) => {
             if (errors.quantity) {
-                errorMessage.value = errors.quantity;
+                showToast(errors.quantity, "error");
             }
         },
     });
 };
 
-const addToFavorites = (e) => {
+const addToWishlist = (e) => {
     e.preventDefault();
     favoriteForm.product_id = props.product.id;
 
@@ -68,15 +81,11 @@ const addToFavorites = (e) => {
         preserveScroll: true,
         onSuccess: () => {
             favoriteForm.reset();
-            favoriteSuccessMessage.value =
-                "Produk berhasil ditambahkan ke favorit!";
-            setTimeout(() => {
-                favoriteSuccessMessage.value = "";
-            }, 3000);
+            showToast("Produk berhasil ditambahkan ke favorit!", "success");
         },
         onError: (errors) => {
             if (errors.message) {
-                favoriteErrorMessage.value = errors.message;
+                showToast(errors.message, "error");
             }
         },
     });
@@ -92,15 +101,22 @@ const getCategoryName = (categoryId) => {
     const category = props.categories.find((cat) => cat.id === categoryId);
     return category ? category.name : "Tidak ada kategori";
 };
-
-// Remove fetchProductReviews function and onMounted hook since we now get data directly
 </script>
 
 <template>
     <Head title="Product" />
     <CustomersLayout>
         <section class="bg-orange-100 px-24 py-6 flex flex-row">
-            <div class="text-gray-400 mr-2">Home > Shop ></div>
+            <div class="text-gray-400 mr-2">
+                <Link :href="route('home')" class="hover:text-orange-500"
+                    >Home</Link
+                >
+                >
+                <Link :href="route('shop')" class="hover:text-orange-500"
+                    >Shop</Link
+                >
+                >
+            </div>
             <div>Product</div>
         </section>
         <section class="mx-24 my-6 flex flex-row gap-4">
@@ -212,14 +228,14 @@ const getCategoryName = (categoryId) => {
                         <button
                             type="button"
                             @click="quantity > 1 ? quantity-- : null"
-                            class="p-4 border-l border-y border-gray-300 hover:bg-orange-500 rounded-l-md hover:text-white duration-300"
+                            class="p-2 border-l border-y border-gray-300 hover:bg-orange-500 rounded-l-md hover:text-white duration-300"
                         >
                             -
                         </button>
                         <input
                             type="number"
                             v-model="quantity"
-                            class="border-x-0 border-y border-gray-300 text-center p-4 hover:bg-orange-500 hover:text-white duration-300 w-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            class="border-x-0 border-y border-gray-300 text-center p-2 hover:bg-orange-500 hover:text-white duration-300 w-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             min="1"
                             :max="product.stock"
                         />
@@ -228,7 +244,7 @@ const getCategoryName = (categoryId) => {
                             @click="
                                 quantity < product.stock ? quantity++ : null
                             "
-                            class="p-4 border-r border-y border-gray-300 hover:bg-orange-500 rounded-r-md hover:text-white duration-300"
+                            class="p-2 border-r border-y border-gray-300 hover:bg-orange-500 rounded-r-md hover:text-white duration-300"
                         >
                             +
                         </button>
@@ -236,7 +252,7 @@ const getCategoryName = (categoryId) => {
 
                     <button
                         @click="addToCart"
-                        class="rounded-md border border-gray-300 px-10 py-4 hover:bg-orange-500 hover:text-white duration-300"
+                        class="flex space-x-2 rounded-md border border-gray-300 px-6 py-2 hover:bg-orange-500 hover:text-white duration-300"
                         :disabled="
                             product.stock < 1 ||
                             (!selectedSize && product.sizes?.length) ||
@@ -244,7 +260,8 @@ const getCategoryName = (categoryId) => {
                             quantity > product.stock
                         "
                     >
-                        {{
+                        <ShoppingCart />
+                        <span>{{
                             product.stock < 1
                                 ? "Out of Stock"
                                 : !selectedSize && product.sizes?.length
@@ -254,198 +271,26 @@ const getCategoryName = (categoryId) => {
                                 : quantity > product.stock
                                 ? "Not enough stock"
                                 : "Add To Cart"
-                        }}
+                        }}</span>
                     </button>
 
                     <button
                         @click.prevent="addToWishlist"
-                        class="rounded-md border border-gray-300 px-10 py-4 hover:bg-orange-500 hover:text-white duration-300"
+                        class="flex space-x-2 rounded-md border border-gray-300 px-6 py-2 hover:bg-orange-500 hover:text-white duration-300"
                     >
-                        Add To Wishlist
+                        <HeartPlus />
+                        <span>Add To Wishlist</span>
                     </button>
-
-                    <!-- Toast notification with close button -->
-                    <div
-                        v-if="errorMessage"
-                        class="fixed top-24 right-24 z-50 rounded-md bg-red-50 p-4 shadow-lg"
-                    >
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <svg
-                                        class="h-5 w-5 text-red-400"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                </div>
-                                <div class="ml-3">
-                                    <p class="text-sm font-medium text-red-800">
-                                        {{ errorMessage }}
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                @click="errorMessage = ''"
-                                class="ml-4 text-red-400 hover:text-red-500"
-                            >
-                                <svg
-                                    class="h-5 w-5"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                        clip-rule="evenodd"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- Success notification -->
-                    <div
-                        v-if="successMessage"
-                        class="fixed top-24 right-24 z-50 rounded-md bg-green-50 p-4 shadow-lg"
-                    >
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <svg
-                                        class="h-5 w-5 text-green-400"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                </div>
-                                <div class="ml-3">
-                                    <p
-                                        class="text-sm font-medium text-green-800"
-                                    >
-                                        {{ successMessage }}
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                @click="successMessage = ''"
-                                class="ml-4 text-green-400 hover:text-green-500"
-                            >
-                                <svg
-                                    class="h-5 w-5"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                        clip-rule="evenodd"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    <div
-                        v-if="wishlistSuccessMessage"
-                        class="fixed top-24 right-24 z-50 rounded-md bg-green-50 p-4 shadow-lg"
-                    >
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <svg
-                                        class="h-5 w-5 text-green-400"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                </div>
-                                <div class="ml-3">
-                                    <p
-                                        class="text-sm font-medium text-green-800"
-                                    >
-                                        {{ wishlistSuccessMessage }}
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                @click="wishlistSuccessMessage = ''"
-                                class="ml-4 text-green-400 hover:text-green-500"
-                            >
-                                <svg
-                                    class="h-5 w-5"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                        clip-rule="evenodd"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Add error message toast -->
-                    <div
-                        v-if="wishlistErrorMessage"
-                        class="fixed top-24 right-24 z-50 rounded-md bg-red-50 p-4 shadow-lg"
-                    >
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <svg
-                                        class="h-5 w-5 text-red-400"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                </div>
-                                <div class="ml-3">
-                                    <p class="text-sm font-medium text-red-800">
-                                        {{ wishlistErrorMessage }}
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                @click="wishlistErrorMessage = ''"
-                                class="ml-4 text-red-400 hover:text-red-500"
-                            >
-                                <svg
-                                    class="h-5 w-5"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fill-rule="evenodd"
-                                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                        clip-rule="evenodd"
-                                    />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
                 </div>
             </div>
         </section>
+
+        <!-- Toast Notification Component -->
+        <ToastNotification
+            :show="toast.show"
+            :message="toast.message"
+            :type="toast.type"
+            @close="hideToast"
+        />
     </CustomersLayout>
 </template>

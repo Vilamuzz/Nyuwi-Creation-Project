@@ -26,7 +26,7 @@ class OrderController extends Controller
 
     public function detail($id)
     {
-        $order = Order::with(['orderItems.product']) // Eager load order items and products
+        $order = Order::with(['orderItems.product'])
             ->findOrFail($id);
 
         return Inertia::render('Admin/Orders/Show', [
