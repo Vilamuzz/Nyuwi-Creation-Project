@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Product;
 use App\Models\Category;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Route;
-use App\Models\ProductReview;
 use App\Models\OrderItem;
+use Illuminate\Http\Request;
+use App\Models\ProductReview;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -148,24 +147,31 @@ class ProductController extends Controller
             'stock' => 'required|integer|min:1',
             'price' => 'required|numeric|min:1',
             'category_id' => 'nullable|integer|exists:categories,id',
+            'new_category' => 'nullable|string|max:255', // Add this line
             'description' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'colors' => 'nullable|array',
             'sizes' => 'nullable|array',
         ]);
 
+        // Handle new category creation (add this)
+        if ($request->filled('new_category')) {
+            $category = Category::create(['name' => $request->new_category]);
+            $validatedData['category_id'] = $category->id;
+        }
+
         $updateData = [
             'name' => $validatedData['name'],
             'stock' => $validatedData['stock'],
             'price' => $validatedData['price'],
             'category_id' => $validatedData['category_id'],
-            'description' => $request->description,
+            'description' => $validatedData['description'], // Use validated data
         ];
 
         if ($request->hasFile('image')) {
             // Delete old image
-            if ($product->image && Storage::exists("public/products/{$product->image}")) {
-                Storage::delete("public/products/{$product->image}");
+            if ($product->image && Storage::disk('public')->exists("products/{$product->image}")) {
+                Storage::disk('public')->delete("products/{$product->image}");
             }
 
             // Store new image
@@ -215,12 +221,27 @@ class ProductController extends Controller
                 ->with('error', 'Cannot delete product that has active orders');
         }
 
-        // Delete old image if exists
-        if ($product->image && Storage::exists("public/products/{$product->image}")) {
-            Storage::delete("public/products/{$product->image}");
+        // Store image name before deletion
+        $imageName = $product->image;
+
+        // Delete related data first
+        $product->colors()->delete();
+        $product->sizes()->delete();
+
+        // Delete the product from database
+        $product->delete();
+
+        // Delete image after successful database deletion
+        if ($imageName) {
+            // Correct path for Storage facade
+            $imagePath = "products/{$imageName}";
+
+            // Use the public disk explicitly
+            if (Storage::disk('public')->exists($imagePath)) {
+                $deleted = Storage::disk('public')->delete($imagePath);
+            }
         }
 
-        $product->delete();
         return redirect()->route('products.index')
             ->with('success', 'Product deleted successfully');
     }

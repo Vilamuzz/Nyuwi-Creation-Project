@@ -1,23 +1,17 @@
 <script setup>
-import { Head, Link, useForm } from "@inertiajs/vue3";
-import { ref, watch } from "vue";
+import { Head, Link, useForm, router } from "@inertiajs/vue3";
+import { ref } from "vue";
+import AdminLayout from "@/Layouts/AdminLayout.vue";
+import ToastNotification from "@/Components/Customer/Sub-main/ToastNotification.vue";
+import ColorPicker from "@/Components/Customer/Sub-main/ColorPicker.vue";
+import ImageInput from "@/Components/Customer/Sub-main/ImageInput.vue";
+import CategoryInput from "@/Components/Customer/Sub-main/CategoryInput.vue";
+import SizeInput from "@/Components/Customer/Sub-main/SizeInput.vue";
 
-// Add new refs
-const imagePreview = ref(null);
-const colorButtons = ref([]);
-const currentColor = ref("#000000");
-const selectedCategory = ref("");
-const sizeList = ref([]);
-const newSize = ref("");
-
-// Preset sizes for each category
-const categorySizes = {
-    1: ["14cm", "16cm", "18cm", "20cm"],
-    2: ["40cm", "45cm", "50cm", "55cm"],
-    3: ["5", "6", "7", "8", "9"],
-    4: ["Small", "Medium", "Large"],
-    5: ["Small", "Medium", "Large"],
-};
+// Toast notification state
+const toastMessage = ref("");
+const toastType = ref("info");
+const showToast = ref(false);
 
 const props = defineProps({
     errors: Object,
@@ -25,7 +19,15 @@ const props = defineProps({
     categories: Array,
 });
 
-// Update form structure
+// Preset sizes for each category
+const categorySizes = {
+    1: ["14cm", "16cm", "18cm", "20cm"], // Gelang sizes
+    2: ["40cm", "45cm", "50cm", "55cm"], // Kalung sizes
+    3: ["5", "6", "7", "8", "9"], // Cincin sizes
+    4: ["Small", "Medium", "Large"], // Bunga sizes
+    5: ["Small", "Medium", "Large"], // Anting sizes
+};
+
 const form = useForm({
     name: props.product.name,
     stock: props.product.stock,
@@ -33,383 +35,212 @@ const form = useForm({
     category_id: props.product.category_id,
     new_category: "",
     description: props.product.description,
-    image: null, // Only send when changed
+    image: null,
     colors: props.product.colors?.map((c) => c.color) || [],
     sizes: props.product.sizes?.map((s) => s.size) || [],
-    _method: "PUT", // Add method explicitly
 });
 
-// Initialize existing colors
-if (props.product.colors) {
-    colorButtons.value = props.product.colors.map((c) => ({
-        hex: c.color,
-        isEditing: false,
-    }));
-}
+const selectedCategory = ref(props.product.category_id);
 
-// Initialize existing sizes
-if (props.product.sizes) {
-    sizeList.value = props.product.sizes.map((s) => s.size);
-}
-
-// Initialize selected category
-selectedCategory.value = props.product.category_id;
-
-// Watch for category changes
-watch(selectedCategory, (newCategoryId) => {
-    if (newCategoryId && newCategoryId !== "new") {
-        sizeList.value = [];
-        form.sizes = [];
-        const presetSizes = categorySizes[newCategoryId];
-        if (presetSizes) {
-            sizeList.value = [...presetSizes];
-            form.sizes = [...presetSizes];
-        }
-    }
-});
-
-// Add color management functions
-const addNewColor = () => {
-    colorButtons.value.push({
-        hex: currentColor.value,
-    });
-    form.colors.push(currentColor.value);
+// Function to show toast notifications
+const showNotification = (message, type = "info") => {
+    toastMessage.value = message;
+    toastType.value = type;
+    showToast.value = true;
 };
 
-const removeColorButton = (index) => {
-    colorButtons.value.splice(index, 1);
-    form.colors.splice(index, 1);
+// Function to close toast
+const closeToast = () => {
+    showToast.value = false;
 };
 
-// Add size management functions
-const addSize = () => {
-    if (newSize.value.trim()) {
-        sizeList.value.push(newSize.value.trim());
-        form.sizes.push(newSize.value.trim());
-        newSize.value = "";
-    }
-};
-
-const removeSize = (index) => {
-    sizeList.value.splice(index, 1);
-    form.sizes.splice(index, 1);
-};
-
-// Add image handling
-const handleImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        form.image = file;
-        imagePreview.value = URL.createObjectURL(file);
-    }
-};
-
-// Update the updateProduct function
 const updateProduct = () => {
-    // Create FormData object to handle file upload
-    const formData = new FormData();
-
-    // Append all form fields
-    formData.append("name", form.name);
-    formData.append("stock", form.stock);
-    formData.append("price", form.price);
-    formData.append("category_id", form.category_id);
-    formData.append("description", form.description);
-    formData.append("_method", "PUT"); // Required for PUT requests
-
-    // Append colors and sizes as arrays
-    form.colors.forEach((color, index) => {
-        formData.append(`colors[${index}]`, color);
-    });
-
-    form.sizes.forEach((size, index) => {
-        formData.append(`sizes[${index}]`, size);
-    });
-
-    // Only append image if a new one is selected
-    if (form.image) {
-        formData.append("image", form.image);
+    if (selectedCategory.value === "new") {
+        form.new_category = form.new_category;
+    } else {
+        form.category_id = selectedCategory.value;
     }
 
-    // Use post() instead of put() for FormData
-    form.post(route("products.update", props.product.id), {
-        preserveScroll: true,
+    form.put(route("products.update", props.product.id), {
         onSuccess: () => {
-            window.location = route("products.index");
+            showNotification("Produk berhasil diperbarui!", "success");
         },
         onError: (errors) => {
-            console.error("Form submission errors:", errors);
-        },
-        onFinish: () => {
-            if (imagePreview.value) {
-                URL.revokeObjectURL(imagePreview.value);
-            }
+            const errorMessages = Object.values(errors).flat();
+            showNotification(
+                errorMessages[0] || "Terjadi kesalahan saat memperbarui produk",
+                "error"
+            );
         },
     });
+};
+
+const handleCategoryChange = (categoryId) => {
+    selectedCategory.value = categoryId;
 };
 </script>
 
 <template>
     <Head title="Edit Products" />
 
-    <div class="bg-orange-200 px-8 py-4">
-        <h2 class="text-xl font-semibold leading-tight text-gray-800">
-            Edit Product
-        </h2>
-    </div>
+    <AdminLayout pageTitle="Edit Product">
+        <!-- Toast Notification Component -->
+        <ToastNotification
+            :message="toastMessage"
+            :type="toastType"
+            :show="showToast"
+            @close="closeToast"
+        />
 
-    <div v-if="$page.props.flash.message" class="alert">
-        {{ $page.props.flash.message }}
-    </div>
+        <div class="mx-12 my-10">
+            <form @submit.prevent="updateProduct">
+                <div class="flex flex-row space-x-6 w-full">
+                    <div class="flex flex-col w-1/2">
+                        <!-- Nama Produk -->
+                        <div class="form-control mb-4">
+                            <label class="label">
+                                <span class="label-text font-semibold"
+                                    >Nama Produk*</span
+                                >
+                            </label>
+                            <input
+                                type="text"
+                                v-model="form.name"
+                                class="input input-bordered w-full"
+                                :class="{ 'input-error': errors.name }"
+                                required
+                            />
+                            <div v-if="errors.name" class="label">
+                                <span class="label-text-alt text-error">{{
+                                    errors.name
+                                }}</span>
+                            </div>
+                        </div>
 
-    <div class="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md m-16">
-        <form @submit.prevent="updateProduct">
-            <!-- Name Input -->
-            <div class="mb-4">
-                <label class="block text-gray-700 font-semibold mb-2"
-                    >Nama Produk</label
-                >
-                <input
-                    type="text"
-                    v-model="form.name"
-                    class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    :class="{ 'border-red-500': errors.name }"
-                    required
-                />
-                <div v-if="errors.name" class="text-red-500 text-sm mt-1">
-                    {{ errors.name }}
-                </div>
-            </div>
+                        <!-- Jumlah Stok -->
+                        <div class="form-control mb-4">
+                            <label class="label">
+                                <span class="label-text font-semibold"
+                                    >Jumlah Stok*</span
+                                >
+                            </label>
+                            <input
+                                type="number"
+                                v-model="form.stock"
+                                class="input input-bordered w-full"
+                                :class="{ 'input-error': errors.stock }"
+                                required
+                                min="1"
+                            />
+                            <div v-if="errors.stock" class="label">
+                                <span class="label-text-alt text-error">{{
+                                    errors.stock
+                                }}</span>
+                            </div>
+                        </div>
 
-            <!-- Stock Input -->
-            <div class="mb-4">
-                <label class="block text-gray-700 font-semibold mb-2"
-                    >Stok</label
-                >
-                <input
-                    type="number"
-                    v-model="form.stock"
-                    class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    :class="{ 'border-red-500': errors.stock }"
-                    required
-                />
-                <div v-if="errors.stock" class="text-red-500 text-sm mt-1">
-                    {{ errors.stock }}
-                </div>
-            </div>
+                        <!-- Harga -->
+                        <div class="form-control mb-4">
+                            <label class="label">
+                                <span class="label-text font-semibold"
+                                    >Harga*</span
+                                >
+                            </label>
+                            <input
+                                type="number"
+                                v-model="form.price"
+                                class="input input-bordered w-full"
+                                :class="{ 'input-error': errors.price }"
+                                required
+                                min="1"
+                            />
+                            <div v-if="errors.price" class="label">
+                                <span class="label-text-alt text-error">{{
+                                    errors.price
+                                }}</span>
+                            </div>
+                        </div>
 
-            <!-- Price Input -->
-            <div class="mb-4">
-                <label class="block text-gray-700 font-semibold mb-2"
-                    >Harga</label
-                >
-                <input
-                    type="number"
-                    v-model="form.price"
-                    class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    :class="{ 'border-red-500': errors.price }"
-                    placeholder="Rp10,000"
-                    required
-                />
-                <div v-if="errors.price" class="text-red-500 text-sm mt-1">
-                    {{ errors.price }}
-                </div>
-            </div>
-
-            <!-- Category Input -->
-            <div class="mb-4">
-                <label class="block text-gray-700 font-semibold mb-2"
-                    >Kategori</label
-                >
-                <select
-                    v-model="form.category_id"
-                    class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    :class="{ 'border-red-500': errors.category_id }"
-                    required
-                >
-                    <option value="">Pilih Kategori</option>
-                    <option
-                        v-for="category in categories"
-                        :key="category.id"
-                        :value="category.id"
-                    >
-                        {{ category.name }}
-                    </option>
-                    <option value="new">+ Tambah Kategori Baru</option>
-                </select>
-                <div
-                    v-if="errors.category_id"
-                    class="text-red-500 text-sm mt-1"
-                >
-                    {{ errors.category_id }}
-                </div>
-            </div>
-
-            <!-- New Category Input (if needed) -->
-            <div v-if="form.category_id === 'new'" class="mb-4">
-                <label class="block text-gray-700 font-semibold mb-2"
-                    >Kategori Baru</label
-                >
-                <input
-                    type="text"
-                    v-model="form.new_category"
-                    class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    :class="{ 'border-red-500': errors.new_category }"
-                    required
-                />
-                <div
-                    v-if="errors.new_category"
-                    class="text-red-500 text-sm mt-1"
-                >
-                    {{ errors.new_category }}
-                </div>
-            </div>
-
-            <!-- Description Input -->
-            <div class="mb-4">
-                <label class="block text-gray-700 font-semibold mb-2"
-                    >Deskripsi</label
-                >
-                <textarea
-                    v-model="form.description"
-                    class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    :class="{ 'border-red-500': errors.description }"
-                    rows="4"
-                ></textarea>
-                <div
-                    v-if="errors.description"
-                    class="text-red-500 text-sm mt-1"
-                >
-                    {{ errors.description }}
-                </div>
-            </div>
-
-            <!-- Image Input -->
-            <div class="mb-4">
-                <label class="block text-gray-700 font-semibold mb-2"
-                    >Gambar</label
-                >
-                <input
-                    type="file"
-                    @change="handleImageUpload"
-                    class="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    :class="{ 'border-red-500': errors.image }"
-                    accept="image/*"
-                />
-                <div v-if="errors.image" class="text-red-500 text-sm mt-1">
-                    {{ errors.image }}
-                </div>
-                <div v-if="imagePreview || product.image" class="mt-2">
-                    <img
-                        :src="
-                            imagePreview || `/storage/products/${product.image}`
-                        "
-                        class="w-32 h-32 object-cover rounded-md"
-                        alt="Preview"
-                    />
-                </div>
-            </div>
-
-            <!-- Add Color Picker Section -->
-            <div class="mb-4">
-                <label class="block text-gray-700 font-semibold mb-2">
-                    Warna (Optional)
-                </label>
-                <div class="flex flex-wrap gap-2">
-                    <div
-                        v-for="(button, index) in colorButtons"
-                        :key="index"
-                        class="flex items-center gap-2"
-                    >
-                        <div
-                            class="w-10 h-10 rounded-full border border-gray-300"
-                            :style="{ backgroundColor: button.hex }"
-                        ></div>
-                        <button
-                            @click="removeColorButton(index)"
-                            type="button"
-                            class="text-red-500 hover:text-red-700"
-                        >
-                            &times;
-                        </button>
-                    </div>
-                    <div class="relative">
-                        <input
-                            type="color"
-                            v-model="currentColor"
-                            @change="addNewColor"
-                            class="absolute inset-0 opacity-0 w-10 h-10 cursor-pointer"
+                        <!-- Kategori Component -->
+                        <CategoryInput
+                            :categories="categories"
+                            v-model="selectedCategory"
+                            v-model:new-category="form.new_category"
+                            @category-change="handleCategoryChange"
                         />
-                        <div
-                            class="w-10 h-10 rounded-full border border-dashed border-gray-300 flex items-center justify-center hover:border-gray-400"
-                        >
-                            +
+                    </div>
+
+                    <div class="flex flex-col w-1/2">
+                        <!-- Image Input Component -->
+                        <ImageInput
+                            v-model="form.image"
+                            :errors="form.errors"
+                            :current-image="product.image"
+                            @notification="showNotification"
+                        />
+
+                        <!-- Color Picker Component -->
+                        <ColorPicker
+                            v-model:colors="form.colors"
+                            @notification="showNotification"
+                        />
+
+                        <!-- Size Input Component -->
+                        <SizeInput
+                            v-model:sizes="form.sizes"
+                            :selected-category="selectedCategory"
+                            :category-sizes="categorySizes"
+                            @notification="showNotification"
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <!-- Deskripsi -->
+                    <div class="form-control mb-4">
+                        <label class="label">
+                            <span class="label-text font-semibold"
+                                >Deskripsi*</span
+                            >
+                        </label>
+                        <textarea
+                            v-model="form.description"
+                            class="textarea textarea-bordered w-full"
+                            :class="{
+                                'textarea-error': form.errors.description,
+                            }"
+                            rows="4"
+                            placeholder="Deskripsi produk..."
+                        ></textarea>
+                        <div v-if="form.errors.description" class="label">
+                            <span class="label-text-alt text-error">{{
+                                form.errors.description
+                            }}</span>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Add Size Section -->
-            <div class="mb-4">
-                <label class="block text-gray-700 font-semibold mb-2">
-                    Ukuran (Optional)
-                </label>
-                <div class="flex gap-2" v-if="selectedCategory">
-                    <input
-                        type="text"
-                        v-model="newSize"
-                        placeholder="Masukkan ukuran"
-                        class="flex-grow px-4 py-2 border rounded-md"
-                    />
-                    <button
-                        type="button"
-                        @click="addSize"
-                        class="px-4 py-2 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+                <div class="flex gap-4 mt-6">
+                    <Link
+                        :href="route('products.index')"
+                        class="btn btn-neutral flex-1"
                     >
-                        +
+                        Kembali
+                    </Link>
+                    <!-- Submit Button -->
+                    <button
+                        type="submit"
+                        class="btn btn-primary flex-1"
+                        :disabled="form.processing"
+                    >
+                        {{
+                            form.processing
+                                ? "Memperbarui..."
+                                : "Perbarui Produk"
+                        }}
                     </button>
                 </div>
-                <div class="flex flex-wrap gap-2 mt-2">
-                    <div
-                        v-for="(size, index) in sizeList"
-                        :key="index"
-                        class="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-md"
-                    >
-                        <span>{{ size }}</span>
-                        <button
-                            @click="removeSize(index)"
-                            type="button"
-                            class="text-red-500 hover:text-red-700"
-                        >
-                            &times;
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Submit Button -->
-            <button
-                type="submit"
-                class="w-full bg-blue-500 text-white py-2 rounded-md font-semibold hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            >
-                Simpan
-            </button>
-            <Link
-                :href="route('products.index')"
-                class="block w-full mt-4 bg-gray-300 text-center text-gray-800 py-2 rounded-md font-semibold hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
-            >
-                Kembali
-            </Link>
-        </form>
-    </div>
+            </form>
+        </div>
+    </AdminLayout>
 </template>
-
-<style scoped>
-input[type="color"]::-webkit-color-swatch-wrapper {
-    padding: 0;
-}
-input[type="color"]::-webkit-color-swatch {
-    border: none;
-    border-radius: 50%;
-}
-</style>

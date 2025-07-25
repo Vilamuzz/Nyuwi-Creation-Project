@@ -1,14 +1,21 @@
 <script setup>
 import { Head, Link, useForm, router } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
+import ToastNotification from "@/Components/Customer/Sub-main/ToastNotification.vue";
 import { ref, watch, computed } from "vue";
 import debounce from "lodash/debounce";
+import { Search } from "lucide-vue-next";
 
 const props = defineProps({
     products: Object, // Change from Array to Object for pagination
     categories: Array,
     filters: Object,
 });
+
+// Toast notification state
+const toastMessage = ref("");
+const toastType = ref("info");
+const showToast = ref(false);
 
 const search = ref(props.filters?.search || "");
 const sortField = ref("created_at");
@@ -35,6 +42,18 @@ const currentSortLabel = computed(() => {
     );
     return currentOption ? currentOption.label : "Terbaru";
 });
+
+// Function to show toast notifications
+const showNotification = (message, type = "info") => {
+    toastMessage.value = message;
+    toastType.value = type;
+    showToast.value = true;
+};
+
+// Function to close toast
+const closeToast = () => {
+    showToast.value = false;
+};
 
 // Watch for search changes with debounce
 watch(
@@ -83,7 +102,19 @@ const form = useForm({});
 
 const deleteProduct = (productId) => {
     if (confirm("Are you sure you want to delete this product?")) {
-        form.delete(route("products.destroy", productId));
+        form.delete(route("products.destroy", productId), {
+            onSuccess: () => {
+                showNotification("Produk berhasil dihapus!", "success");
+            },
+            onError: (errors) => {
+                const errorMessages = Object.values(errors).flat();
+                showNotification(
+                    errorMessages[0] ||
+                        "Terjadi kesalahan saat menghapus produk",
+                    "error"
+                );
+            },
+        });
     }
 };
 
@@ -105,6 +136,14 @@ const formatPrice = (price) => {
     <Head title="Inventory" />
 
     <AdminLayout pageTitle="Inventory Management">
+        <!-- Toast Notification Component -->
+        <ToastNotification
+            :message="toastMessage"
+            :type="toastType"
+            :show="showToast"
+            @close="closeToast"
+        />
+
         <div class="mt-4">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
@@ -115,22 +154,7 @@ const formatPrice = (price) => {
                             <label
                                 class="input input-bordered flex items-center gap-2 w-1/3"
                             >
-                                <svg
-                                    class="h-[1em] opacity-50"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <g
-                                        stroke-linejoin="round"
-                                        stroke-linecap="round"
-                                        stroke-width="2.5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                    >
-                                        <circle cx="11" cy="11" r="8"></circle>
-                                        <path d="m21 21-4.3-4.3"></path>
-                                    </g>
-                                </svg>
+                                <Search />
                                 <input
                                     type="search"
                                     class="grow border-none focus:ring-0"
@@ -243,7 +267,7 @@ const formatPrice = (price) => {
                                     <img
                                         :src="`/storage/products/${item.image}`"
                                         alt="product image"
-                                        class="w-16 h-16 object-cover"
+                                        class="w-16 h-16 object-cover rounded"
                                     />
                                 </td>
                                 <td
