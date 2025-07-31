@@ -1,23 +1,25 @@
 <script setup>
 import { Head } from "@inertiajs/vue3";
-import { ref, watch } from "vue";
+import { ref, watch, onMounted, nextTick } from "vue";
 import debounce from "lodash/debounce";
-import { router } from "@inertiajs/vue3";
+import axios from "axios";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Customer/Main/Hero.vue";
 import Product from "@/Components/Customer/Sub-main/Product.vue";
 
-const props = defineProps({
-    products: Object,
-    categories: Array,
-    filters: Object,
-});
+// Reactive data
+const products = ref([]);
+const categories = ref([]);
+const meta = ref({});
+const isLoading = ref(true);
+const error = ref(null);
 
-// Add search, sort and category states
-const search = ref(props.filters?.search || "");
-const sortField = ref(props.filters?.sortField || "created_at");
-const sortDirection = ref(props.filters?.sortDirection || "desc");
-const selectedCategory = ref(props.filters?.category || ""); // Add category filter
+// Filter states
+const search = ref("");
+const sortField = ref("created_at");
+const sortDirection = ref("desc");
+const selectedCategory = ref("");
+const currentPage = ref(1);
 
 // Define sort options
 const sortOptions = [
@@ -29,17 +31,48 @@ const sortOptions = [
     { field: "price", label: "Harga (Tinggi-Rendah)", direction: "desc" },
 ];
 
+// Fetch data from API
+const fetchShopData = async () => {
+    try {
+        isLoading.value = true;
+        const response = await axios.get("/api/shop", {
+            params: {
+                search: search.value,
+                sortField: sortField.value,
+                sortDirection: sortDirection.value,
+                category: selectedCategory.value,
+                page: currentPage.value,
+            },
+        });
+
+        if (response.data.success) {
+            products.value = response.data.data.products;
+            categories.value = response.data.data.categories;
+            meta.value = response.data.data.meta;
+        } else {
+            error.value = "Failed to load shop data";
+        }
+    } catch (err) {
+        console.error("Error fetching shop data:", err);
+        error.value = "Failed to load shop data";
+    } finally {
+        isLoading.value = false;
+    }
+};
+
 // Watch for search changes with debounce
 watch(
     search,
     debounce((value) => {
-        updateFilters({ search: value });
+        currentPage.value = 1; // Reset to page 1 on search
+        fetchShopData();
     }, 300)
 );
 
 // Watch for category changes
 watch(selectedCategory, (value) => {
-    updateFilters({ category: value });
+    currentPage.value = 1; // Reset to page 1 on category change
+    fetchShopData();
 });
 
 // Handle sorting
@@ -47,34 +80,30 @@ const handleSort = (event) => {
     const [field, direction] = event.target.value.split("|");
     sortField.value = field;
     sortDirection.value = direction;
-    updateFilters({
-        sortField: field,
-        sortDirection: direction,
+    currentPage.value = 1; // Reset to page 1 on sort
+    fetchShopData();
+};
+
+// Handle pagination with instant scroll to top
+const changePage = async (page) => {
+    currentPage.value = page;
+    await fetchShopData();
+
+    // Instantly scroll to top after data is loaded
+    await nextTick();
+    window.scrollTo({
+        top: 0,
+        behavior: "auto", // Changed from "smooth" to "auto" for instant scroll
     });
 };
 
-// Update filters and reload data
-const updateFilters = (newFilters) => {
-    router.get(
-        route("shop"),
-        {
-            page: newFilters.page || props.products.current_page,
-            search: search.value,
-            sortField: sortField.value,
-            sortDirection: sortDirection.value,
-            category: selectedCategory.value,
-            ...newFilters,
-        },
-        {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        }
-    );
-};
+// Fetch data on component mount
+onMounted(() => {
+    fetchShopData();
+});
 
 const getCategoryName = (categoryId) => {
-    const category = props.categories.find((cat) => cat.id === categoryId);
+    const category = categories.value.find((cat) => cat.id === categoryId);
     return category ? category.name : "No category";
 };
 
@@ -88,9 +117,10 @@ const formatPrice = (price) => {
 </script>
 
 <template>
-    <Head title="Shoping Page" />
+    <Head title="Shopping Page" />
     <CustomersLayout>
         <Hero title="Shop" breadcrumb="Home > Shop" />
+
         <section class="bg-orange-200">
             <div
                 class="w-full bg-[#fdf7f2] py-4 px-24 flex items-center justify-between border-t border-b border-gray-200"
@@ -140,10 +170,6 @@ const formatPrice = (price) => {
                                 v-for="option in sortOptions"
                                 :key="`${option.field}-${option.direction}`"
                                 :value="`${option.field}|${option.direction}`"
-                                :selected="
-                                    option.field === sortField &&
-                                    option.direction === sortDirection
-                                "
                             >
                                 {{ option.label }}
                             </option>
@@ -152,32 +178,61 @@ const formatPrice = (price) => {
                 </div>
             </div>
         </section>
+
         <section>
             <div class="flex flex-col items-center space-y-8 my-14">
-                <div class="flex flex-col items-center space-y-8 my-14">
+                <!-- Loading state -->
+                <div v-if="isLoading" class="text-center py-8">
+                    <div
+                        class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"
+                    ></div>
+                    <p class="mt-4 text-gray-600">Loading products...</p>
+                </div>
+
+                <!-- Error state -->
+                <div v-else-if="error" class="text-center py-8 text-red-500">
+                    <p>{{ error }}</p>
+                    <button
+                        @click="fetchShopData"
+                        class="mt-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+                    >
+                        Retry
+                    </button>
+                </div>
+
+                <!-- Products grid - Added class for targeting -->
+                <div
+                    v-else
+                    class="flex flex-col items-center space-y-8 my-14 products-grid"
+                >
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                         <Product
-                            v-for="item in products.data"
+                            v-for="item in products"
                             :key="item.id"
                             :id="item.id"
+                            :slug="item.slug"
                             :name="item.name"
                             :price="formatPrice(item.price)"
                             :category="getCategoryName(item.category_id)"
-                            :image="item.image"
+                            :image="
+                                item.image ||
+                                (item.images && item.images[0]) ||
+                                null
+                            "
                             :rating="Number(item.average_rating) || 0"
                             :total-reviews="Number(item.total_reviews) || 0"
                         />
                     </div>
 
                     <!-- Pagination -->
-                    <div v-if="products.last_page > 1" class="flex gap-2">
+                    <div v-if="meta.last_page > 1" class="flex gap-2">
                         <button
-                            v-for="page in products.last_page"
+                            v-for="page in meta.last_page"
                             :key="page"
-                            @click="updateFilters({ page })"
+                            @click="changePage(page)"
                             :class="[
                                 'py-2 px-4 rounded-md border',
-                                page === products.current_page
+                                page === meta.current_page
                                     ? 'bg-orange-500 text-white border-orange-500'
                                     : 'bg-orange-100 hover:bg-orange-500 hover:text-white duration-300',
                             ]"
@@ -188,6 +243,7 @@ const formatPrice = (price) => {
                 </div>
             </div>
         </section>
+
         <section class="bg-[#fdf7f2]">
             <div class="flex justify-center py-20">
                 <div class="flex space-x-20">

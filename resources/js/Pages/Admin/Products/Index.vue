@@ -265,7 +265,7 @@ const formatPrice = (price) => {
                                 </td>
                                 <td class="px-6 py-4">
                                     <img
-                                        :src="`/storage/products/${item.image}`"
+                                        :src="`/storage/products/${item.images[0]}`"
                                         alt="product image"
                                         class="w-16 h-16 object-cover rounded"
                                     />

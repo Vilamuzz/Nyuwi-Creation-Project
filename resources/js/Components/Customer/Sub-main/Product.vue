@@ -7,6 +7,10 @@ const props = defineProps({
         type: Number,
         required: true,
     },
+    slug: {
+        type: String,
+        required: true,
+    },
     name: {
         type: String,
         required: true,
@@ -41,7 +45,7 @@ const addToWishlist = (e) => {
 
 <template>
     <Link
-        :href="route('product', { id: id })"
+        :href="route('product', { slug: slug })"
         class="relative flex flex-col items-start w-[200px] bg-gray-100 rounded-md hover:shadow-lg hover:scale-105 duration-300"
     >
         <!-- Container Gambar dan Overlay -->

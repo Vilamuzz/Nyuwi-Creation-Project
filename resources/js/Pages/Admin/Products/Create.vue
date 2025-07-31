@@ -15,15 +15,6 @@ const showToast = ref(false);
 
 defineProps({ errors: Object, categories: Array });
 
-// Preset sizes for each category
-const categorySizes = {
-    1: ["14cm", "16cm", "18cm", "20cm"], // Gelang sizes
-    2: ["40cm", "45cm", "50cm", "55cm"], // Kalung sizes
-    3: ["5", "6", "7", "8", "9"], // Cincin sizes
-    4: ["Small", "Medium", "Large"], // Bunga sizes
-    5: ["Small", "Medium", "Large"], // Anting sizes
-};
-
 const form = useForm({
     name: "",
     stock: "",
@@ -31,7 +22,7 @@ const form = useForm({
     category_id: "",
     new_category: "",
     description: "",
-    image: null,
+    images: [], // Changed from 'image' to 'images' array
     colors: [],
     sizes: [],
 });
@@ -170,8 +161,9 @@ const handleCategoryChange = (categoryId) => {
                     <div class="flex flex-col w-1/2">
                         <!-- Image Input Component -->
                         <ImageInput
-                            v-model="form.image"
-                            :errors="form.errors"
+                            v-model="form.images"
+                            :errors="errors"
+                            :max-images="10"
                             @notification="showNotification"
                         />
 
@@ -184,8 +176,6 @@ const handleCategoryChange = (categoryId) => {
                         <!-- Size Input Component -->
                         <SizeInput
                             v-model:sizes="form.sizes"
-                            :selected-category="selectedCategory"
-                            :category-sizes="categorySizes"
                             @notification="showNotification"
                         />
                     </div>

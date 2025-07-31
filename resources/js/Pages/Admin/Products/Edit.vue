@@ -19,15 +19,6 @@ const props = defineProps({
     categories: Array,
 });
 
-// Preset sizes for each category
-const categorySizes = {
-    1: ["14cm", "16cm", "18cm", "20cm"], // Gelang sizes
-    2: ["40cm", "45cm", "50cm", "55cm"], // Kalung sizes
-    3: ["5", "6", "7", "8", "9"], // Cincin sizes
-    4: ["Small", "Medium", "Large"], // Bunga sizes
-    5: ["Small", "Medium", "Large"], // Anting sizes
-};
-
 const form = useForm({
     name: props.product.name,
     stock: props.product.stock,
@@ -35,9 +26,10 @@ const form = useForm({
     category_id: props.product.category_id,
     new_category: "",
     description: props.product.description,
-    image: null,
-    colors: props.product.colors?.map((c) => c.color) || [],
-    sizes: props.product.sizes?.map((s) => s.size) || [],
+    images: [], // Changed from 'image' to 'images' array to match controller
+    colors: props.product.colors || [],
+    sizes: props.product.sizes || [],
+    _method: "PUT",
 });
 
 const selectedCategory = ref(props.product.category_id);
@@ -61,7 +53,7 @@ const updateProduct = () => {
         form.category_id = selectedCategory.value;
     }
 
-    form.put(route("products.update", props.product.id), {
+    form.post(route("products.update", props.product.id), {
         onSuccess: () => {
             showNotification("Produk berhasil diperbarui!", "success");
         },
@@ -173,9 +165,9 @@ const handleCategoryChange = (categoryId) => {
                     <div class="flex flex-col w-1/2">
                         <!-- Image Input Component -->
                         <ImageInput
-                            v-model="form.image"
-                            :errors="form.errors"
-                            :current-image="product.image"
+                            v-model="form.images"
+                            :errors="errors"
+                            :current-images="product.images"
                             @notification="showNotification"
                         />
 
@@ -188,8 +180,6 @@ const handleCategoryChange = (categoryId) => {
                         <!-- Size Input Component -->
                         <SizeInput
                             v-model:sizes="form.sizes"
-                            :selected-category="selectedCategory"
-                            :category-sizes="categorySizes"
                             @notification="showNotification"
                         />
                     </div>

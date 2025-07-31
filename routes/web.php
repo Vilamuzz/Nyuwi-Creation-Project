@@ -11,61 +11,65 @@ use App\Http\Controllers\Auth\AdminRegistrationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-// Public Routes (Add customer middleware to prevent admin access)
+// Public Routes
 Route::middleware(['customer'])->group(function () {
     Route::get('/', [ProductController::class, 'landingPage'])->name('home');
     Route::get('/about', function () {
         return Inertia::render('Customer/About');
     })->name('about');
-    Route::get('/shop', [ProductController::class, 'shop'])->name('shop');
-    Route::get('/product/{id}', [ProductController::class, 'product'])->name('product');
+    Route::get('/shop', function () {
+        return Inertia::render('Customer/ShopingPage');
+    })->name('shop');
+    Route::get('/product/{slug}', [ProductController::class, 'product'])->name('product');
 });
 
-// Customer Only Routes
+// Authenticated Customer Routes
 Route::middleware(['auth', 'customer'])->group(function () {
     // Customer Profile
-    Route::prefix('customer')->name('customer.')->group(function () {
-        Route::get('profile', [OrderController::class, 'orderUser'])->name('profile');
+    Route::get('/customer/profile', [OrderController::class, 'orderUser'])->name('customer.profile');
+
+    // Cart Management
+    Route::controller(CartController::class)->prefix('cart')->name('cart.')->group(function () {
+        Route::get('/', 'showCart')->name('show');
+        Route::post('/add', 'addToCart')->name('add');
+        Route::put('/{id}', 'updateCart')->name('update');
+        Route::delete('/{id}', 'removeFromCart')->name('remove');
     });
 
-    // Cart Routes
-    Route::prefix('cart')->name('cart.')->group(function () {
-        Route::get('/', [CartController::class, 'showCart'])->name('show');
-        Route::post('/add', [CartController::class, 'addToCart'])->name('add');
-        Route::put('/{id}', [CartController::class, 'updateCart'])->name('update');
-        Route::delete('/{id}', [CartController::class, 'removeFromCart'])->name('remove');
+    // Checkout
+    Route::controller(OrderController::class)->group(function () {
+        Route::get('/checkout', 'showCheckout')->middleware('check.cart')->name('checkout');
+        Route::post('/checkout', 'store')->name('order.store');
     });
 
-    // Checkout Route
-    Route::post('/checkout', [OrderController::class, 'store'])->name('order.store');
-    Route::get('/checkout', [CartController::class, 'showCheckout'])
-        ->middleware('check.cart')
-        ->name('checkout');
-
-    // Wishlist Routes
-    Route::prefix('wishlist')->name('wishlist.')->group(function () {
-        Route::get('/', [WishlistController::class, 'index'])->name('index');
-        Route::post('/', [WishlistController::class, 'store'])->name('store');
-        Route::delete('/{id}', [WishlistController::class, 'destroy'])->name('destroy');
+    // Wishlist Management
+    Route::controller(WishlistController::class)->prefix('wishlist')->name('wishlist.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::delete('/{id}', 'destroy')->name('destroy');
     });
 
-    Route::put('/orders/{id}', [OrderController::class, 'update'])->name('orders.update');
-    Route::get('/orders/info', [OrderController::class, 'getInfo'])->name('orders.info');
-    Route::post('/orders/complete', [OrderController::class, 'complete'])->name('orders.complete');
-    Route::post('/orders/upload-proof', [OrderController::class, 'uploadPaymentProof'])->name('orders.upload-proof');
+    // Order Management
+    Route::controller(OrderController::class)->prefix('orders')->name('orders.')->group(function () {
+        Route::get('/info', 'getInfo')->name('info');
+        Route::put('/{id}', 'update')->name('update');
+        Route::post('/complete', 'complete')->name('complete');
+        Route::post('/upload-proof', 'uploadPaymentProof')->name('upload-proof');
+    });
 
-    Route::get('/user/reviews', [ProductReviewController::class, 'getUserReviews'])
-        ->middleware(['auth'])
-        ->name('user.reviews');
-
-    Route::get('/products/{id}/reviews', [ProductReviewController::class, 'getProductReviews'])
-        ->name('products.reviews');
+    // Product Reviews
+    Route::controller(ProductReviewController::class)->group(function () {
+        Route::get('/user/reviews', 'getUserReviews')->name('user.reviews');
+        Route::get('/products/{id}/reviews', 'getProductReviews')->name('products.reviews');
+    });
 });
 
 // Admin Routes
 Route::middleware(['auth', 'admin'])->group(function () {
+    // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // Product Management (Inventory)
     Route::resource('/inventory', ProductController::class)->names([
         'index' => 'products.index',
         'create' => 'products.create',
@@ -75,21 +79,29 @@ Route::middleware(['auth', 'admin'])->group(function () {
         'update' => 'products.update',
         'destroy' => 'products.destroy',
     ]);
-    Route::get('/orders', [OrderController::class, 'show'])->name('orders.show');
-    Route::get('/orders/{id}', [OrderController::class, 'detail'])->name('orders.detail');
-    Route::prefix('profile')->name('profile.')->group(function () {
-        Route::get('/', [ProfileController::class, 'edit'])->name('edit');
-        Route::patch('/', [ProfileController::class, 'update'])->name('update');
-        Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
+
+    // Order Management (Admin)
+    Route::controller(OrderController::class)->prefix('orders')->name('orders.')->group(function () {
+        Route::get('/', 'show')->name('show');
+        Route::get('/{id}', 'detail')->name('detail');
     });
+
+    // Profile Management
+    Route::controller(ProfileController::class)->prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', 'edit')->name('edit');
+        Route::patch('/', 'update')->name('update');
+        Route::delete('/', 'destroy')->name('destroy');
+    });
+
+    // Database Management
     Route::get('/data', function () {
         return Inertia::render('Admin/Database');
     })->name('data');
 });
 
+// Guest Routes
 Route::middleware('guest')->group(function () {
-    Route::get('admin/register', [AdminRegistrationController::class, 'create'])
-        ->name('admin.register');
+    Route::get('admin/register', [AdminRegistrationController::class, 'create'])->name('admin.register');
     Route::post('admin/register', [AdminRegistrationController::class, 'store']);
 });
 

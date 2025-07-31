@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use App\Models\ProductReview;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
@@ -65,51 +66,52 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        $validatedData = $request->validate([
+        $rules = [
             'name' => 'required|string|max:255',
             'stock' => 'required|integer|min:1',
             'price' => 'required|numeric|min:1',
             'category_id' => 'nullable|integer|exists:categories,id',
             'new_category' => 'nullable|string|max:255',
             'description' => 'required|string',
-            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048'
-        ]);
+            'images' => 'required|array',
+            'images.*' => 'image|mimes:jpeg,png,jpg|max:2048',
+            'sizes' => 'nullable|array',
+            'sizes.*' => 'string|max:50',
+            'colors' => 'nullable|array',
+            'colors.*' => 'string|max:50',
+        ];
 
-        // Buat kategori baru jika 'new_category' diisi
+        $validatedData = $request->validate($rules);
+
+        // Create new category if 'new_category' is filled
         if ($request->filled('new_category')) {
             $category = Category::create(['name' => $request->new_category]);
             $validatedData['category_id'] = $category->id;
         }
 
-        if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $imageName = time() . '.' . $image->getClientOriginalExtension();
-            $image->storeAs('products', $imageName, 'public');
-            $validatedData['image'] =  $imageName;
+        // Handle multiple image uploads
+        $imageNames = [];
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $image->storeAs('products', $imageName, 'public');
+                $imageNames[] = $imageName;
+            }
         }
 
-        $product = Product::create([
+        $productData = [
             'name' => $validatedData['name'],
+            'slug' => Str::slug($validatedData['name']),
             'stock' => $validatedData['stock'],
             'price' => $validatedData['price'],
             'category_id' => $validatedData['category_id'],
-            'description' => $request->description,
-            'image' => $validatedData['image']
-        ]);
+            'description' => $validatedData['description'],
+            'images' => $imageNames,
+            'sizes' => $request->sizes,
+            'colors' => $request->colors,
+        ];
 
-        // Add colors if provided
-        if ($request->colors) {
-            foreach ($request->colors as $color) {
-                $product->colors()->create(['color' => $color]);
-            }
-        }
-
-        // Add sizes if provided
-        if ($request->sizes) {
-            foreach ($request->sizes as $size) {
-                $product->sizes()->create(['size' => $size]);
-            }
-        }
+        $product = Product::create($productData);
 
         return redirect()->route('products.index')->with('success', 'Product created successfully.');
     }
@@ -127,7 +129,7 @@ class ProductController extends Controller
      */
     public function edit($id)
     {
-        $product = Product::with(['colors', 'sizes'])->findOrFail($id);
+        $product = Product::findOrFail($id);
         $categories = Category::all();
         return Inertia::render('Admin/Products/Edit', [
             'product' => $product,
@@ -142,19 +144,24 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
 
-        $validatedData = $request->validate([
+        $rules = [
             'name' => 'required|string|max:255',
             'stock' => 'required|integer|min:1',
             'price' => 'required|numeric|min:1',
             'category_id' => 'nullable|integer|exists:categories,id',
-            'new_category' => 'nullable|string|max:255', // Add this line
+            'new_category' => 'nullable|string|max:255',
             'description' => 'required|string',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'images' => 'nullable|array',
+            'images.*' => 'image|mimes:jpeg,png,jpg|max:2048',
             'colors' => 'nullable|array',
+            'colors.*' => 'string|max:50',
             'sizes' => 'nullable|array',
-        ]);
+            'sizes.*' => 'string|max:50',
+        ];
 
-        // Handle new category creation (add this)
+        $validatedData = $request->validate($rules);
+
+        // Create new category if 'new_category' is filled
         if ($request->filled('new_category')) {
             $category = Category::create(['name' => $request->new_category]);
             $validatedData['category_id'] = $category->id;
@@ -162,47 +169,41 @@ class ProductController extends Controller
 
         $updateData = [
             'name' => $validatedData['name'],
+            'slug' => Str::slug($validatedData['name']),
             'stock' => $validatedData['stock'],
             'price' => $validatedData['price'],
             'category_id' => $validatedData['category_id'],
-            'description' => $validatedData['description'], // Use validated data
+            'description' => $validatedData['description'],
+            'sizes' => $request->sizes ?? [],
+            'colors' => $request->colors ?? [],
         ];
 
-        if ($request->hasFile('image')) {
-            // Delete old image
-            if ($product->image && Storage::disk('public')->exists("products/{$product->image}")) {
-                Storage::disk('public')->delete("products/{$product->image}");
+        // Handle image updates - only if new images are uploaded
+        if ($request->hasFile('images')) {
+            // Delete old images
+            if ($product->images && is_array($product->images)) {
+                foreach ($product->images as $oldImage) {
+                    if (Storage::disk('public')->exists("products/{$oldImage}")) {
+                        Storage::disk('public')->delete("products/{$oldImage}");
+                    }
+                }
             }
 
-            // Store new image
-            $image = $request->file('image');
-            $imageName = time() . '.' . $image->getClientOriginalExtension();
-            $image->storeAs('products', $imageName, 'public');
-            $updateData['image'] = $imageName;
+            // Store new images
+            $imageNames = [];
+            foreach ($request->file('images') as $image) {
+                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $image->storeAs('products', $imageName, 'public');
+                $imageNames[] = $imageName;
+            }
+            $updateData['images'] = $imageNames;
         }
 
         $product->update($updateData);
 
-        // Update colors
-        if ($request->has('colors')) {
-            $product->colors()->delete();
-            foreach ($request->colors as $color) {
-                $product->colors()->create(['color' => $color]);
-            }
-        }
-
-        // Update sizes
-        if ($request->has('sizes')) {
-            $product->sizes()->delete();
-            foreach ($request->sizes as $size) {
-                $product->sizes()->create(['size' => $size]);
-            }
-        }
-
         return redirect()->route('products.index')
             ->with('success', 'Product updated successfully.');
     }
-
 
     /**
      * Remove the specified resource from storage.
@@ -221,24 +222,19 @@ class ProductController extends Controller
                 ->with('error', 'Cannot delete product that has active orders');
         }
 
-        // Store image name before deletion
-        $imageName = $product->image;
-
-        // Delete related data first
-        $product->colors()->delete();
-        $product->sizes()->delete();
+        // Store images before deletion
+        $images = $product->images;
 
         // Delete the product from database
         $product->delete();
 
-        // Delete image after successful database deletion
-        if ($imageName) {
-            // Correct path for Storage facade
-            $imagePath = "products/{$imageName}";
-
-            // Use the public disk explicitly
-            if (Storage::disk('public')->exists($imagePath)) {
-                $deleted = Storage::disk('public')->delete($imagePath);
+        // Delete images after successful database deletion
+        if ($images) {
+            foreach ($images as $imageName) {
+                $imagePath = "products/{$imageName}";
+                if (Storage::disk('public')->exists($imagePath)) {
+                    Storage::disk('public')->delete($imagePath);
+                }
             }
         }
 
@@ -248,90 +244,22 @@ class ProductController extends Controller
 
     public function landingPage()
     {
-        $products = Product::query()
-            ->withCount('reviews as total_reviews')
-            ->withAvg('reviews as average_rating', 'rating')
-            ->take(8)
-            ->get();
-
-        $categories = Category::all();
-
         return Inertia::render('Customer/LandingPage', [
-            'products' => $products->map(function ($product) {
-                return [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'price' => $product->price,
-                    'image' => $product->image,
-                    'category_id' => $product->category_id,
-                    'average_rating' => round($product->average_rating ?? 0, 1),
-                    'total_reviews' => $product->total_reviews ?? 0
-                ];
-            }),
-            'categories' => $categories,
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
         ]);
     }
 
-    public function shop(Request $request)
+    /**
+     * Show the shop page
+     */
+    public function shopPage()
     {
-        $query = Product::query()
-            ->withCount('reviews as total_reviews')
-            ->withAvg('reviews as average_rating', 'rating');
-
-        // Apply category filter
-        if ($request->has('category') && !empty($request->category)) {
-            $query->where('category_id', $request->category);
-        }
-
-        // Apply search filter
-        if ($request->has('search') && !empty($request->search)) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                    ->orWhere('description', 'LIKE', "%{$search}%");
-            });
-        }
-
-        // Apply sorting
-        if ($request->has('sortField') && $request->has('sortDirection')) {
-            $query->orderBy($request->sortField, $request->sortDirection);
-        } else {
-            $query->latest();
-        }
-
-        // Add pagination with 16 items per page
-        $products = $query->paginate(16);
-
-        return Inertia::render('Customer/ShopingPage', [
-            'products' => $products,
-            'categories' => Category::all(),
-            'filters' => $request->only(['search', 'sortField', 'sortDirection', 'category'])
-        ]);
+        return Inertia::render('Customer/ShopingPage');
     }
 
-    public function product($id)
+    public function product()
     {
-        $product = Product::with(['sizes', 'colors'])->findOrFail($id);
-        $categories = Category::all();
-
-        // Get reviews directly
-        $reviews = ProductReview::where('product_id', $id)
-            ->select('rating')
-            ->get();
-
-        $avgRating = $reviews->avg('rating');
-        $totalReviews = $reviews->count();
-
-        return Inertia::render('Customer/Product', [
-            'product' => $product,
-            'categories' => $categories,
-            'productRating' => [
-                'average_rating' => round($avgRating, 1),
-                'total_reviews' => $totalReviews,
-                'ratings' => $reviews->pluck('rating')
-            ]
-        ]);
+        return Inertia::render('Customer/Product');
     }
 }

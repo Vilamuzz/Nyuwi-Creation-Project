@@ -21,26 +21,6 @@ const emit = defineEmits(["update:sizes", "notification"]);
 const sizeList = ref([...props.sizes]);
 const newSize = ref("");
 
-// Watch for category changes
-watch(
-    () => props.selectedCategory,
-    (newCategoryId) => {
-        if (newCategoryId && newCategoryId !== "new") {
-            // Clear existing sizes
-            sizeList.value = [];
-
-            // Add preset sizes for the selected category
-            const presetSizes = props.categorySizes[newCategoryId];
-            if (presetSizes) {
-                sizeList.value = [...presetSizes];
-                emit("update:sizes", [...presetSizes]);
-            } else {
-                emit("update:sizes", []);
-            }
-        }
-    }
-);
-
 const addSize = () => {
     if (newSize.value.trim()) {
         sizeList.value.push(newSize.value.trim());
@@ -62,8 +42,7 @@ const removeSize = (index) => {
         <label class="label">
             <span class="label-text font-semibold">Ukuran</span>
         </label>
-        <!-- Only show custom size input if category is selected -->
-        <div class="join" v-if="selectedCategory">
+        <div class="join">
             <input
                 type="text"
                 v-model="newSize"

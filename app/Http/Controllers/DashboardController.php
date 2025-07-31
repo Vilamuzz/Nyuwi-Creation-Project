@@ -20,20 +20,56 @@ class DashboardController extends Controller
         }])
             ->orderByDesc('total_sold')
             ->take(5)
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'price' => $product->price,
+                    'stock' => $product->stock,
+                    'total_sold' => $product->total_sold,
+                    'image' => $product->images && is_array($product->images) && count($product->images) > 0
+                        ? $product->images[0]
+                        : null
+                ];
+            });
 
         // Get most rated products
         $mostRated = Product::withCount('reviews as total_reviews')
             ->withAvg('reviews as average_rating', 'rating')
             ->orderByDesc('average_rating')
             ->take(5)
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'price' => $product->price,
+                    'stock' => $product->stock,
+                    'total_reviews' => $product->total_reviews,
+                    'average_rating' => round($product->average_rating ?? 0, 1),
+                    'image' => $product->images && is_array($product->images) && count($product->images) > 0
+                        ? $product->images[0]
+                        : null
+                ];
+            });
 
         // Get low stock products (less than 10 items)
         $lowStock = Product::where('stock', '<', 10)
             ->orderBy('stock', 'asc')
             ->take(5)
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'price' => $product->price,
+                    'stock' => $product->stock,
+                    'image' => $product->images && is_array($product->images) && count($product->images) > 0
+                        ? $product->images[0]
+                        : null
+                ];
+            });
 
         return Inertia::render('Admin/Dashboard', [
             'topSelling' => $topSelling,
