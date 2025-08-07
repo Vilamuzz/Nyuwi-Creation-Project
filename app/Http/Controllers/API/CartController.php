@@ -3,55 +3,14 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order;
 use App\Models\Cart;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
-class OrderController extends Controller
+class CartController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Order $order)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Order $order)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Order $order)
-    {
-        //
-    }
-
     /**
      * Get cart items for authenticated user
      */
@@ -98,13 +57,15 @@ class OrderController extends Controller
             $request->validate([
                 'product_id' => 'required|exists:products,id',
                 'quantity' => 'required|integer|min:1',
-                'price' => 'required|numeric',
                 'size' => 'nullable|string',
                 'color' => 'nullable|string'
             ]);
 
             // Get product and check stock
             $product = Product::findOrFail($request->product_id);
+
+            // Use the product's actual price from the database
+            $actualPrice = $product->price;
 
             // Check if adding this quantity would exceed available stock
             $existingCartItem = Cart::where([
@@ -131,19 +92,20 @@ class OrderController extends Controller
                 ], 400);
             }
 
-            DB::transaction(function () use ($request, $existingCartItem, $totalQuantity) {
+            DB::transaction(function () use ($request, $existingCartItem, $totalQuantity, $actualPrice) {
                 if ($existingCartItem) {
                     // Update quantity if item exists
                     $existingCartItem->update([
-                        'quantity' => $totalQuantity
+                        'quantity' => $totalQuantity,
+                        'price' => $actualPrice // Update price to ensure it's current
                     ]);
                 } else {
-                    // Create new cart item
+                    // Create new cart item with price from database
                     Cart::create([
                         'user_id' => Auth::id(),
                         'product_id' => $request->product_id,
                         'quantity' => $request->quantity,
-                        'price' => $request->price,
+                        'price' => $actualPrice, // Use actual price from database
                         'size' => $request->size,
                         'color' => $request->color
                     ]);
@@ -234,35 +196,6 @@ class OrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to remove item from cart',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Clear all cart items for authenticated user
-     */
-    public function clearCart()
-    {
-        try {
-            Cart::where('user_id', Auth::id())->delete();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Cart cleared successfully',
-                'data' => [
-                    'cartItems' => [],
-                    'summary' => [
-                        'subtotal' => 0,
-                        'totalItems' => 0,
-                        'itemCount' => 0
-                    ]
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to clear cart',
                 'error' => $e->getMessage()
             ], 500);
         }

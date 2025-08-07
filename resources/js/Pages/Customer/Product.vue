@@ -166,46 +166,81 @@ const hideToast = () => {
 };
 
 // Add to cart handler
-const addToCart = () => {
-    form.product_id = product.value.id;
-    form.price = product.value.price;
-    form.quantity = quantity.value;
-    form.size = selectedSize.value;
-    form.color = selectedColor.value;
+const addToCart = async () => {
+    try {
+        const cartData = {
+            product_id: product.value.id,
+            quantity: quantity.value,
+            size: selectedSize.value,
+            color: selectedColor.value,
+        };
 
-    form.post(route("cart.add"), {
-        preserveScroll: true,
-        onSuccess: () => {
-            form.reset();
+        const response = await axios.post("/api/cart/add", cartData);
+
+        if (response.data.success) {
             quantity.value = 1;
             selectedSize.value = "";
             selectedColor.value = "";
             showToast("Produk berhasil ditambahkan ke keranjang!", "success");
-        },
-        onError: (errors) => {
-            if (errors.quantity) {
-                showToast(errors.quantity, "error");
+        } else {
+            showToast("Gagal menambahkan produk ke keranjang", "error");
+        }
+    } catch (error) {
+        console.error("Error adding to cart:", error);
+        if (error.response && error.response.data) {
+            // Handle validation errors
+            if (
+                error.response.data.data &&
+                error.response.data.data.available_stock
+            ) {
+                showToast(
+                    `Jumlah melebihi stok yang tersedia. Stok tersedia: ${error.response.data.data.available_stock}`,
+                    "error"
+                );
+            } else if (error.response.data.message) {
+                showToast(error.response.data.message, "error");
+            } else {
+                showToast("Gagal menambahkan produk ke keranjang", "error");
             }
-        },
-    });
+        } else {
+            showToast("Gagal menambahkan produk ke keranjang", "error");
+        }
+    }
 };
 
-const addToWishlist = (e) => {
+const addToWishlist = async (e) => {
     e.preventDefault();
-    favoriteForm.product_id = product.value.id;
 
-    favoriteForm.post(route("favorites.store"), {
-        preserveScroll: true,
-        onSuccess: () => {
-            favoriteForm.reset();
-            showToast("Produk berhasil ditambahkan ke favorit!", "success");
-        },
-        onError: (errors) => {
-            if (errors.message) {
-                showToast(errors.message, "error");
-            }
-        },
-    });
+    try {
+        // Call the API endpoint instead of using Inertia form
+        const response = await axios.post("/api/wishlist/add", {
+            slug: product.value.slug,
+        });
+
+        if (response.data.success) {
+            showToast(
+                response.data.message ||
+                    "Produk berhasil ditambahkan ke favorit!",
+                "success"
+            );
+        } else {
+            showToast(
+                response.data.message || "Gagal menambahkan produk ke favorit",
+                "error"
+            );
+        }
+    } catch (error) {
+        console.error("Error adding to wishlist:", error);
+        if (error.response && error.response.data) {
+            showToast(
+                error.response.data.message ||
+                    "Gagal menambahkan produk ke favorit",
+                "error"
+            );
+        } else {
+            showToast("Gagal menambahkan produk ke favorit", "error");
+        }
+    }
 };
 
 const getCategoryName = (categoryId) => {

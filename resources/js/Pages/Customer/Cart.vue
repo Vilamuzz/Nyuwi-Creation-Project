@@ -1,47 +1,72 @@
 <script setup>
-import { Head, Link, useForm } from "@inertiajs/vue3"; // Tambahkan useForm
-import { computed, ref, onMounted, watch } from "vue";
+import { Head, Link } from "@inertiajs/vue3";
+import { computed, ref, onMounted } from "vue";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Customer/Main/Hero.vue";
 import PaymentInformationModal from "@/Components/Customer/Sub-main/PaymentInformationModal.vue";
+import axios from "axios";
 
-const props = defineProps({
-    cartItems: Array,
-});
+// Configure axios for session auth
+axios.defaults.withCredentials = true; // Important for sending cookies
+const token = document.head.querySelector('meta[name="csrf-token"]');
+if (token) {
+    axios.defaults.headers.common["X-CSRF-TOKEN"] = token.content;
+}
 
-// Form untuk delete item
-const form = useForm({});
+// Use reactive state for cart items from API
+const cartItems = ref([]);
+const isLoading = ref(true);
+const error = ref(null);
 
-// Form untuk update quantity
-const updateForm = useForm({
-    quantity: null,
-});
-
-// Fungsi untuk menghapus item
-const deleteCartItem = (itemId) => {
-    if (confirm("Apakah anda yakin ingin menghapus item ini?")) {
-        form.delete(route("cart.remove", itemId), {
-            preserveScroll: true,
-        });
+// Get cart data
+const fetchCart = async () => {
+    try {
+        isLoading.value = true;
+        const response = await axios.get("/api/cart");
+        if (response.data.success) {
+            cartItems.value = response.data.data.cartItems;
+        }
+    } catch (error) {
+        console.error("Error fetching cart:", error);
+        error.value = "Failed to fetch cart items";
+    } finally {
+        isLoading.value = false;
     }
 };
 
-// Fungsi untuk mengupdate quantity
-const updateQuantity = (item, newQuantity) => {
-    updateForm.quantity = newQuantity;
-    updateForm.put(route("cart.update", item.id), {
-        preserveScroll: true,
-        onSuccess: () => {
-            // Reset form setelah berhasil
-            updateForm.reset();
-        },
-    });
+// Delete cart item
+const deleteCartItem = async (itemId) => {
+    if (confirm("Apakah anda yakin ingin menghapus item ini?")) {
+        try {
+            const response = await axios.delete(`/api/cart/${itemId}`);
+            if (response.data.success) {
+                cartItems.value = response.data.data.cartItems;
+            }
+        } catch (error) {
+            console.error("Error removing item:", error);
+        }
+    }
+};
+
+// Update quantity
+const updateQuantity = async (item, newQuantity) => {
+    try {
+        const response = await axios.put(`/api/cart/${item.id}`, {
+            quantity: newQuantity,
+        });
+        if (response.data.success) {
+            cartItems.value = response.data.data.cartItems;
+        }
+    } catch (error) {
+        console.error("Error updating quantity:", error);
+        // Handle error - possibly show a notification
+    }
 };
 
 // Compute total price from all items
 const cartTotal = computed(() => {
-    if (!props.cartItems || props.cartItems.length === 0) return 0;
-    return props.cartItems.reduce((total, item) => {
+    if (!cartItems.value || cartItems.value.length === 0) return 0;
+    return cartItems.value.reduce((total, item) => {
         return total + item.price * item.quantity;
     }, 0);
 });
@@ -61,15 +86,16 @@ const paymentInfo = {
     accountName: "Nyuwi Creation",
 };
 
-// Tambahkan fungsi untuk mengecek query parameter
 onMounted(() => {
-    // Cek localStorage alih-alih query parameter
+    // Fetch cart data when component mounts
+    fetchCart();
+
+    // Check localStorage for payment info
     const showPaymentInfo = localStorage.getItem("showPaymentInfo");
-    const amount = localStorage.getItem("paymentAmount");
 
     if (showPaymentInfo === "true") {
         showPaymentModal.value = true;
-        // Bersihkan localStorage setelah digunakan
+        // Clear localStorage after use
         localStorage.removeItem("showPaymentInfo");
         localStorage.removeItem("paymentAmount");
     }
@@ -78,20 +104,6 @@ onMounted(() => {
 const closePaymentModal = () => {
     showPaymentModal.value = false;
 };
-
-watch(
-    () => props.cartItems,
-    () => {
-        // Cek localStorage setiap kali cartItems berubah
-        const showPaymentInfo = localStorage.getItem("showPaymentInfo");
-        if (showPaymentInfo === "true") {
-            showPaymentModal.value = true;
-            localStorage.removeItem("showPaymentInfo");
-            localStorage.removeItem("paymentAmount");
-        }
-    },
-    { immediate: true }
-);
 </script>
 <template>
     <Head title="Shoping Cart" />
@@ -122,7 +134,7 @@ watch(
                                     <img
                                         :src="
                                             '/storage/products/' +
-                                            item.product.image
+                                            item.product.images[0]
                                         "
                                         alt="Product Image"
                                         class="w-16 h-16 object-cover rounded-md"

@@ -1,12 +1,9 @@
 <script setup>
 import { Head, useForm, router } from "@inertiajs/vue3";
 import { computed, ref, onMounted, watch } from "vue";
+import axios from "axios"; // Make sure this is imported
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Customer/Main/Hero.vue";
-
-const props = defineProps({
-    cartItems: Array,
-});
 
 const form = useForm({
     name: "",
@@ -17,35 +14,15 @@ const form = useForm({
     province: "",
     phone: "",
     note: "",
-    payment_method: "", // Will be either 'digital_wallet' or 'cash_on_delivery'
+    payment_method: "",
     shipping_method: "",
-    shipping_cost: 0, // Add shipping cost field
+    shipping_cost: 0,
 });
 
 const showModal = ref(false);
 
-const validateForm = () => {
-    form.clearErrors();
-
-    if (!form.name) form.setError("name", "Name is required");
-    if (!form.address) form.setError("address", "Address is required");
-    if (!form.city) form.setError("city", "City is required");
-    if (!form.district) form.setError("district", "District is required");
-    if (!form.village) form.setError("village", "Village is required");
-    if (!form.province) form.setError("province", "Province is required");
-    if (!form.phone) form.setError("phone", "Phone is required");
-    if (!form.payment_method)
-        form.setError("payment_method", "Payment method is required");
-    if (!form.shipping_method)
-        form.setError("shipping_method", "Shipping method is required");
-
-    return Object.keys(form.errors).length === 0;
-};
-
 const openConfirmModal = () => {
-    if (validateForm()) {
-        showModal.value = true;
-    }
+    showModal.value = true;
 };
 
 const closeModal = () => {
@@ -63,7 +40,7 @@ const confirmCheckout = () => {
         ? parseInt(selectedShippingRate.value.price)
         : 0;
 
-    form.post(route("order.store"), {
+    form.post(route("orders.store"), {
         preserveScroll: true,
         onSuccess: () => {
             closeModal();
@@ -85,11 +62,30 @@ const formatPrice = (price) => {
 };
 
 const cartTotal = computed(() => {
-    if (!props.cartItems || props.cartItems.length === 0) return 0;
-    return props.cartItems.reduce((total, item) => {
+    if (!cartItems.value || cartItems.value.length === 0) return 0;
+    return cartItems.value.reduce((total, item) => {
         return total + item.price * item.quantity;
     }, 0);
 });
+
+const isLoading = ref(false);
+const cartItems = ref([]);
+const error = ref(null);
+
+const fetchCartItems = async () => {
+    try {
+        isLoading.value = true;
+        const response = await axios.get("/api/cart");
+        if (response.data.success) {
+            cartItems.value = response.data.data.cartItems;
+        }
+    } catch (error) {
+        console.error("Error fetching cart items:", error);
+        error.value = "Failed to load cart items. Please try again later.";
+    } finally {
+        isLoading.value = false;
+    }
+};
 
 const provinces = ref([]);
 const cities = ref([]);
@@ -103,13 +99,13 @@ const selectedVillage = ref(null);
 
 const getProvinces = async () => {
     const response = await axios.get("/api/provinces");
-    provinces.value = response.data;
+    provinces.value = response.data.data;
 };
 
 const getCities = async (provinceId) => {
     if (!provinceId) return;
-    const response = await axios.get(`/api/cities/${provinceId}`);
-    cities.value = response.data;
+    const response = await axios.get(`/api/regencies/${provinceId}`);
+    cities.value = response.data.data;
     form.city = null;
     form.district = null;
     form.village = null;
@@ -118,7 +114,7 @@ const getCities = async (provinceId) => {
 const getDistricts = async (cityId) => {
     if (!cityId) return;
     const response = await axios.get(`/api/districts/${cityId}`);
-    districts.value = response.data;
+    districts.value = response.data.data;
     form.district = null;
     form.village = null;
 };
@@ -126,11 +122,12 @@ const getDistricts = async (cityId) => {
 const getVillages = async (districtId) => {
     if (!districtId) return;
     const response = await axios.get(`/api/villages/${districtId}`);
-    villages.value = response.data;
+    villages.value = response.data.data;
     form.village = null;
 };
 
 onMounted(() => {
+    fetchCartItems();
     getProvinces();
 });
 
@@ -226,17 +223,38 @@ const totalWithShipping = computed(() => {
     return subtotal + shippingCost;
 });
 </script>
+
 <template>
     <Head title="Checkout" />
     <CustomersLayout>
         <Hero title="Checkout" breadcrumb="Home > Cart > Checkout" />
-        <form @submit.prevent="submitCheckout">
+
+        <!-- Add loading state -->
+        <div v-if="isLoading" class="flex justify-center items-center py-20">
+            <div
+                class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"
+            ></div>
+            <p class="ml-3">Loading cart items...</p>
+        </div>
+
+        <!-- Add error state -->
+        <div v-else-if="error" class="text-center py-20">
+            <p class="text-red-500">{{ error }}</p>
+            <button
+                @click="fetchCartItems"
+                class="mt-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
+            >
+                Retry
+            </button>
+        </div>
+
+        <form v-else>
             <section class="mx-24 flex flex-row my-16 gap-x-8">
                 <div class="felx flex-col space-y-4 w-1/2">
                     <h1 class="font-bold text-2xl">Billing details</h1>
 
                     <div class="flex flex-col space-y-2">
-                        <label for="first_name">Name</label>
+                        <label for="first_name">Nama*</label>
                         <input
                             v-model="form.name"
                             type="text"
@@ -251,7 +269,7 @@ const totalWithShipping = computed(() => {
                         </div>
                     </div>
                     <div class="flex flex-col space-y-2">
-                        <label for="address">Address</label>
+                        <label for="address">Alamat*</label>
                         <input
                             v-model="form.address"
                             type="text"
@@ -266,13 +284,13 @@ const totalWithShipping = computed(() => {
                         </div>
                     </div>
                     <div class="flex flex-col space-y-2">
-                        <label for="province">Province</label>
+                        <label for="province">Provinsi*</label>
                         <select
                             @change="setSelectedProvince($event.target.value)"
                             class="rounded-md border-gray-400"
                             required
                         >
-                            <option value="">Select Province</option>
+                            <option value="">Pilih Provinsi</option>
                             <option
                                 v-for="province in provinces"
                                 :key="province.id"
@@ -289,14 +307,14 @@ const totalWithShipping = computed(() => {
                         </div>
                     </div>
                     <div class="flex flex-col space-y-2">
-                        <label for="city">City</label>
+                        <label for="city">Kota*</label>
                         <select
                             @change="setSelectedCity($event.target.value)"
                             class="rounded-md border-gray-400"
                             required
                             :disabled="!form.province"
                         >
-                            <option value="">Select City</option>
+                            <option value="">Pilih Kota</option>
                             <option
                                 v-for="city in cities"
                                 :key="city.id"
@@ -313,14 +331,14 @@ const totalWithShipping = computed(() => {
                         </div>
                     </div>
                     <div class="flex flex-col space-y-2">
-                        <label for="district">District</label>
+                        <label for="district">Kecamatan*</label>
                         <select
                             @change="setSelectedDistrict($event.target.value)"
                             class="rounded-md border-gray-400"
                             required
                             :disabled="!form.city"
                         >
-                            <option value="">Select District</option>
+                            <option value="">Pilih Kecamatan</option>
                             <option
                                 v-for="district in districts"
                                 :key="district.id"
@@ -337,14 +355,14 @@ const totalWithShipping = computed(() => {
                         </div>
                     </div>
                     <div class="flex flex-col space-y-2">
-                        <label for="village">Village</label>
+                        <label for="village">Kelurahan*</label>
                         <select
                             @change="setSelectedVillage($event.target.value)"
                             class="rounded-md border-gray-400"
                             required
                             :disabled="!form.district"
                         >
-                            <option value="">Select Village</option>
+                            <option value="">Pilih Kelurahan</option>
                             <option
                                 v-for="village in villages"
                                 :key="village.id"
@@ -361,7 +379,7 @@ const totalWithShipping = computed(() => {
                         </div>
                     </div>
                     <div class="flex flex-col space-y-2">
-                        <label for="phone">Phone</label>
+                        <label for="phone">Telepon*</label>
                         <input
                             v-model="form.phone"
                             type="text"
@@ -376,7 +394,7 @@ const totalWithShipping = computed(() => {
                         </div>
                     </div>
                     <div class="flex flex-col space-y-2">
-                        <label for="note">Note</label>
+                        <label for="note">Catatan</label>
                         <input
                             v-model="form.note"
                             type="text"
@@ -386,8 +404,8 @@ const totalWithShipping = computed(() => {
                 </div>
                 <div class="flex flex-col w-1/2">
                     <div class="flex flex-row justify-between">
-                        <h1 class="font-bold text-2xl">Product</h1>
-                        <h1 class="font-bold text-2xl">Price</h1>
+                        <h1 class="font-bold text-2xl">Produk</h1>
+                        <h1 class="font-bold text-2xl">Harga</h1>
                     </div>
                     <div
                         v-for="item in cartItems"
@@ -422,7 +440,7 @@ const totalWithShipping = computed(() => {
                         <h1 class="font-bold">{{ formatPrice(cartTotal) }}</h1>
                     </div>
                     <div class="flex flex-col space-y-3">
-                        <h1 class="font-bold text-2xl">Shipping Method</h1>
+                        <h1 class="font-bold text-2xl">Metode Pengiriman</h1>
                         <div class="flex flex-col space-y-2">
                             <div class="space-x-2">
                                 <input
@@ -542,7 +560,7 @@ const totalWithShipping = computed(() => {
                     </div>
 
                     <div class="flex flex-col space-y-3">
-                        <h1 class="font-bold text-2xl">Payment Method</h1>
+                        <h1 class="font-bold text-2xl">Metode Pembayaran</h1>
                         <div class="flex flex-col space-y-2">
                             <div class="space-x-2">
                                 <input

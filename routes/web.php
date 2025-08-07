@@ -29,30 +29,19 @@ Route::middleware(['auth', 'customer'])->group(function () {
     Route::get('/customer/profile', [OrderController::class, 'orderUser'])->name('customer.profile');
 
     // Cart Management
-    Route::controller(CartController::class)->prefix('cart')->name('cart.')->group(function () {
-        Route::get('/', 'showCart')->name('show');
-        Route::post('/add', 'addToCart')->name('add');
-        Route::put('/{id}', 'updateCart')->name('update');
-        Route::delete('/{id}', 'removeFromCart')->name('remove');
-    });
+    Route::get('/cart', [CartController::class, 'showCart'])->name('cart.show');
 
     // Checkout
-    Route::controller(OrderController::class)->group(function () {
-        Route::get('/checkout', 'showCheckout')->middleware('check.cart')->name('checkout');
-        Route::post('/checkout', 'store')->name('order.store');
-    });
+    Route::get('/checkout',  [CartController::class, 'showCheckout'])->middleware('check.cart')->name('checkout');
 
     // Wishlist Management
-    Route::controller(WishlistController::class)->prefix('wishlist')->name('wishlist.')->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::post('/', 'store')->name('store');
-        Route::delete('/{id}', 'destroy')->name('destroy');
-    });
+    Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist.index');
 
     // Order Management
     Route::controller(OrderController::class)->prefix('orders')->name('orders.')->group(function () {
         Route::get('/info', 'getInfo')->name('info');
         Route::put('/{id}', 'update')->name('update');
+        Route::post('/checkout', 'store')->name('store');
         Route::post('/complete', 'complete')->name('complete');
         Route::post('/upload-proof', 'uploadPaymentProof')->name('upload-proof');
     });

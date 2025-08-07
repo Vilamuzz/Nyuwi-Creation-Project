@@ -1,12 +1,9 @@
 <script setup>
-import { Link, useForm } from "@inertiajs/vue3";
+import { Link } from "@inertiajs/vue3";
 import { ref } from "vue";
+import axios from "axios";
 
 const props = defineProps({
-    id: {
-        type: Number,
-        required: true,
-    },
     slug: {
         type: String,
         required: true,
@@ -33,13 +30,41 @@ const props = defineProps({
     },
 });
 
-const form = useForm({
-    product_id: props.id,
-});
+// Add a success message state
+const successMessage = ref("");
+const errorMessage = ref("");
+const showMessage = ref(false);
 
-const addToWishlist = (e) => {
+const addToWishlist = async (e) => {
     e.preventDefault();
-    form.post(route("wishlist.store"));
+
+    try {
+        const response = await axios.post("/api/wishlist/add", {
+            slug: props.slug,
+        });
+
+        if (response.data.success) {
+            successMessage.value = response.data.message;
+            errorMessage.value = "";
+            showMessage.value = true;
+
+            // Hide message after 3 seconds
+            setTimeout(() => {
+                showMessage.value = false;
+            }, 3000);
+        }
+    } catch (error) {
+        console.error("Error adding to wishlist:", error);
+        errorMessage.value =
+            error.response?.data?.message || "Failed to add to wishlist";
+        successMessage.value = "";
+        showMessage.value = true;
+
+        // Hide message after 3 seconds
+        setTimeout(() => {
+            showMessage.value = false;
+        }, 3000);
+    }
 };
 </script>
 
@@ -69,6 +94,19 @@ const addToWishlist = (e) => {
                 >
                     Add To Wishlist
                 </button>
+            </div>
+
+            <!-- Success/Error notification -->
+            <div
+                v-if="showMessage"
+                class="absolute bottom-0 left-0 right-0 p-2 text-center text-sm"
+                :class="[
+                    successMessage
+                        ? 'bg-green-500 text-white'
+                        : 'bg-red-500 text-white',
+                ]"
+            >
+                {{ successMessage || errorMessage }}
             </div>
         </div>
 

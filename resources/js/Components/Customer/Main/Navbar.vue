@@ -42,8 +42,31 @@ const hasAwaitingOrders = computed(() => {
         <div class="flex items-center">
             <!-- Only show these items if user is logged in -->
             <template v-if="isLoggedIn">
+                <!-- Wishlist -->
+                <Link :href="route('wishlist.index')"
+                    ><span
+                        role="button"
+                        class="btn btn-ghost m-1 hover:bg-transparent"
+                    >
+                        <img :src="'/img/icon/wishlist.svg'" alt="" />
+                    </span>
+                </Link>
+
+                <!-- Cart -->
+                <Link
+                    :href="route('cart.show')"
+                    class="font-bold hover:text-orange-500"
+                >
+                    <span
+                        role="button"
+                        class="btn btn-ghost m-1 hover:bg-transparent"
+                    >
+                        <img :src="'/img/icon/cart.svg'" alt="" />
+                    </span>
+                </Link>
+
                 <!-- Dropdown -->
-                <div class="dropdown relative">
+                <div class="dropdown dropdown-end relative">
                     <span
                         tabindex="0"
                         role="button"
@@ -85,29 +108,6 @@ const hasAwaitingOrders = computed(() => {
                         </li>
                     </ul>
                 </div>
-
-                <!-- Wishlist -->
-                <Link :href="route('wishlist.index')"
-                    ><span
-                        role="button"
-                        class="btn btn-ghost m-1 hover:bg-transparent"
-                    >
-                        <img :src="'/img/icon/wishlist.svg'" alt="" />
-                    </span>
-                </Link>
-
-                <!-- Cart -->
-                <Link
-                    :href="route('cart.show')"
-                    class="font-bold hover:text-orange-500"
-                >
-                    <span
-                        role="button"
-                        class="btn btn-ghost m-1 hover:bg-transparent"
-                    >
-                        <img :src="'/img/icon/cart.svg'" alt="" />
-                    </span>
-                </Link>
             </template>
 
             <!-- Show login/register buttons if user is not logged in -->

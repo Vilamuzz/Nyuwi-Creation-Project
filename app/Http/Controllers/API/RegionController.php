@@ -94,43 +94,6 @@ class RegionController extends Controller
     }
 
     /**
-     * Get complete region data (province -> regency -> district -> village)
-     */
-    public function getCompleteRegion($provinceId = null, $regencyId = null, $districtId = null)
-    {
-        try {
-            $data = [];
-
-            if ($provinceId) {
-                $province = Province::with('regencies')->findOrFail($provinceId);
-                $data['province'] = $province;
-
-                if ($regencyId) {
-                    $regency = Regency::with('districts')->findOrFail($regencyId);
-                    $data['regency'] = $regency;
-
-                    if ($districtId) {
-                        $district = District::with('villages')->findOrFail($districtId);
-                        $data['district'] = $district;
-                    }
-                }
-            } else {
-                $data['provinces'] = Province::all();
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => $data
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch region data'
-            ], 500);
-        }
-    }
-
-    /**
      * Search regions by name
      */
     public function searchRegions(Request $request)
@@ -171,54 +134,5 @@ class RegionController extends Controller
                 'message' => 'Failed to search regions'
             ], 500);
         }
-    }
-
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        return $this->getProvinces();
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        return response()->json([
-            'success' => false,
-            'message' => 'This endpoint is not available for creating regions'
-        ], 405);
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        return $this->getCompleteRegion($id);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        return response()->json([
-            'success' => false,
-            'message' => 'This endpoint is not available for updating regions'
-        ], 405);
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        return response()->json([
-            'success' => false,
-            'message' => 'This endpoint is not available for deleting regions'
-        ], 405);
     }
 }

@@ -30,7 +30,7 @@ onMounted(async () => {
     <a
         href="https://wa.me/+6289514923727"
         target="_blank"
-        class="fixed bottom-8 right-8 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-colors duration-300 z-50 flex items-center gap-2"
+        class="fixed bottom-8 right-8 bg-green-500 text-white p-4 rounded-full shadow-lg hover:bg-green-600 transition-colors duration-300 z-40 flex items-center gap-2"
     >
         <svg
             xmlns="http://www.w3.org/2000/svg"

@@ -11,7 +11,7 @@ use App\Models\Product;
 use App\Models\Cart;
 use Inertia\Inertia;
 use App\Models\ProductReview;
-use App\Models\Whislist;
+use App\Models\Wishlist;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 class OrderController extends Controller
@@ -206,7 +206,7 @@ class OrderController extends Controller
             ->where('user_id', Auth::id())
             ->get();
 
-        $wishlistItems = Whislist::with('product')
+        $wishlistItems = Wishlist::with('product')
             ->where('user_id', Auth::id())
             ->get();
 

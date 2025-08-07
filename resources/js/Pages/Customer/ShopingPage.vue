@@ -207,9 +207,8 @@ const formatPrice = (price) => {
                 >
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
                         <Product
-                            v-for="item in products"
-                            :key="item.id"
-                            :id="item.id"
+                            v-for="(item, index) in products"
+                            :key="index"
                             :slug="item.slug"
                             :name="item.name"
                             :price="formatPrice(item.price)"
