@@ -15,11 +15,12 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('slug')->unique();
-            $table->foreignId('category_id')->nullable()->constrained('categories')->nullOnDelete();
+            $table->foreignId('category_id')->constrained('categories');
             $table->integer('stock')->default(0);
             $table->decimal('price', 10, 2);
-            $table->text('description')->nullable();
-            $table->json('images')->nullable();
+            $table->integer('weight')->default(0);
+            $table->text('description');
+            $table->json('images');
             $table->json('sizes')->nullable();
             $table->json('colors')->nullable();
             $table->timestamps();

@@ -17,6 +17,7 @@ class Product extends Model
         'category_id',
         'stock',
         'price',
+        'weight',
         'description',
         'images',
         'sizes',
@@ -40,18 +41,6 @@ class Product extends Model
     public function cartItems()
     {
         return $this->hasMany(Cart::class);
-    }
-
-    // Relationship with ProductSize
-    public function sizes()
-    {
-        return $this->hasMany(ProductSize::class);
-    }
-
-    // Relationship with ProductColor
-    public function colors()
-    {
-        return $this->hasMany(ProductColor::class);
     }
 
     // Relationship with OrderItem

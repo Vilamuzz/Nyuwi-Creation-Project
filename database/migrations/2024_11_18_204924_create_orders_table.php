@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Relasi ke tabel users
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('name');
             $table->string('address');
             $table->string('village');
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('province');
             $table->string('phone');
             $table->decimal('total_price', 15, 2);
-            $table->enum('payment_method', ['digital_wallet', 'cash_on_delivery'])->default('cash_on_delivery');
+            $table->enum('payment_method', ['digital_wallet', 'qris'])->default('qris');
             $table->string('payment_proof')->nullable();
             $table->text('note')->nullable();
             $table->enum('status', [
@@ -33,9 +33,9 @@ return new class extends Migration
                 'shiping',
                 'completed',
                 'cancelled'
-            ])->default('waiting'); // Ubah default juga
+            ])->default('waiting');
             $table->string('shipping_method')->nullable();
-            $table->string('tracking_number')->nullable(); // Add tracking number column
+            $table->string('tracking_number')->nullable();
             $table->timestamps();
         });
     }

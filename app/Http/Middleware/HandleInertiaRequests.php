@@ -2,8 +2,9 @@
 
 namespace App\Http\Middleware;
 
-use Illuminate\Http\Request;
 use Inertia\Middleware;
+use App\Models\ProfileStore;
+use Illuminate\Http\Request;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -29,6 +30,7 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $profileStore = ProfileStore::first();
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $request->user(),
@@ -37,6 +39,8 @@ class HandleInertiaRequests extends Middleware
                 'message' => fn() => $request->session()->get('message')
             ],
             'recaptchaSiteKey' => config('recaptcha.api_site_key'),
+            'storeName' => $profileStore->name,
+            'storeCity' => $profileStore->city
         ]);
     }
 }

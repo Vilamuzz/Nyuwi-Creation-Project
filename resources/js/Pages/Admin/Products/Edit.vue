@@ -23,6 +23,7 @@ const form = useForm({
     name: props.product.name,
     stock: props.product.stock,
     price: props.product.price,
+    weight: props.product.weight, // Add this line for the weight
     category_id: props.product.category_id,
     new_category: "",
     description: props.product.description,
@@ -149,6 +150,28 @@ const handleCategoryChange = (categoryId) => {
                             <div v-if="errors.price" class="label">
                                 <span class="label-text-alt text-error">{{
                                     errors.price
+                                }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Berat -->
+                        <div class="form-control mb-4">
+                            <label class="label">
+                                <span class="label-text font-semibold"
+                                    >Berat*</span
+                                >
+                            </label>
+                            <input
+                                type="number"
+                                v-model="form.weight"
+                                class="input input-bordered w-full"
+                                :class="{ 'input-error': errors.weight }"
+                                required
+                                min="1"
+                            />
+                            <div v-if="errors.weight" class="label">
+                                <span class="label-text-alt text-error">{{
+                                    errors.weight
                                 }}</span>
                             </div>
                         </div>

@@ -1,15 +1,16 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\CartController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\ProductReviewController;
-use App\Http\Controllers\WishlistController;
-use App\Http\Controllers\Auth\AdminRegistrationController;
-use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProfileStoreController;
+use App\Http\Controllers\ProductReviewController;
+use App\Http\Controllers\Auth\AdminRegistrationController;
 
 // Public Routes
 Route::middleware(['customer'])->group(function () {
@@ -73,6 +74,12 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::controller(OrderController::class)->prefix('orders')->name('orders.')->group(function () {
         Route::get('/', 'show')->name('show');
         Route::get('/{id}', 'detail')->name('detail');
+    });
+
+    // Profile Store Setting
+    Route::controller(ProfileStoreController::class)->prefix('profile-store')->name('profile-store.')->group(function () {
+        Route::get('/{name}', 'edit')->name('edit');
+        Route::put('/update/{name}', 'update')->name('update');
     });
 
     // Profile Management

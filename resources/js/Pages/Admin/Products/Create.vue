@@ -149,6 +149,28 @@ const handleCategoryChange = (categoryId) => {
                             </div>
                         </div>
 
+                        <!-- Berat -->
+                        <div class="form-control mb-4">
+                            <label class="label">
+                                <span class="label-text font-semibold"
+                                    >Berat*</span
+                                >
+                            </label>
+                            <input
+                                type="number"
+                                v-model="form.weight"
+                                class="input input-bordered w-full"
+                                :class="{ 'input-error': errors.weight }"
+                                required
+                                min="1"
+                            />
+                            <div v-if="errors.weight" class="label">
+                                <span class="label-text-alt text-error">{{
+                                    errors.weight
+                                }}</span>
+                            </div>
+                        </div>
+
                         <!-- Kategori Component -->
                         <CategoryInput
                             :categories="categories"

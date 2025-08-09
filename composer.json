@@ -10,6 +10,7 @@
         "biscolab/laravel-recaptcha": "^6.1",
         "dedoc/scramble": "^0.12.26",
         "inertiajs/inertia-laravel": "^1.0",
+        "intervention/image": "^3.11",
         "laravel/framework": "^11.9",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",

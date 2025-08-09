@@ -6,6 +6,7 @@ use App\Http\Controllers\API\RegionController;
 use App\Http\Controllers\API\ProductController;
 use App\Http\Controllers\API\CartController;
 use App\Http\Controllers\API\WishlistController;
+use App\Http\Controllers\API\ShippingController;
 
 // Public routes
 Route::get('/provinces', [RegionController::class, 'getProvinces']);
@@ -40,4 +41,7 @@ Route::middleware(['web', 'auth', 'customer'])->group(function () {
         Route::delete('/{id}', 'destroy');
         Route::get('/count', 'count');
     });
+
+    // Shipping calculation
+    Route::get('/shipping/calculate', [ShippingController::class, 'calculateShipping']);
 });

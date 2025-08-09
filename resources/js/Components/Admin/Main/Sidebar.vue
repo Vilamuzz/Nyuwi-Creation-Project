@@ -1,6 +1,6 @@
 <script setup>
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
-import { Link } from "@inertiajs/vue3";
+import { Link, usePage } from "@inertiajs/vue3";
 import { ref, watch } from "vue";
 import {
     LayoutDashboard,
@@ -9,6 +9,7 @@ import {
     Settings,
     ChevronsRight,
     ChevronsLeft,
+    Store
 } from "lucide-vue-next";
 
 // Initialize sidebar state from localStorage, default to true if not found
@@ -43,6 +44,8 @@ watch(
     { immediate: true }
 );
 
+const storeName = usePage().props.storeName;
+
 // Updated navigation items array with Lucide icons
 const navigation = [
     {
@@ -59,6 +62,11 @@ const navigation = [
         name: "Orders",
         href: route("orders.show"),
         icon: ShoppingCart,
+    },
+    {
+        name: "Profile Store",
+        href: route("profile-store.edit", storeName),
+        icon: Store,
     },
 ];
 </script>

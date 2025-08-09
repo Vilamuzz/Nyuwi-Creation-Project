@@ -1,5 +1,5 @@
 <script setup>
-import { Head, useForm, router } from "@inertiajs/vue3";
+import { Head, useForm, router, usePage } from "@inertiajs/vue3";
 import { computed, ref, onMounted, watch } from "vue";
 import axios from "axios"; // Make sure this is imported
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
@@ -140,9 +140,7 @@ const setSelectedProvince = (provinceId) => {
 
 // Add function to clean city name
 const cleanCityName = (cityName) => {
-    return cityName
-        .replace(/KABUPATEN\s+/i, "") // Remove 'KABUPATEN '
-        .replace(/KOTA\s+/i, ""); // Remove 'KOTA '
+    return cityName.replace(/KABUPATEN\s+/i, "").replace(/KOTA\s+/i, "");
 };
 
 // Update setSelectedCity function
@@ -167,9 +165,15 @@ const setSelectedVillage = (villageId) => {
     form.village = village ? village.name : "";
 };
 
-// Add a computed property to check if GoSend is available
+// Update the computed property to check if the selected city matches the store city
 const isGoSendAvailable = computed(() => {
-    return form.city?.toLowerCase().includes("klaten");
+    if (!form.city || !storeCity.value) return false;
+
+    // Clean both city names for comparison
+    const selectedCityClean = cleanCityName(form.city).toLowerCase();
+    const storeCityClean = cleanCityName(storeCity.value).toLowerCase();
+
+    return selectedCityClean === storeCityClean;
 });
 
 const shippingRates = ref([]);
@@ -182,15 +186,13 @@ const fetchShippingRates = async (destination) => {
         const cleanDestination = cleanCityName(destination);
         isLoadingRates.value = true;
 
-        const response = await axios.get(`https://api.binderbyte.com/v1/cost`, {
+        // Use our own backend API with dynamic weight and origin
+        const response = await axios.get("/api/shipping/calculate", {
             params: {
-                api_key:
-                    "151a782863970433251abbcbf51fe253f4625de1eda00f7a49ba55d90e7419a5",
                 courier: form.shipping_method?.toLowerCase(),
-                origin: "klaten",
+                origin: storeCity.value, // Use store's city
                 destination: cleanDestination,
-                weight: 1,
-                volume: "100x100x100",
+                weight: totalWeight.value,
             },
         });
 
@@ -222,6 +224,34 @@ const totalWithShipping = computed(() => {
         : 0;
     return subtotal + shippingCost;
 });
+
+// Add this function after your other computed properties
+const totalWeight = computed(() => {
+    if (!cartItems.value || cartItems.value.length === 0) return 1000; // Default to 1kg
+
+    return cartItems.value.reduce((total, item) => {
+        // Get the weight from product (in grams) and multiply by quantity
+        const itemWeight = item.product.weight * item.quantity;
+        return total + itemWeight;
+    }, 0);
+});
+
+// Add this after your other imports
+const page = usePage();
+const storeCity = computed(() => {
+    // Access the profile store data from Inertia shared props
+    const profileStore = page.props.storeCity;
+    return profileStore.toLowerCase();
+});
+
+// Add this function after your other formatting functions
+const formatWeight = (weight) => {
+    if (weight < 1000) {
+        return `${weight} g`;
+    } else {
+        return `${(weight / 1000).toFixed(1)} kg`;
+    }
+};
 </script>
 
 <template>
@@ -543,8 +573,10 @@ const totalWithShipping = computed(() => {
                                 >
                                     Go Send
                                     {{
-                                        !isGoSendAvailable
-                                            ? "(Only available in Klaten)"
+                                        !isGoSendAvailable && storeCity
+                                            ? `(Only available in ${storeCity})`
+                                            : !isGoSendAvailable
+                                            ? "(City not available)"
                                             : ""
                                     }}
                                 </label>
@@ -707,6 +739,11 @@ const totalWithShipping = computed(() => {
                                 {{ formatPrice(totalWithShipping) }}
                             </h1>
                         </div>
+                    </div>
+                    <div class="border-t pt-2 mt-2">
+                        <p class="text-sm text-gray-500">
+                            Total weight: {{ formatWeight(totalWeight) }}
+                        </p>
                     </div>
                 </div>
             </section>
