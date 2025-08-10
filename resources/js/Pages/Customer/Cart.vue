@@ -92,12 +92,14 @@ onMounted(() => {
 
     // Check localStorage for payment info
     const showPaymentInfo = localStorage.getItem("showPaymentInfo");
+    const paymentMethod = localStorage.getItem("paymentMethod");
 
     if (showPaymentInfo === "true") {
         showPaymentModal.value = true;
         // Clear localStorage after use
         localStorage.removeItem("showPaymentInfo");
         localStorage.removeItem("paymentAmount");
+        localStorage.removeItem("paymentMethod");
     }
 });
 
@@ -224,11 +226,13 @@ const closePaymentModal = () => {
                 </div>
             </div>
         </section>
-        <!-- Payment Modal -->
+        <!-- Payment Information Modal -->
         <PaymentInformationModal
             v-if="showPaymentModal"
-            :payment-info="paymentInfo"
-            :on-close="closePaymentModal"
+            :onClose="closePaymentModal"
+            :paymentMethod="
+                localStorage.getItem('paymentMethod') || 'digital_wallet'
+            "
         />
     </CustomersLayout>
 </template>

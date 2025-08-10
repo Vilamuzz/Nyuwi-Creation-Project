@@ -52,6 +52,47 @@ class RegionController extends Controller
     }
 
     /**
+     * Get city by name and return with province information
+     */
+    public function getCityByName($cityName)
+    {
+        try {
+            // Clean the city name (remove KABUPATEN/KOTA prefixes)
+            $cleanCityName = preg_replace('/^(KABUPATEN\s+|KOTA\s+)/i', '', $cityName);
+
+            // Search for the city with different possible formats
+            $regency = Regency::where(function ($query) use ($cityName, $cleanCityName) {
+                $query->where('name', 'LIKE', '%' . $cityName . '%')
+                    ->orWhere('name', 'LIKE', '%' . $cleanCityName . '%')
+                    ->orWhere('name', 'LIKE', 'KABUPATEN ' . $cleanCityName)
+                    ->orWhere('name', 'LIKE', 'KOTA ' . $cleanCityName);
+            })->with('province')->first();
+
+            if (!$regency) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'City not found'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'city' => $regency,
+                    'province' => $regency->province,
+                    'all_cities_in_province' => $regency->province->regencies
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch city information',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get districts by regency/city ID
      */
     public function getDistricts($regencyId)

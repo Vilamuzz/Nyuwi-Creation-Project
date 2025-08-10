@@ -44,9 +44,13 @@ const confirmCheckout = () => {
         preserveScroll: true,
         onSuccess: () => {
             closeModal();
-            if (form.payment_method === "digital_wallet") {
+            if (
+                form.payment_method === "digital_wallet" ||
+                form.payment_method === "qris"
+            ) {
                 localStorage.setItem("showPaymentInfo", "true");
                 localStorage.setItem("paymentAmount", totalWithShipping.value);
+                localStorage.setItem("paymentMethod", form.payment_method); // Store payment method
             }
             router.visit(route("cart.show"));
         },
@@ -609,14 +613,12 @@ const formatWeight = (weight) => {
                             <div class="space-x-2">
                                 <input
                                     type="radio"
-                                    id="cash_on_delivery"
-                                    value="cash_on_delivery"
+                                    id="qris"
+                                    value="qris"
                                     v-model="form.payment_method"
                                     name="payment_method"
                                 />
-                                <label for="cash_on_delivery"
-                                    >Cash on Delivery</label
-                                >
+                                <label for="qris">QRIS Payment</label>
                             </div>
 
                             <div

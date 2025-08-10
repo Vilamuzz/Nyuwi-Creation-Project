@@ -463,7 +463,7 @@ const cancelOrder = () => {
                         <!-- Existing Accept Order button -->
                         <button
                             @click="openTrackingModal"
-                            :disabled="
+                            :hidden="
                                 order.status === 'shiping' ||
                                 order.status === 'completed' ||
                                 order.status === 'cancelled' ||
@@ -624,10 +624,7 @@ const cancelOrder = () => {
                     </div>
 
                     <!-- Add button to view payment proof -->
-                    <div
-                        v-if="order.payment_method === 'digital_wallet'"
-                        class="mt-4"
-                    >
+                    <div class="mt-4">
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="font-semibold">Payment Proof:</p>
@@ -663,7 +660,7 @@ const cancelOrder = () => {
                             class="flex min-h-full items-center justify-center p-4"
                         >
                             <div
-                                class="relative bg-white rounded-lg max-w-3xl w-full shadow-xl"
+                                class="relative bg-white rounded-lg max-w-xl w-full shadow-xl"
                             >
                                 <!-- Modal Header -->
                                 <div class="px-6 py-4 border-b">
@@ -685,14 +682,16 @@ const cancelOrder = () => {
                                 <!-- Modal Content -->
                                 <div class="p-6">
                                     <div class="space-y-4">
-                                        <div class="aspect-w-16 aspect-h-9">
+                                        <div
+                                            class="aspect-w-16 aspect-h-9 flex justify-center"
+                                        >
                                             <img
                                                 :src="`/storage/payment_proofs/${order.payment_proof}`"
                                                 :alt="
                                                     'Payment proof for order #' +
                                                     order.id
                                                 "
-                                                class="object-contain w-full h-full"
+                                                class="object-contain w-auto h-96"
                                             />
                                         </div>
 

@@ -73,6 +73,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     // Order Management (Admin)
     Route::controller(OrderController::class)->prefix('orders')->name('orders.')->group(function () {
         Route::get('/', 'show')->name('show');
+        Route::put('/{id}', 'update')->name('update');
         Route::get('/{id}', 'detail')->name('detail');
     });
 

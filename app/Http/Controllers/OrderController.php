@@ -105,7 +105,7 @@ class OrderController extends Controller
             'village' => 'required|string|max:255',
             'province' => 'required|string|max:255',
             'phone' => 'required|string|max:15',
-            'payment_method' => 'required|in:digital_wallet,cash_on_delivery',
+            'payment_method' => 'required|in:digital_wallet,qris',
             'shipping_method' => 'required|in:JNE,GoSend',
             'shipping_cost' => 'required|numeric|min:0',
         ]);

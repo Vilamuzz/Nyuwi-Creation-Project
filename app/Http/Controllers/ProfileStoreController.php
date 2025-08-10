@@ -35,6 +35,11 @@ class ProfileStoreController extends Controller
             $rules['logo'] = 'image|mimes:jpeg,png,jpg,svg|max:2048';
         }
 
+        // Only require the QRIS if a new one is uploaded
+        if ($request->hasFile('qris')) {
+            $rules['qris'] = 'image|mimes:jpeg,png,jpg,svg|max:2048';
+        }
+
         $validatedData = $request->validate($rules);
 
         // Prepare update data
@@ -69,6 +74,18 @@ class ProfileStoreController extends Controller
             // Save favicon to public directory
             $faviconPath = public_path('favicon.ico');
             $favicon->save($faviconPath);
+        }
+
+        // Process and store the QRIS image if one was uploaded
+        if ($request->hasFile('qris')) {
+            // Delete the old QRIS image if it exists
+            if ($profile->qris && Storage::disk('public')->exists($profile->qris)) {
+                Storage::disk('public')->delete($profile->qris);
+            }
+
+            // Store the new QRIS image
+            $qrisPath = $request->file('qris')->store('qris', 'public');
+            $updateData['qris'] = $qrisPath;
         }
 
         // Update admin registration code in .env if provided

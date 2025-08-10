@@ -17,20 +17,29 @@ const props = defineProps({
 const form = useForm({
     name: props.profile.name,
     logo: null,
+    qris: null,
     address: props.profile.address,
     city: props.profile.city,
     phone: props.profile.phone,
     instagram: props.profile.instagram || "",
     facebook: props.profile.facebook || "",
     tiktok: props.profile.tiktok || "",
-    admin_registration_code: "", // Add this field for admin registration code
+    admin_registration_code: "",
     _method: "PUT",
 });
 
-// For logo preview
+// For logo and QRIS preview (existing code)
 const logoPreview = ref(null);
 const logoInput = ref(null);
-const existingLogo = `/storage/${props.profile.logo}`;
+const existingLogo = props.profile.logo
+    ? `/storage/${props.profile.logo}`
+    : null;
+
+const qrisPreview = ref(null);
+const qrisInput = ref(null);
+const existingQris = props.profile.qris
+    ? `/storage/${props.profile.qris}`
+    : null;
 
 // For region selection
 const provinces = ref([]);
@@ -44,7 +53,31 @@ const showMessage = ref(false);
 const message = ref("");
 const messageType = ref("success");
 
-// Handle logo file selection
+// Initialize the region selection based on current city
+const initializeRegionSelection = async () => {
+    if (props.profile.city) {
+        try {
+            // Get city information including its province
+            const response = await axios.get(
+                `/api/city/${encodeURIComponent(props.profile.city)}`
+            );
+
+            if (response.data.success) {
+                const { province, all_cities_in_province } = response.data.data;
+
+                // Set the selected province
+                selectedProvince.value = province.id;
+
+                // Set the cities for this province
+                cities.value = all_cities_in_province;
+            }
+        } catch (error) {
+            console.error("Error initializing region selection:", error);
+        }
+    }
+};
+
+// Handle logo file selection (existing code)
 const handleLogoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -52,6 +85,19 @@ const handleLogoChange = (e) => {
         const reader = new FileReader();
         reader.onload = (e) => {
             logoPreview.value = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+};
+
+// Handle QRIS file selection (existing code)
+const handleQrisChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        form.qris = file;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            qrisPreview.value = e.target.result;
         };
         reader.readAsDataURL(file);
     }
@@ -89,7 +135,7 @@ const getCities = async (provinceId) => {
 const setSelectedProvince = (provinceId) => {
     selectedProvince.value = provinceId;
     getCities(provinceId);
-    form.city = "";
+    form.city = ""; // Reset city when province changes
 };
 
 // Update form when a city is selected
@@ -97,34 +143,32 @@ const setSelectedCity = (cityName) => {
     form.city = cityName;
 };
 
-// Submit the form
+// Submit the form (existing code)
 const updateProfileStore = () => {
     form.post(route("profile-store.update", props.profile.name), {
         preserveScroll: true,
         onSuccess: () => {
-            // Reset file input
             if (logoInput.value) {
                 logoInput.value.value = "";
             }
+            if (qrisInput.value) {
+                qrisInput.value.value = "";
+            }
 
-            // Show success message
             message.value = "Profile store updated successfully!";
             messageType.value = "success";
             showMessage.value = true;
 
-            // Hide message after 3 seconds
             setTimeout(() => {
                 showMessage.value = false;
             }, 3000);
         },
         onError: () => {
-            // Show error message
             message.value =
                 "Failed to update profile store. Please check the form for errors.";
             messageType.value = "error";
             showMessage.value = true;
 
-            // Hide message after 3 seconds
             setTimeout(() => {
                 showMessage.value = false;
             }, 3000);
@@ -132,9 +176,10 @@ const updateProfileStore = () => {
     });
 };
 
-// Fetch provinces on component mount
-onMounted(() => {
-    getProvinces();
+// Fetch data on component mount
+onMounted(async () => {
+    await getProvinces();
+    await initializeRegionSelection();
 });
 </script>
 
@@ -218,55 +263,108 @@ onMounted(() => {
                             />
                         </div>
 
-                        <!-- Logo -->
-                        <div>
-                            <InputLabel for="logo" value="Store Logo" />
+                        <!-- Logo and QRIS Images Section -->
+                        <div class="flex flex-row gap-x-6 w-full">
+                            <!-- Logo -->
+                            <div class="w-1/2">
+                                <InputLabel for="logo" value="Store Logo" />
 
-                            <div class="flex items-center mt-2 space-x-6">
-                                <!-- Logo Preview -->
-                                <div
-                                    class="w-24 h-24 border rounded-md overflow-hidden bg-gray-100"
-                                >
-                                    <img
-                                        v-if="logoPreview"
-                                        :src="logoPreview"
-                                        class="w-full h-full object-cover"
-                                        alt="Logo preview"
-                                    />
-                                    <img
-                                        v-else-if="existingLogo"
-                                        :src="existingLogo"
-                                        class="w-full h-full object-cover"
-                                        alt="Current logo"
-                                    />
+                                <div class="flex items-center mt-2 space-x-4">
+                                    <!-- Logo Preview -->
                                     <div
-                                        v-else
-                                        class="w-full h-full flex items-center justify-center text-gray-400"
+                                        class="w-24 h-24 border rounded-md overflow-hidden bg-gray-100"
                                     >
-                                        No logo
+                                        <img
+                                            v-if="logoPreview"
+                                            :src="logoPreview"
+                                            class="w-full h-full object-cover"
+                                            alt="Logo preview"
+                                        />
+                                        <img
+                                            v-else-if="existingLogo"
+                                            :src="existingLogo"
+                                            class="w-full h-full object-cover"
+                                            alt="Current logo"
+                                        />
+                                        <div
+                                            v-else
+                                            class="w-full h-full flex items-center justify-center text-gray-400"
+                                        >
+                                            No logo
+                                        </div>
                                     </div>
-                                </div>
 
-                                <!-- File Input -->
-                                <div>
-                                    <input
-                                        ref="logoInput"
-                                        type="file"
-                                        id="logo"
-                                        @change="handleLogoChange"
-                                        accept="image/jpeg,image/png,image/jpg,image/svg+xml"
-                                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                    />
-                                    <div class="mt-1 text-sm text-gray-500">
-                                        Upload a store logo image (JPEG, PNG,
-                                        JPG, SVG)
+                                    <!-- File Input -->
+                                    <div class="flex-1">
+                                        <input
+                                            ref="logoInput"
+                                            type="file"
+                                            id="logo"
+                                            @change="handleLogoChange"
+                                            accept="image/jpeg,image/png,image/jpg,image"
+                                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                        />
+                                        <div class="mt-1 text-sm text-gray-500">
+                                            Upload store logo (JPEG, PNG, JPG)
+                                        </div>
                                     </div>
                                 </div>
+                                <InputError
+                                    class="mt-2"
+                                    :message="form.errors.logo"
+                                />
                             </div>
-                            <InputError
-                                class="mt-2"
-                                :message="form.errors.logo"
-                            />
+
+                            <!-- QRIS -->
+                            <div class="w-1/2">
+                                <InputLabel for="qris" value="QRIS Payment" />
+
+                                <div class="flex items-center mt-2 space-x-4">
+                                    <!-- QRIS Preview -->
+                                    <div
+                                        class="w-24 h-24 border rounded-md overflow-hidden bg-gray-100"
+                                    >
+                                        <img
+                                            v-if="qrisPreview"
+                                            :src="qrisPreview"
+                                            class="w-full h-full object-cover"
+                                            alt="QRIS preview"
+                                        />
+                                        <img
+                                            v-else-if="existingQris"
+                                            :src="existingQris"
+                                            class="w-full h-full object-cover"
+                                            alt="Current QRIS"
+                                        />
+                                        <div
+                                            v-else
+                                            class="w-full h-full flex items-center justify-center text-gray-400 text-xs text-center"
+                                        >
+                                            No QRIS
+                                        </div>
+                                    </div>
+
+                                    <!-- File Input -->
+                                    <div class="flex-1">
+                                        <input
+                                            ref="qrisInput"
+                                            type="file"
+                                            id="qris"
+                                            @change="handleQrisChange"
+                                            accept="image/jpeg,image/png,image/jpg,image"
+                                            class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                                        />
+                                        <div class="mt-1 text-sm text-gray-500">
+                                            Upload QRIS code image (JPEG, PNG,
+                                            JPG)
+                                        </div>
+                                    </div>
+                                </div>
+                                <InputError
+                                    class="mt-2"
+                                    :message="form.errors.qris"
+                                />
+                            </div>
                         </div>
 
                         <!-- Address -->

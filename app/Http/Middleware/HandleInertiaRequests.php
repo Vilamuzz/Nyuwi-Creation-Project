@@ -40,7 +40,11 @@ class HandleInertiaRequests extends Middleware
             ],
             'recaptchaSiteKey' => config('recaptcha.api_site_key'),
             'storeName' => $profileStore->name,
-            'storeCity' => $profileStore->city
+            'storeCity' => $profileStore->city,
+            'storePaymentMethod' => [
+                'storeDana' => $profileStore->phone,
+                'storeQris' => $profileStore->qris,
+            ]
         ]);
     }
 }

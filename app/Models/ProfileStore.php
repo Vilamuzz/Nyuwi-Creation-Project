@@ -12,6 +12,7 @@ class ProfileStore extends Model
         'address',
         'city',
         'phone',
+        'qris',
         'instagram',
         'facebook',
         'tiktok',
