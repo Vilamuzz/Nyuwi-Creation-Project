@@ -41,12 +41,11 @@ class HandleInertiaRequests extends Middleware
             'regionData' => fn() => $request->session()->get('regionData'),
             'shippingResult' => fn() => $request->session()->get('shippingResult'),
             'trackingData' => fn() => $request->session()->get('trackingData'),
-            'recaptchaSiteKey' => config('recaptcha.api_site_key'),
-            'storeName' => $profileStore->name,
-            'storeCity' => $profileStore->city,
+            'storeName' => $profileStore?->name,
+            'storeCity' => $profileStore?->city,
             'storePaymentMethod' => [
-                'storeDana' => $profileStore->phone,
-                'storeQris' => $profileStore->qris,
+                'storeDana' => $profileStore?->phone,
+                'storeQris' => $profileStore?->qris,
             ]
         ]);
     }

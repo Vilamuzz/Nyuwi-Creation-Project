@@ -5,35 +5,17 @@ import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import TextInput from "@/Components/TextInput.vue";
 import { Head, Link, useForm } from "@inertiajs/vue3";
-import { onMounted } from "vue";
 
 const form = useForm({
     name: "",
     email: "",
     password: "",
     password_confirmation: "",
-    "g-recaptcha-response": "",
-});
-
-onMounted(() => {
-    const script = document.createElement("script");
-    script.src = "https://www.google.com/recaptcha/api.js";
-    document.head.appendChild(script);
-
-    window.onRecaptchaSuccess = (token) => {
-        form["g-recaptcha-response"] = token;
-    };
 });
 
 const submit = () => {
     form.post(route("register"), {
-        onSuccess: () => {
-            form.reset();
-            grecaptcha.reset();
-        },
-        onError: () => {
-            grecaptcha.reset();
-        },
+        onSuccess: () => form.reset(),
     });
 };
 </script>
@@ -107,18 +89,6 @@ const submit = () => {
                 <InputError
                     class="mt-2"
                     :message="form.errors.password_confirmation"
-                />
-            </div>
-
-            <div class="mt-4">
-                <div
-                    class="g-recaptcha"
-                    :data-sitekey="$page.props.recaptchaSiteKey"
-                    data-callback="onRecaptchaSuccess"
-                ></div>
-                <InputError
-                    class="mt-2"
-                    :message="form.errors['g-recaptcha-response']"
                 />
             </div>
 

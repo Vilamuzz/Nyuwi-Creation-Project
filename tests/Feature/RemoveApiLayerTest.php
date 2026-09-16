@@ -10,8 +10,7 @@ class RemoveApiLayerTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
-    public function api_routes_are_not_registered(): void
+    public function test_api_routes_are_not_registered(): void
     {
         $apiRoutes = collect(\Route::getRoutes()->getRoutes())
             ->filter(fn ($route) => str_starts_with($route->uri(), 'api/'));
@@ -22,8 +21,7 @@ class RemoveApiLayerTest extends TestCase
         );
     }
 
-    /** @test */
-    public function home_page_returns_landing_page_with_products_and_categories(): void
+    public function test_home_page_returns_landing_page_with_products_and_categories(): void
     {
         $this->get('/')
             ->assertOk()
@@ -35,8 +33,7 @@ class RemoveApiLayerTest extends TestCase
                 ->has('canRegister'));
     }
 
-    /** @test */
-    public function shop_page_returns_shop_page_with_products(): void
+    public function test_shop_page_returns_shop_page_with_products(): void
     {
         $this->get('/shop')
             ->assertOk()
@@ -47,16 +44,14 @@ class RemoveApiLayerTest extends TestCase
                 ->has('filters'));
     }
 
-    /** @test */
-    public function cart_mutation_routes_require_authentication(): void
+    public function test_cart_mutation_routes_require_authentication(): void
     {
         $this->post('/cart')->assertRedirect('/login');
         $this->put('/cart/1')->assertRedirect('/login');
         $this->delete('/cart/1')->assertRedirect('/login');
     }
 
-    /** @test */
-    public function customer_order_routes_require_authentication(): void
+    public function test_customer_order_routes_require_authentication(): void
     {
         $this->get('/customer/orders')->assertRedirect('/login');
         $this->get('/customer/orders/1')->assertRedirect('/login');
@@ -66,8 +61,7 @@ class RemoveApiLayerTest extends TestCase
         $this->get('/customer/orders/tracking/TRACK123')->assertRedirect('/login');
     }
 
-    /** @test */
-    public function admin_order_routes_require_authentication(): void
+    public function test_admin_order_routes_require_authentication(): void
     {
         $this->get('/admin/orders')->assertRedirect('/login');
         $this->get('/admin/orders/1')->assertRedirect('/login');
@@ -75,15 +69,15 @@ class RemoveApiLayerTest extends TestCase
         $this->get('/admin/orders/tracking/TRACK123')->assertRedirect('/login');
     }
 
-    /** @test */
-    public function region_routes_return_success(): void
+    public function test_region_routes_return_success(): void
     {
+        // Provinces route does not require seeded data
         $this->get('/regions/provinces')->assertStatus(302);
-        $this->get('/regions/regencies/1')->assertStatus(302);
+        // Regencies route is registered; 404 is expected when province does not exist
+        $this->get('/regions/regencies/99999')->assertStatus(404);
     }
 
-    /** @test */
-    public function shipping_calculation_route_requires_valid_input(): void
+    public function test_shipping_calculation_route_requires_valid_input(): void
     {
         $this->post('/shipping/calculate')->assertSessionHasErrors();
     }

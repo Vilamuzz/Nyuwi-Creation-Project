@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\AdminRegisterRequest;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
+use Illuminate\Support\Facades\RateLimiter;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,25 +20,22 @@ class AdminRegistrationController extends Controller
         return Inertia::render('Auth/AdminRegister');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(AdminRegisterRequest $request): RedirectResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:' . User::class,
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'admin_code' => 'required|in:' . env('ADMIN_REGISTRATION_CODE')
-        ]);
+        $request->ensureIsNotRateLimited();
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'name' => $request->validated('name'),
+            'email' => $request->validated('email'),
+            'password' => Hash::make($request->validated('password')),
             'role' => 'admin'
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
+
+        RateLimiter::clear($request->throttleKey());
 
         return redirect()->route('dashboard');
     }

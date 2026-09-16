@@ -16,12 +16,14 @@ Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store']);
+    Route::post('register', [RegisteredUserController::class, 'store'])
+        ->middleware('throttle:5,10');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
 
-    Route::post('login', [AuthenticatedSessionController::class, 'store']);
+    Route::post('login', [AuthenticatedSessionController::class, 'store'])
+        ->middleware('throttle:10,1');
 
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
@@ -38,7 +40,8 @@ Route::middleware('guest')->group(function () {
     Route::get('admin/register', [AdminRegistrationController::class, 'create'])
         ->name('admin.register');
 
-    Route::post('admin/register', [AdminRegistrationController::class, 'store']);
+    Route::post('admin/register', [AdminRegistrationController::class, 'store'])
+        ->middleware('throttle:5,10');
 });
 
 Route::middleware('auth')->group(function () {

@@ -24,7 +24,8 @@ class VerifyEmailController extends Controller
 
         return $this->redirectBasedOnRole($request->user())
             ->with('verified', 1)
-            ->with('message', 'Email berhasil diverifikasi!');
+            ->with('message', 'Email berhasil diverifikasi!')
+            ->with('status', 'verification-success');
     }
 
     /**
@@ -33,10 +34,10 @@ class VerifyEmailController extends Controller
     protected function redirectBasedOnRole($user): RedirectResponse
     {
         if ($user->role === 'admin') {
-            return redirect()->route('dashboard');
+            return redirect()->route('dashboard', ['verified' => 1]);
         }
 
         // Default for customers
-        return redirect()->route('home'); // or whichever route name you use for homepage
+        return redirect()->route('home', ['verified' => 1]);
     }
 }
