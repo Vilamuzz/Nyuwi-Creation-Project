@@ -1,99 +1,64 @@
 <script setup>
-import { Head, Link } from "@inertiajs/vue3";
-import { ref, onMounted } from "vue";
-import axios from "axios";
+import { Head, Link, useForm, router } from "@inertiajs/vue3";
+import { ref, computed } from "vue";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Customer/Main/Hero.vue";
 
-// Reactive state
-const wishlistItems = ref([]);
-const isLoading = ref(true);
-const error = ref(null);
-const pagination = ref({
-    current_page: 1,
-    last_page: 1,
-    total: 0,
+const props = defineProps({
+    wishlistItems: { type: Object, default: () => ({ data: [], last_page: 1, current_page: 1, total: 0 }) },
 });
+
+const wishlistItems = computed(() => props.wishlistItems.data || []);
+const pagination = computed(() => ({
+    current_page: props.wishlistItems.current_page,
+    last_page: props.wishlistItems.last_page,
+    total: props.wishlistItems.total,
+}));
+const isLoading = ref(false);
+const error = ref(null);
 
 // Toast notification state
 const message = ref("");
 const messageType = ref("");
 const showMessage = ref(false);
 
-// Fetch wishlist from API
-const fetchWishlist = async (page = 1) => {
-    try {
-        isLoading.value = true;
-        const response = await axios.get(`/api/wishlist?page=${page}`);
-
-        if (response.data.success) {
-            wishlistItems.value = response.data.data.data;
-            pagination.value = {
-                current_page: response.data.data.current_page,
-                last_page: response.data.data.last_page,
-                total: response.data.data.total,
-            };
-        } else {
-            error.value = "Failed to load wishlist items";
-        }
-    } catch (err) {
-        console.error("Error fetching wishlist data:", err);
-        error.value = "Failed to load wishlist items";
-    } finally {
-        isLoading.value = false;
-    }
+const fetchWishlist = (page = 1) => {
+    isLoading.value = false;
 };
 
-// Remove item from wishlist
-const removeFromWishlist = async (itemId) => {
-    if (confirm("Are you sure you want to remove this item from wishlist?")) {
-        try {
-            const response = await axios.delete(`/api/wishlist/${itemId}`);
+const deleteForm = useForm({});
 
-            if (response.data.success) {
-                // Show success message
-                message.value =
-                    response.data.message || "Item removed from wishlist";
+// Remove item from wishlist
+const removeFromWishlist = (itemId) => {
+    if (confirm("Are you sure you want to remove this item from wishlist?")) {
+        deleteForm.delete(route("wishlist.destroy", itemId), {
+            preserveScroll: true,
+            onSuccess: () => {
+                message.value = "Item removed from wishlist";
                 messageType.value = "success";
                 showMessage.value = true;
 
-                // Refresh the wishlist data
-                fetchWishlist(pagination.value.current_page);
-
-                // Hide message after 3 seconds
                 setTimeout(() => {
                     showMessage.value = false;
                 }, 3000);
-            } else {
-                console.error("Failed to remove item:", response.data.message);
-            }
-        } catch (error) {
-            console.error("Error removing item:", error);
+            },
+            onError: () => {
+                message.value = "Failed to remove item from wishlist";
+                messageType.value = "error";
+                showMessage.value = true;
 
-            // Show error message
-            message.value =
-                error.response?.data?.message ||
-                "Failed to remove item from wishlist";
-            messageType.value = "error";
-            showMessage.value = true;
-
-            // Hide message after 3 seconds
-            setTimeout(() => {
-                showMessage.value = false;
-            }, 3000);
-        }
+                setTimeout(() => {
+                    showMessage.value = false;
+                }, 3000);
+            },
+        });
     }
 };
 
 // Change page
 const changePage = (page) => {
-    fetchWishlist(page);
+    router.get(route("wishlist.index"), { page }, { preserveScroll: true });
 };
-
-// Fetch wishlist on component mount
-onMounted(() => {
-    fetchWishlist();
-});
 </script>
 
 <template>

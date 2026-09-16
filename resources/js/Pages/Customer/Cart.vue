@@ -1,66 +1,34 @@
 <script setup>
-import { Head, Link } from "@inertiajs/vue3";
+import { Head, Link, useForm } from "@inertiajs/vue3";
 import { computed, ref, onMounted } from "vue";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Customer/Main/Hero.vue";
 import PaymentInformationModal from "@/Components/Customer/Sub-main/PaymentInformationModal.vue";
-import axios from "axios";
+const props = defineProps({
+    cartItems: { type: Array, default: () => [] },
+    summary: { type: Object, default: () => ({}) },
+});
 
-// Configure axios for session auth
-axios.defaults.withCredentials = true; // Important for sending cookies
-const token = document.head.querySelector('meta[name="csrf-token"]');
-if (token) {
-    axios.defaults.headers.common["X-CSRF-TOKEN"] = token.content;
-}
-
-// Use reactive state for cart items from API
-const cartItems = ref([]);
-const isLoading = ref(true);
+const cartItems = computed(() => props.cartItems);
+const isLoading = ref(false);
 const error = ref(null);
 
-// Get cart data
-const fetchCart = async () => {
-    try {
-        isLoading.value = true;
-        const response = await axios.get("/api/cart");
-        if (response.data.success) {
-            cartItems.value = response.data.data.cartItems;
-        }
-    } catch (error) {
-        console.error("Error fetching cart:", error);
-        error.value = "Failed to fetch cart items";
-    } finally {
-        isLoading.value = false;
-    }
-};
+const fetchCart = () => {};
+
+const deleteForm = useForm({});
+const updateForm = useForm({ quantity: 1 });
 
 // Delete cart item
-const deleteCartItem = async (itemId) => {
+const deleteCartItem = (itemId) => {
     if (confirm("Apakah anda yakin ingin menghapus item ini?")) {
-        try {
-            const response = await axios.delete(`/api/cart/${itemId}`);
-            if (response.data.success) {
-                cartItems.value = response.data.data.cartItems;
-            }
-        } catch (error) {
-            console.error("Error removing item:", error);
-        }
+        deleteForm.delete(route("cart.destroy", itemId), { preserveScroll: true });
     }
 };
 
 // Update quantity
-const updateQuantity = async (item, newQuantity) => {
-    try {
-        const response = await axios.put(`/api/cart/${item.id}`, {
-            quantity: newQuantity,
-        });
-        if (response.data.success) {
-            cartItems.value = response.data.data.cartItems;
-        }
-    } catch (error) {
-        console.error("Error updating quantity:", error);
-        // Handle error - possibly show a notification
-    }
+const updateQuantity = (item, newQuantity) => {
+    updateForm.quantity = Number(newQuantity);
+    updateForm.put(route("cart.update", item.id), { preserveScroll: true });
 };
 
 // Compute total price from all items
@@ -87,9 +55,6 @@ const paymentInfo = {
 };
 
 onMounted(() => {
-    // Fetch cart data when component mounts
-    fetchCart();
-
     // Check localStorage for payment info
     const showPaymentInfo = localStorage.getItem("showPaymentInfo");
     const paymentMethod = localStorage.getItem("paymentMethod");
@@ -207,7 +172,7 @@ const closePaymentModal = () => {
             <!-- Bagian Ringkasan Keranjang -->
             <div class="bg-red-100 w-1/4 p-8">
                 <h2 class="text-xl font-bold mb-4">Ringkasan Belanja</h2>
-                <p>Total: {{ formatPrice(cartTotal) }}</p>
+                <p>Total: {{ formatPrice(summary.subtotal || cartTotal) }}</p>
                 <div class="mt-4 flex items-center">
                     <Link
                         v-if="cartItems && cartItems.length > 0"

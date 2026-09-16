@@ -3,9 +3,8 @@
 ## Architecture
 - **Monolithic Laravel 11 application** with Inertia.js for SPA-like experience
 - Server-side rendering via Inertia + Vue 3 (no separate backend/frontend)
-- Dual controller layer:
-  - **Web controllers** — Return Inertia responses for page rendering
-  - **API controllers** — Return JSON for AJAX operations (cart, wishlist, shipping, orders)
+- Single web controller layer — controllers return Inertia responses for page rendering and redirects for mutations
+- Inertia partial reloads handle dynamic data such as cart updates, regions, shipping, and wishlist changes
 - Role-based middleware (`admin`, `customer`) for route protection
 - MySQL database with Indonesian region data (azishapidin/indoregion package)
 
@@ -19,7 +18,7 @@
 | MySQL | Widely supported, excellent Laravel integration, suitable for e-commerce scale |
 | Tailwind CSS v3 + DaisyUI v4 | Utility-first styling with pre-built components for rapid UI development |
 | Laravel Breeze | Opinionated auth scaffolding with Vue/Inertia preset, reduces auth boilerplate |
-| Laravel Sanctum | Token-based API authentication for cart/order API endpoints |
+
 | Vite | Fast HMR, native ESM support, excellent Laravel integration via laravel-vite-plugin |
 | Intervention/Image | Image upload processing and manipulation for product images |
 
@@ -35,13 +34,12 @@
 ## Non-Functional Requirements
 - Page load < 2s on 3G connection
 - All form inputs validated server-side via Laravel Form Requests
-- API responses use consistent JSON structure with proper HTTP status codes
+- Inertia responses provide page props; validation failures use Laravel error bags and mutations use redirects with flash messages
 - Image uploads processed server-side (max 5MB per image)
 - Database queries optimized with eager loading (prevent N+1)
 - CSRF protection on all web routes
 - XSS prevention via Vue template escaping and backend sanitization
-- Rate limiting on API endpoints (public routes: 60 req/min, auth routes: 30 req/min)
-- Session-based auth with secure cookie configuration
+- Session-based auth with secure cookie configuration and CSRF protection
 
 ## Dependencies (Approved List)
 
@@ -49,7 +47,7 @@
 Only these may be installed without asking:
 - `laravel/framework` (core)
 - `inertiajs/inertia-laravel` — Inertia server adapter
-- `laravel/sanctum` — API token auth
+
 - `laravel/breeze` — Auth scaffolding
 - `azishapidin/indoregion` — Indonesian region data
 - `intervention/image` — Image processing
@@ -62,7 +60,7 @@ Only these may be installed without asking:
 - `vue` — Core Vue framework
 - `tailwindcss` + `@tailwindcss/forms` — CSS framework
 - `daisyui` — Tailwind component library
-- `axios` — HTTP client
+
 - `lucide-vue-next` — Icon library
 - `laravel-vite-plugin` — Vite integration
 
@@ -75,9 +73,16 @@ Only these may be installed without asking:
 ## Explicitly Rejected
 - **No React** — Vue 3 chosen for Inertia integration and lighter footprint
 - **No Next.js/Nuxt** — Laravel handles routing and server logic; Inertia provides SPA UX
-- **No GraphQL** — REST API endpoints sufficient for e-commerce operations
+- **No separate API layer** — Inertia web routes provide the application data flow
 - **No Redux/Pinia state management** — Use Vue 3 Composition API reactivity + Inertia shared data
 - **No Tailwind UI / Headless UI** — DaisyUI provides sufficient component library
 - **No MongoDB** — Relational data model required for e-commerce (orders, inventory)
 - **No Redis caching (v1)** — Add only if performance profiling shows need
 - **No WebSocket/real-time (v1)** — Polling or page refresh sufficient for order status updates
+
+## Inertia Data Flow
+- Initial page data is supplied through page-specific Inertia props.
+- Mutations use Inertia `useForm` or `router` requests to named web routes.
+- Controllers validate with Form Requests, apply authorization and transactions, then redirect with flash messages.
+- Region selectors and shipping recalculation use partial reloads instead of JSON API endpoints.
+- Shared props remain lightweight: authenticated user, flash messages, store branding, and small navigation counters.

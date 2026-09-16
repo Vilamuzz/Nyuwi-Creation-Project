@@ -1,7 +1,6 @@
 <script setup>
-import { Link } from "@inertiajs/vue3";
+import { Link, useForm } from "@inertiajs/vue3";
 import { ref } from "vue";
-import axios from "axios";
 import { CircleCheck, AlertCircle } from "lucide-vue-next"; // Optional: import icons
 
 const props = defineProps({
@@ -12,6 +11,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["refresh"]);
+const deleteForm = useForm({});
 
 // Format price for displaying
 const formatPrice = (price) => {
@@ -27,41 +27,23 @@ const message = ref("");
 const messageType = ref("");
 const showMessage = ref(false);
 
-// Add function to remove from wishlist using API
-const removeFromWishlist = async (id) => {
-    if (
-        confirm("Are you sure you want to remove this item from your wishlist?")
-    ) {
-        try {
-            const response = await axios.delete(`/api/wishlist/${id}`);
-
-            if (response.data.success) {
-                message.value =
-                    response.data.message || "Item removed from wishlist";
+const removeFromWishlist = (id) => {
+    if (confirm("Are you sure you want to remove this item from your wishlist?")) {
+        deleteForm.delete(route("wishlist.destroy", id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                message.value = "Item removed from wishlist";
                 messageType.value = "success";
                 showMessage.value = true;
-
-                // Emit event to parent to refresh wishlist data
                 emit("refresh");
-
-                // Hide message after 3 seconds
-                setTimeout(() => {
-                    showMessage.value = false;
-                }, 3000);
-            }
-        } catch (error) {
-            console.error("Error removing from wishlist:", error);
-            message.value =
-                error.response?.data?.message ||
-                "Failed to remove item from wishlist";
-            messageType.value = "error";
-            showMessage.value = true;
-
-            // Hide message after 3 seconds
-            setTimeout(() => {
-                showMessage.value = false;
-            }, 3000);
-        }
+                setTimeout(() => { showMessage.value = false; }, 3000);
+            },
+            onError: () => {
+                message.value = "Failed to remove item from wishlist";
+                messageType.value = "error";
+                showMessage.value = true;
+            },
+        });
     }
 };
 </script>

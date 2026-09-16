@@ -1,17 +1,21 @@
 <script setup>
-import { Head } from "@inertiajs/vue3";
-import { ref, watch, onMounted, nextTick } from "vue";
+import { Head, router } from "@inertiajs/vue3";
+import { ref, watch, nextTick, computed } from "vue";
 import debounce from "lodash/debounce";
-import axios from "axios";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Customer/Main/Hero.vue";
 import Product from "@/Components/Customer/Sub-main/Product.vue";
 
-// Reactive data
-const products = ref([]);
-const categories = ref([]);
-const meta = ref({});
-const isLoading = ref(true);
+const props = defineProps({
+    products: { type: Object, default: () => ({ data: [], last_page: 1, current_page: 1 }) },
+    categories: { type: Array, default: () => [] },
+    filters: { type: Object, default: () => ({}) },
+});
+
+const products = computed(() => props.products.data || []);
+const categories = computed(() => props.categories);
+const meta = computed(() => props.products);
+const isLoading = ref(false);
 const error = ref(null);
 
 // Filter states
@@ -19,7 +23,11 @@ const search = ref("");
 const sortField = ref("created_at");
 const sortDirection = ref("desc");
 const selectedCategory = ref("");
-const currentPage = ref(1);
+const currentPage = ref(props.products.current_page || 1);
+search.value = props.filters.search || "";
+sortField.value = props.filters.sortField || "created_at";
+sortDirection.value = props.filters.sortDirection || "desc";
+selectedCategory.value = props.filters.category || "";
 
 // Define sort options
 const sortOptions = [
@@ -31,33 +39,21 @@ const sortOptions = [
     { field: "price", label: "Harga (Tinggi-Rendah)", direction: "desc" },
 ];
 
-// Fetch data from API
-const fetchShopData = async () => {
-    try {
-        isLoading.value = true;
-        const response = await axios.get("/api/shop", {
-            params: {
-                search: search.value,
-                sortField: sortField.value,
-                sortDirection: sortDirection.value,
-                category: selectedCategory.value,
-                page: currentPage.value,
-            },
-        });
-
-        if (response.data.success) {
-            products.value = response.data.data.products;
-            categories.value = response.data.data.categories;
-            meta.value = response.data.data.meta;
-        } else {
-            error.value = "Failed to load shop data";
-        }
-    } catch (err) {
-        console.error("Error fetching shop data:", err);
-        error.value = "Failed to load shop data";
-    } finally {
-        isLoading.value = false;
-    }
+const fetchShopData = () => {
+    error.value = null;
+    router.get(route("shop"), {
+        search: search.value,
+        sortField: sortField.value,
+        sortDirection: sortDirection.value,
+        category: selectedCategory.value,
+        page: currentPage.value,
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+        onStart: () => { isLoading.value = true; },
+        onFinish: () => { isLoading.value = false; },
+        onError: () => { error.value = "Failed to load shop data"; },
+    });
 };
 
 // Watch for search changes with debounce
@@ -97,10 +93,6 @@ const changePage = async (page) => {
     });
 };
 
-// Fetch data on component mount
-onMounted(() => {
-    fetchShopData();
-});
 
 const getCategoryName = (categoryId) => {
     const category = categories.value.find((cat) => cat.id === categoryId);

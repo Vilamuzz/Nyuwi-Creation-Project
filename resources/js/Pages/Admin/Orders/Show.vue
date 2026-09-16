@@ -1,10 +1,11 @@
 <script setup>
-import { Head, useForm } from "@inertiajs/vue3";
+import { Head, useForm, router, usePage } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
-import { ref } from "vue";
+import { ref, watch } from "vue";
 
 const props = defineProps({
     order: Object,
+    trackingData: { type: Object, default: null },
 });
 
 const showTrackingModal = ref(false);
@@ -20,32 +21,33 @@ const form = useForm({
     tracking_number: "",
 });
 
-// Function to track shipment
 const trackShipment = async () => {
     try {
-        const response = await axios.get(
-            "https://api.binderbyte.com/v1/track",
+        await router.get(
+            route("admin.orders.tracking", props.order.tracking_number),
+            {},
             {
-                params: {
-                    api_key:
-                        "151a782863970433251abbcbf51fe253f4625de1eda00f7a49ba55d90e7419a5",
-                    courier: props.order.shipping_method.toLowerCase(),
-                    awb: props.order.tracking_number,
-                },
+                only: ['trackingData'],
+                preserveState: true,
+                preserveScroll: true,
             }
         );
-
-        if (response.data.status === 200) {
-            trackingInfo.value = response.data.data;
-            showTrackingInfo.value = true;
-        } else {
-            trackingError.value = response.data.message;
-        }
     } catch (error) {
         trackingError.value = "Failed to fetch tracking information";
         console.error("Tracking error:", error);
     }
 };
+
+const page = usePage();
+watch(() => page.props.trackingData, (data) => {
+    if (!data) return;
+    if (data.status === 200) {
+        trackingInfo.value = data.data;
+        showTrackingInfo.value = true;
+    } else {
+        trackingError.value = data.message || "Failed to fetch tracking information";
+    }
+}, { deep: true, immediate: true });
 
 const openTrackingModal = () => {
     if (props.order.shipping_method === "GoSend") {
@@ -61,7 +63,7 @@ const closeTrackingModal = () => {
 };
 
 const confirmTracking = () => {
-    form.put(route("orders.update", props.order.id), {
+    form.put(route("admin.orders.update", props.order.id), {
         preserveScroll: true,
         onSuccess: () => {
             closeTrackingModal();
@@ -74,7 +76,7 @@ const updateStatus = (orderId, newStatus) => {
         status: newStatus,
     });
 
-    statusForm.put(route("orders.update", orderId), {
+    statusForm.put(route("admin.orders.update", orderId), {
         preserveScroll: true,
         onSuccess: () => {},
         onError: (errors) => {
@@ -103,7 +105,7 @@ const closePaymentProofModal = () => {
 // Add method to approve payment and update status
 const approvePayment = () => {
     form.status = "processing";
-    form.put(route("orders.update", props.order.id), {
+    form.put(route("admin.orders.update", props.order.id), {
         preserveScroll: true,
         onSuccess: () => {
             closePaymentProofModal();
@@ -127,7 +129,7 @@ const closeEditTrackingModal = () => {
 };
 
 const updateTrackingNumber = () => {
-    editTrackingForm.put(route("orders.update", props.order.id), {
+    editTrackingForm.put(route("admin.orders.update", props.order.id), {
         preserveScroll: true,
         onSuccess: () => {
             closeEditTrackingModal();
@@ -141,7 +143,7 @@ const cancelOrder = () => {
             status: "cancelled",
         });
 
-        cancelForm.put(route("orders.update", props.order.id), {
+        cancelForm.put(route("admin.orders.update", props.order.id), {
             preserveScroll: true,
             onSuccess: () => {
                 // Optional: tambahkan feedback sukses

@@ -1,7 +1,6 @@
 <script setup>
 import { Head, useForm, router, usePage } from "@inertiajs/vue3";
 import { computed, ref, onMounted, watch } from "vue";
-import axios from "axios"; // Make sure this is imported
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Customer/Main/Hero.vue";
 
@@ -40,7 +39,7 @@ const confirmCheckout = () => {
         ? parseInt(selectedShippingRate.value.price)
         : 0;
 
-    form.post(route("orders.store"), {
+    form.post(route("customer.orders.store"), {
         preserveScroll: true,
         onSuccess: () => {
             closeModal();
@@ -72,24 +71,16 @@ const cartTotal = computed(() => {
     }, 0);
 });
 
+const props = defineProps({
+    cartItems: { type: Array, default: () => [] },
+    summary: { type: Object, default: () => ({}) },
+});
+
+const cartItems = computed(() => props.cartItems);
 const isLoading = ref(false);
-const cartItems = ref([]);
 const error = ref(null);
 
-const fetchCartItems = async () => {
-    try {
-        isLoading.value = true;
-        const response = await axios.get("/api/cart");
-        if (response.data.success) {
-            cartItems.value = response.data.data.cartItems;
-        }
-    } catch (error) {
-        console.error("Error fetching cart items:", error);
-        error.value = "Failed to load cart items. Please try again later.";
-    } finally {
-        isLoading.value = false;
-    }
-};
+const fetchCartItems = () => {};
 
 const provinces = ref([]);
 const cities = ref([]);
@@ -101,37 +92,70 @@ const selectedCity = ref(null);
 const selectedDistrict = ref(null);
 const selectedVillage = ref(null);
 
+const regionTarget = ref(null);
+
 const getProvinces = async () => {
-    const response = await axios.get("/api/provinces");
-    provinces.value = response.data.data;
+    regionTarget.value = "provinces";
+    try {
+        await router.get(route("regions.provinces"), {}, {
+            only: ['regionData'],
+            preserveState: true,
+            preserveScroll: true,
+        });
+    } catch (error) {
+        console.error("Error fetching provinces:", error);
+    }
 };
 
 const getCities = async (provinceId) => {
     if (!provinceId) return;
-    const response = await axios.get(`/api/regencies/${provinceId}`);
-    cities.value = response.data.data;
-    form.city = null;
-    form.district = null;
-    form.village = null;
+    regionTarget.value = "cities";
+    try {
+        await router.get(route("regions.regencies", provinceId), {}, {
+            only: ['regionData'],
+            preserveState: true,
+            preserveScroll: true,
+        });
+        form.city = null;
+        form.district = null;
+        form.village = null;
+    } catch (error) {
+        console.error("Error fetching cities:", error);
+    }
 };
 
 const getDistricts = async (cityId) => {
     if (!cityId) return;
-    const response = await axios.get(`/api/districts/${cityId}`);
-    districts.value = response.data.data;
-    form.district = null;
-    form.village = null;
+    regionTarget.value = "districts";
+    try {
+        await router.get(route("regions.districts", cityId), {}, {
+            only: ['regionData'],
+            preserveState: true,
+            preserveScroll: true,
+        });
+        form.district = null;
+        form.village = null;
+    } catch (error) {
+        console.error("Error fetching districts:", error);
+    }
 };
 
 const getVillages = async (districtId) => {
     if (!districtId) return;
-    const response = await axios.get(`/api/villages/${districtId}`);
-    villages.value = response.data.data;
-    form.village = null;
+    regionTarget.value = "villages";
+    try {
+        await router.get(route("regions.villages", districtId), {}, {
+            only: ['regionData'],
+            preserveState: true,
+            preserveScroll: true,
+        });
+        form.village = null;
+    } catch (error) {
+        console.error("Error fetching villages:", error);
+    }
 };
 
 onMounted(() => {
-    fetchCartItems();
     getProvinces();
 });
 
@@ -190,19 +214,16 @@ const fetchShippingRates = async (destination) => {
         const cleanDestination = cleanCityName(destination);
         isLoadingRates.value = true;
 
-        // Use our own backend API with dynamic weight and origin
-        const response = await axios.get("/api/shipping/calculate", {
-            params: {
-                courier: form.shipping_method?.toLowerCase(),
-                origin: storeCity.value, // Use store's city
-                destination: cleanDestination,
-                weight: totalWeight.value,
-            },
+        await router.post(route("shipping.calculate"), {
+            courier: form.shipping_method?.toLowerCase(),
+            origin: storeCity.value,
+            destination: cleanDestination,
+            weight: totalWeight.value,
+        }, {
+            only: ['shippingResult'],
+            preserveState: true,
+            preserveScroll: true,
         });
-
-        if (response.data.status === 200) {
-            shippingRates.value = response.data.data.costs;
-        }
     } catch (error) {
         console.error("Error fetching shipping rates:", error);
     } finally {
@@ -242,6 +263,18 @@ const totalWeight = computed(() => {
 
 // Add this after your other imports
 const page = usePage();
+watch(() => page.props.regionData, (data) => {
+    if (!data || !Array.isArray(data)) return;
+    const target = regionTarget.value;
+    if (target === "provinces") provinces.value = data;
+    else if (target === "cities") cities.value = data;
+    else if (target === "districts") districts.value = data;
+    else if (target === "villages") villages.value = data;
+}, { deep: true });
+watch(() => page.props.shippingResult, (result) => {
+    shippingRates.value = result?.data?.costs || [];
+}, { deep: true });
+
 const storeCity = computed(() => {
     // Access the profile store data from Inertia shared props
     const profileStore = page.props.storeCity;
@@ -275,7 +308,7 @@ const formatWeight = (weight) => {
         <div v-else-if="error" class="text-center py-20">
             <p class="text-red-500">{{ error }}</p>
             <button
-                @click="fetchCartItems"
+                @click="() => {}"
                 class="mt-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
             >
                 Retry

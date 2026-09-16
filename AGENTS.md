@@ -14,13 +14,13 @@
 - **Frontend:** Vue 3 via Inertia.js
 - **Styling:** Tailwind CSS v3 + DaisyUI v4
 - **Database:** MySQL (InnoDB)
-- **Auth:** Laravel Sanctum + Laravel Breeze
+- **Auth:** Laravel session authentication + Laravel Breeze
 - **Build tool:** Vite
 - **Package managers:** Composer (PHP) + npm (Vue/JS)
 - **Node version:** 20.x
 - **Key packages:**
   - `inertiajs/inertia-laravel` + `@inertiajs/vue3` — SPA-like experience
-  - `laravel/sanctum` — API token authentication
+
   - `laravel/breeze` — Auth scaffolding
   - `azishapidin/indoregion` — Indonesian region data
   - `intervention/image` — Image manipulation
@@ -32,12 +32,11 @@
 ├── app/
 │   ├── Http/
 │   │   ├── Controllers/           # Web controllers (Inertia)
-│   │   │   ├── API/              # API controllers (JSON responses)
 │   │   │   ├── Auth/             # Authentication controllers (Breeze)
 │   │   │   └── [Feature]Controller.php
 │   │   ├── Middleware/            # Custom middleware (EnsureAdmin, EnsureCustomer, etc.)
 │   │   ├── Requests/             # Form request validation classes
-│   │   └── Resources/            # API resources (transformers)
+│   ├── Resources/            # Optional data transformers
 │   ├── Models/                   # Eloquent models
 │   └── Providers/                # Service providers
 ├── database/
@@ -54,7 +53,7 @@
 │   └── css/                      # Stylesheets
 ├── routes/
 │   ├── web.php                   # Web routes (Inertia pages)
-│   ├── api.php                   # API routes (JSON)
+
 │   └── auth.php                  # Auth routes (Breeze)
 ├── tests/
 │   ├── Feature/                  # Feature tests
@@ -80,7 +79,7 @@
 - Use PHP 8.2+ features (enums, readonly properties, named arguments)
 - Prefer named exports over default exports
 - Use Eloquent relationships for all database queries
-- Use API Resources for JSON responses
+- Pass page data through Inertia props and use redirects/flash messages for mutations
 - Validate all input via Form Request classes
 - Use Route::controller() for grouping routes
 
@@ -120,21 +119,10 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::all();
-        return Inertia::render('Admin/Products', [
-            'products' => ProductResource::collection($products),
-        ]);
-    }
-}
+        $products = Product::query()->paginate();
 
-// API Controller (JSON)
-class ProductController extends Controller
-{
-    public function index()
-    {
-        $products = Product::all();
-        return response()->json([
-            'data' => ProductResource::collection($products),
+        return Inertia::render('Admin/Products', [
+            'products' => $products,
         ]);
     }
 }

@@ -2,7 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\OrderCompleteRequest;
+use App\Http\Requests\OrderStatusUpdateRequest;
+use App\Http\Requests\OrderStoreRequest;
+use App\Http\Requests\PaymentProofRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Order;
@@ -34,18 +39,15 @@ class OrderController extends Controller
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(OrderStatusUpdateRequest $request, $id)
     {
-        $request->validate([
-            'status' => 'required_if:tracking_number,null|in:pending,processing,shiping,completed,cancelled',
-            'tracking_number' => 'required_if:shipping_method,!=,GoSend'
-        ]);
+        $validated = $request->validated();
 
         $order = Order::findOrFail($id);
 
         // Prevent accepting digital wallet orders without payment proof
         if (
-            $request->status === 'processing' &&
+            ($validated['status'] ?? null) === 'processing' &&
             $order->payment_method === 'digital_wallet' &&
             $order->status === 'waiting'
         ) {
@@ -53,15 +55,15 @@ class OrderController extends Controller
         }
 
         // Don't allow cancellation if order is shipping
-        if ($request->status === 'cancelled' && $order->status === 'shiping') {
+        if (($validated['status'] ?? null) === 'cancelled' && $order->status === 'shiping') {
             return back()->with('error', 'Cannot cancel order that is already being shipped');
         }
 
-        DB::transaction(function () use ($request, $order) {
-            if ($request->has('tracking_number')) {
+        DB::transaction(function () use ($validated, $order) {
+            if (!empty($validated['tracking_number'])) {
                 // Update order to shipping status
                 $order->update([
-                    'tracking_number' => $request->tracking_number,
+                    'tracking_number' => $validated['tracking_number'],
                     'status' => 'shiping'
                 ]);
 
@@ -74,8 +76,8 @@ class OrderController extends Controller
                         ]);
                     }
                 }
-            } else if ($request->has('status')) {
-                if ($request->status === 'shiping') {
+            } else if (!empty($validated['status'])) {
+                if ($validated['status'] === 'shiping') {
                     // Reduce product stock for each order item
                     foreach ($order->orderItems as $item) {
                         $product = Product::find($item->product_id);
@@ -87,7 +89,7 @@ class OrderController extends Controller
                     }
                 }
                 $order->update([
-                    'status' => $request->status
+                    'status' => $validated['status']
                 ]);
             }
         });
@@ -95,53 +97,49 @@ class OrderController extends Controller
         return redirect()->back()->with('success', 'Order updated successfully');
     }
 
-    public function store(Request $request)
+    public function store(OrderStoreRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'address' => 'required|string|max:255',
-            'city' => 'required|string|max:255',
-            'district' => 'required|string|max:255',
-            'village' => 'required|string|max:255',
-            'province' => 'required|string|max:255',
-            'phone' => 'required|string|max:15',
-            'payment_method' => 'required|in:digital_wallet,qris',
-            'shipping_method' => 'required|in:JNE,GoSend',
-            'shipping_cost' => 'required|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         try {
-            DB::transaction(function () use ($request) {
+            DB::transaction(function () use ($validated) {
                 $user = Auth::user();
-                $cartItems = Cart::where('user_id', $user->id)->get();
+                $cartItems = Cart::with('product')
+                    ->where('user_id', $user->id)
+                    ->lockForUpdate()
+                    ->get();
 
                 if ($cartItems->isEmpty()) {
                     throw new \Exception('Cart is empty');
                 }
 
-                // Calculate total price
-                $subtotal = $cartItems->sum(function ($item) {
-                    return $item->price * $item->quantity;
-                });
-                $totalPrice = $subtotal + $request->shipping_cost;
+                foreach ($cartItems as $cartItem) {
+                    if (!$cartItem->product || $cartItem->quantity > $cartItem->product->stock) {
+                        throw new \RuntimeException("Insufficient stock for {$cartItem->product?->name}");
+                    }
+                }
 
-                // Set initial status based on payment method
-                $initialStatus = $request->payment_method === 'cash_on_delivery' ? 'processing' : 'waiting';
+                // Calculate total price
+                $subtotal = $cartItems->sum(fn ($item) => $item->price * $item->quantity);
+                $totalPrice = $subtotal + $validated['shipping_cost'];
+
+                // Manual payment starts in a waiting state.
+                $initialStatus = 'waiting';
 
                 // Create order
                 $order = Order::create([
                     'user_id' => $user->id,
-                    'name' => $request->name,
-                    'address' => $request->address,
-                    'city' => $request->city,
-                    'district' => $request->district,
-                    'village' => $request->village,
-                    'province' => $request->province,
-                    'phone' => $request->phone,
+                    'name' => $validated['name'],
+                    'address' => $validated['address'],
+                    'city' => $validated['city'],
+                    'district' => $validated['district'],
+                    'village' => $validated['village'],
+                    'province' => $validated['province'],
+                    'phone' => $validated['phone'],
                     'total_price' => $totalPrice,
-                    'payment_method' => $request->payment_method,
-                    'shipping_method' => $request->shipping_method,
-                    'note' => $request->note,
+                    'payment_method' => $validated['payment_method'],
+                    'shipping_method' => $validated['shipping_method'],
+                    'note' => $validated['note'] ?? null,
                     'status' => $initialStatus // Use dynamic initial status
                 ]);
 
@@ -168,25 +166,22 @@ class OrderController extends Controller
         }
     }
 
-    public function complete(Request $request)
+    public function complete(OrderCompleteRequest $request)
     {
-        $request->validate([
-            'order_id' => 'required|exists:orders,id',
-            'reviews' => 'required|array',
-            'reviews.*.product_id' => 'required|exists:products,id',
-            'reviews.*.rating' => 'required|integer|min:1|max:5',
-        ]);
+        $validated = $request->validated();
 
-        DB::transaction(function () use ($request) {
-            $order = Order::findOrFail($request->order_id);
+        DB::transaction(function () use ($validated) {
+            $order = Order::where('id', $validated['order_id'])
+                ->where('user_id', Auth::id())
+                ->firstOrFail();
             $order->update(['status' => 'completed']);
 
             // Save reviews
-            foreach ($request->reviews as $review) {
+            foreach ($validated['reviews'] as $review) {
                 ProductReview::create([
                     'user_id' => Auth::id(),
                     'product_id' => $review['product_id'],
-                    'order_id' => $request->order_id,
+                    'order_id' => $validated['order_id'],
                     'rating' => $review['rating']
                 ]);
             }
@@ -219,20 +214,63 @@ class OrderController extends Controller
         ]);
     }
 
-    public function getInfo()
+    public function userOrders()
     {
-        $orders = Order::where('user_id', Auth::id())->get();
-        return response()->json(['orders' => $orders]);
+        return Inertia::render('Customer/Orders/Index', [
+            'orders' => Order::with(['orderItems.product'])
+                ->where('user_id', Auth::id())
+                ->latest()
+                ->get(),
+        ]);
     }
 
-    public function uploadPaymentProof(Request $request)
+    public function userOrderDetail($id)
     {
-        $request->validate([
-            'order_id' => 'required|exists:orders,id',
-            'payment_proof' => 'required|image|mimes:jpeg,png,jpg|max:2048'
+        return Inertia::render('Customer/Orders/Show', [
+            'order' => Order::with(['orderItems.product'])
+                ->where('user_id', Auth::id())
+                ->findOrFail($id),
+        ]);
+    }
+
+    public function tracking(string $trackingNumber)
+    {
+        $order = Order::where('tracking_number', $trackingNumber)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        if ($order->shipping_method === 'GoSend') {
+            return back()->withErrors(['tracking' => 'GoSend orders do not have tracking information.']);
+        }
+
+        $trackingResponse = Http::get('https://api.binderbyte.com/v1/track', [
+            'api_key' => config('services.binderbyte.api_key'),
+            'courier' => strtolower($order->shipping_method),
+            'awb' => $trackingNumber,
         ]);
 
-        $order = Order::findOrFail($request->order_id);
+        return back()->with('trackingData', $trackingResponse->json());
+    }
+
+    public function adminTracking(string $trackingNumber)
+    {
+        $order = Order::where('tracking_number', $trackingNumber)->firstOrFail();
+
+        $trackingResponse = Http::get('https://api.binderbyte.com/v1/track', [
+            'api_key' => config('services.binderbyte.api_key'),
+            'courier' => strtolower($order->shipping_method),
+            'awb' => $trackingNumber,
+        ]);
+
+        return back()->with('trackingData', $trackingResponse->json());
+    }
+
+    public function uploadPaymentProof(PaymentProofRequest $request)
+    {
+        $validated = $request->validated();
+        $order = Order::where('id', $validated['order_id'])
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
 
         if ($request->hasFile('payment_proof')) {
             $proof = $request->file('payment_proof');

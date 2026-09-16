@@ -1,8 +1,7 @@
 <script setup>
-import { Head, useForm, Link } from "@inertiajs/vue3";
+import { Head, useForm, Link, router } from "@inertiajs/vue3";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
-import { ref, computed, onMounted } from "vue";
-import axios from "axios";
+import { ref, computed, watch } from "vue";
 import Hero from "@/Components/Customer/Main/Hero.vue";
 import UpdateProfileInformationForm from "@/Pages/Admin/Profile/Partials/UpdateProfileInformationForm.vue";
 import UpdatePasswordForm from "@/Pages/Admin/Profile/Partials/UpdatePasswordForm.vue";
@@ -52,7 +51,7 @@ const paymentProofForm = useForm({
 const showPaymentProofModal = ref(false);
 const selectedPaymentOrder = ref(null);
 
-const openOrderModal = async (order) => {
+const openOrderModal = (order) => {
     selectedOrder.value = order;
     showOrderModal.value = true;
     trackingInfo.value = null;
@@ -67,31 +66,28 @@ const openOrderModal = async (order) => {
 
     // Immediately fetch tracking info if available
     if (order.tracking_number && order.shipping_method) {
-        isLoadingTracking.value = true; // Set loading true
-        try {
-            const response = await axios.get(
-                "https://api.binderbyte.com/v1/track",
-                {
-                    params: {
-                        api_key:
-                            "151a782863970433251abbcbf51fe253f4625de1eda00f7a49ba55d90e7419a5",
-                        courier: order.shipping_method.toLowerCase(),
-                        awb: order.tracking_number,
-                    },
+        isLoadingTracking.value = true;
+        router.get(route("customer.orders.tracking", order.tracking_number), {}, {
+            only: ['trackingData'],
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: (page) => {
+                const data = page.props.trackingData;
+                if (data) {
+                    if (data.status === 200) {
+                        trackingInfo.value = data.data;
+                        showTrackingInfo.value = true;
+                    } else {
+                        trackingError.value = data.message || "Failed to fetch tracking information";
+                    }
                 }
-            );
-            if (response.data.status === 200) {
-                trackingInfo.value = response.data.data;
-                showTrackingInfo.value = true;
-            } else {
-                trackingError.value = response.data.message;
-            }
-        } catch (error) {
-            trackingError.value = "Failed to fetch tracking information";
-            console.error("Tracking error:", error);
-        } finally {
-            isLoadingTracking.value = false; // Set loading false
-        }
+                isLoadingTracking.value = false;
+            },
+            onError: () => {
+                trackingError.value = "Failed to fetch tracking information";
+                isLoadingTracking.value = false;
+            },
+        });
     }
 };
 
@@ -236,7 +232,7 @@ const handlePaymentProofUpload = (e) => {
 
 const submitPaymentProof = () => {
     paymentProofForm.order_id = selectedPaymentOrder.value.id;
-    paymentProofForm.post(route("orders.upload-proof"), {
+    paymentProofForm.post(route("customer.orders.proof"), {
         preserveScroll: true,
         onSuccess: () => {
             closePaymentProofModal();

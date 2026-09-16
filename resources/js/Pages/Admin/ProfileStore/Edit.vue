@@ -1,16 +1,17 @@
 <script setup>
-import { Head, useForm } from "@inertiajs/vue3";
+import { Head, useForm, router, usePage } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
 import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import TextInput from "@/Components/TextInput.vue";
-import { ref, onMounted } from "vue";
-import axios from "axios";
+import { ref, onMounted, watch } from "vue";
 
 const props = defineProps({
     profile: Object,
     errors: Object,
+    provinces: { type: Array, default: () => [] },
+    cities: { type: Array, default: () => [] },
 });
 
 // Create the form with the existing profile data
@@ -42,8 +43,8 @@ const existingQris = props.profile.qris
     : null;
 
 // For region selection
-const provinces = ref([]);
-const cities = ref([]);
+const provinces = ref(props.provinces || []);
+const cities = ref(props.cities || []);
 const selectedProvince = ref(null);
 const isLoadingProvinces = ref(false);
 const isLoadingCities = ref(false);
@@ -57,20 +58,16 @@ const messageType = ref("success");
 const initializeRegionSelection = async () => {
     if (props.profile.city) {
         try {
-            // Get city information including its province
-            const response = await axios.get(
-                `/api/city/${encodeURIComponent(props.profile.city)}`
+            regionTarget.value = "init";
+            await router.get(
+                route("regions.city", encodeURIComponent(props.profile.city)),
+                {},
+                {
+                    only: ['regionData'],
+                    preserveState: true,
+                    preserveScroll: true,
+                }
             );
-
-            if (response.data.success) {
-                const { province, all_cities_in_province } = response.data.data;
-
-                // Set the selected province
-                selectedProvince.value = province.id;
-
-                // Set the cities for this province
-                cities.value = all_cities_in_province;
-            }
         } catch (error) {
             console.error("Error initializing region selection:", error);
         }
@@ -103,12 +100,18 @@ const handleQrisChange = (e) => {
     }
 };
 
+const regionTarget = ref(null);
+
 // Fetch provinces from API
 const getProvinces = async () => {
     try {
         isLoadingProvinces.value = true;
-        const response = await axios.get("/api/provinces");
-        provinces.value = response.data.data;
+        regionTarget.value = "provinces";
+        await router.get(route("regions.provinces"), {}, {
+            only: ['regionData'],
+            preserveState: true,
+            preserveScroll: true,
+        });
     } catch (error) {
         console.error("Error fetching provinces:", error);
     } finally {
@@ -122,8 +125,12 @@ const getCities = async (provinceId) => {
 
     try {
         isLoadingCities.value = true;
-        const response = await axios.get(`/api/regencies/${provinceId}`);
-        cities.value = response.data.data;
+        regionTarget.value = "cities";
+        await router.get(route("regions.regencies", provinceId), {}, {
+            only: ['regionData'],
+            preserveState: true,
+            preserveScroll: true,
+        });
     } catch (error) {
         console.error("Error fetching cities:", error);
     } finally {
@@ -175,6 +182,18 @@ const updateProfileStore = () => {
         },
     });
 };
+
+const page = usePage();
+watch(() => page.props.regionData, (data) => {
+    if (!data) return;
+    const target = regionTarget.value;
+    if (target === "provinces") provinces.value = data;
+    else if (target === "cities") cities.value = data;
+    else if (target === "init" && data.province) {
+        selectedProvince.value = data.province.id;
+        cities.value = data.all_cities_in_province || [];
+    }
+}, { deep: true });
 
 // Fetch data on component mount
 onMounted(async () => {

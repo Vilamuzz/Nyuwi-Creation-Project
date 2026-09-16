@@ -98,7 +98,7 @@ const formatPrice = (price) => {
                                     class="px-6 py-4 whitespace-nowrap flex justify-center"
                                 >
                                     <Link
-                                        :href="route('orders.detail', order.id)"
+                                        :href="route('admin.orders.show', order.id)"
                                         class="btn btn-info text-white"
                                     >
                                         Show Details

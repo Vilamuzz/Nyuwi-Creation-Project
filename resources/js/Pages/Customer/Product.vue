@@ -1,7 +1,6 @@
 <script setup>
-import { Head, Link, useForm, usePage } from "@inertiajs/vue3";
+import { Head, Link, useForm } from "@inertiajs/vue3";
 import { ref, watch, onMounted, computed, onUnmounted } from "vue";
-import axios from "axios";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import ToastNotification from "@/Components/Customer/Sub-main/ToastNotification.vue";
 import Product from "@/Components/Customer/Sub-main/Product.vue";
@@ -12,17 +11,19 @@ import {
     ChevronRight,
 } from "lucide-vue-next";
 
-// Get current page URL and extract slug
-const page = usePage();
-const productSlug = page.url.split("/").pop();
+const props = defineProps({
+    product: { type: Object, default: () => ({}) },
+    categories: { type: Array, default: () => [] },
+    productRating: { type: Object, default: () => ({}) },
+    relatedProducts: { type: Array, default: () => [] },
+});
 
-// Reactive data
-const product = ref({});
-const categories = ref([]);
-const productRating = ref({});
-const relatedProducts = ref([]); // Add related products
-const isLoading = ref(true);
-const error = ref(null);
+const product = computed(() => props.product);
+const categories = computed(() => props.categories);
+const productRating = computed(() => props.productRating);
+const relatedProducts = computed(() => props.relatedProducts);
+const isLoading = computed(() => false);
+const error = computed(() => null);
 
 // Image gallery state
 const selectedImageIndex = ref(0);
@@ -38,7 +39,7 @@ const form = useForm({
 });
 
 const favoriteForm = useForm({
-    product_id: null,
+    slug: "",
 });
 
 const quantity = ref(1);
@@ -111,31 +112,7 @@ const closeImageModal = () => {
     showImageModal.value = false;
 };
 
-// Fetch product data from API
-const fetchProductData = async () => {
-    try {
-        isLoading.value = true;
-        error.value = null;
-        const response = await axios.get(`/api/product/${productSlug}`);
-
-        if (response.data.success) {
-            product.value = response.data.data.product;
-            categories.value = response.data.data.categories;
-            productRating.value = response.data.data.productRating;
-            relatedProducts.value = response.data.data.relatedProducts || []; // Add this line
-
-            // Reset image selection when product changes
-            selectedImageIndex.value = 0;
-        } else {
-            error.value = "Failed to load product data";
-        }
-    } catch (err) {
-        console.error("Error fetching product data:", err);
-        error.value = "Failed to load product data. Please try again.";
-    } finally {
-        isLoading.value = false;
-    }
-};
+const fetchProductData = () => {};
 
 // Add formatPrice function for related products
 const formatPrice = (price) => {
@@ -166,81 +143,44 @@ const hideToast = () => {
 };
 
 // Add to cart handler
-const addToCart = async () => {
-    try {
-        const cartData = {
-            product_id: product.value.id,
-            quantity: quantity.value,
-            size: selectedSize.value,
-            color: selectedColor.value,
-        };
+const addToCart = () => {
+    form.product_id = product.value.id;
+    form.price = product.value.price;
+    form.quantity = quantity.value;
+    form.size = selectedSize.value;
+    form.color = selectedColor.value;
 
-        const response = await axios.post("/api/cart/add", cartData);
-
-        if (response.data.success) {
+    form.post(route("cart.store"), {
+        preserveScroll: true,
+        onSuccess: () => {
             quantity.value = 1;
             selectedSize.value = "";
             selectedColor.value = "";
             showToast("Produk berhasil ditambahkan ke keranjang!", "success");
-        } else {
-            showToast("Gagal menambahkan produk ke keranjang", "error");
-        }
-    } catch (error) {
-        console.error("Error adding to cart:", error);
-        if (error.response && error.response.data) {
-            // Handle validation errors
-            if (
-                error.response.data.data &&
-                error.response.data.data.available_stock
-            ) {
-                showToast(
-                    `Jumlah melebihi stok yang tersedia. Stok tersedia: ${error.response.data.data.available_stock}`,
-                    "error"
-                );
-            } else if (error.response.data.message) {
-                showToast(error.response.data.message, "error");
+        },
+        onError: (errors) => {
+            // Show validation errors
+            if (errors.available_stock) {
+                showToast(`Jumlah melebihi stok yang tersedia. Stok tersedia: ${errors.available_stock}`, "error");
             } else {
                 showToast("Gagal menambahkan produk ke keranjang", "error");
             }
-        } else {
-            showToast("Gagal menambahkan produk ke keranjang", "error");
-        }
-    }
+        },
+    });
 };
 
-const addToWishlist = async (e) => {
+const addToWishlist = (e) => {
     e.preventDefault();
-
-    try {
-        // Call the API endpoint instead of using Inertia form
-        const response = await axios.post("/api/wishlist/add", {
-            slug: product.value.slug,
-        });
-
-        if (response.data.success) {
-            showToast(
-                response.data.message ||
-                    "Produk berhasil ditambahkan ke favorit!",
-                "success"
-            );
-        } else {
-            showToast(
-                response.data.message || "Gagal menambahkan produk ke favorit",
-                "error"
-            );
-        }
-    } catch (error) {
-        console.error("Error adding to wishlist:", error);
-        if (error.response && error.response.data) {
-            showToast(
-                error.response.data.message ||
-                    "Gagal menambahkan produk ke favorit",
-                "error"
-            );
-        } else {
+    favoriteForm.slug = product.value.slug;
+    favoriteForm.post(route("wishlist.store"), {
+        preserveScroll: true,
+        onSuccess: () => {
+            showToast("Produk berhasil ditambahkan ke favorit!", "success");
+        },
+        onError: () => {
             showToast("Gagal menambahkan produk ke favorit", "error");
-        }
-    }
+        },
+    });
 };
 
 const getCategoryName = (categoryId) => {
@@ -263,7 +203,6 @@ const handleKeydown = (event) => {
 
 // Add keyboard event listener
 onMounted(() => {
-    fetchProductData();
     document.addEventListener("keydown", handleKeydown);
 });
 

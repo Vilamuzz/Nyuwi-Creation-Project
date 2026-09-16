@@ -60,7 +60,7 @@ const navigation = [
     },
     {
         name: "Orders",
-        href: route("orders.show"),
+        href: route("admin.orders.index"),
         icon: ShoppingCart,
     },
     {

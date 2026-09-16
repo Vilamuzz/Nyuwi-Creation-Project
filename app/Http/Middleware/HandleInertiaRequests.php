@@ -38,6 +38,9 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'message' => fn() => $request->session()->get('message')
             ],
+            'regionData' => fn() => $request->session()->get('regionData'),
+            'shippingResult' => fn() => $request->session()->get('shippingResult'),
+            'trackingData' => fn() => $request->session()->get('trackingData'),
             'recaptchaSiteKey' => config('recaptcha.api_site_key'),
             'storeName' => $profileStore->name,
             'storeCity' => $profileStore->city,

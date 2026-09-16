@@ -248,22 +248,93 @@ class ProductController extends Controller
 
     public function landingPage()
     {
+        // Get products with reviews and ratings
+        $products = Product::query()
+            ->withCount('reviews as total_reviews')
+            ->withAvg('reviews as average_rating', 'rating')
+            ->take(8)
+            ->get();
+
+        // Get categories
+        $categories = Category::all();
+
         return Inertia::render('Customer/LandingPage', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
+            'products' => $products,
+            'categories' => $categories,
         ]);
     }
 
     /**
-     * Show the shop page
+     * Show the shop page.
      */
-    public function shopPage()
+    public function shopPage(Request $request)
     {
-        return Inertia::render('Customer/ShopingPage');
+        $query = Product::query()
+            ->withCount('reviews as total_reviews')
+            ->withAvg('reviews as average_rating', 'rating');
+
+        // Apply category filter
+        if ($request->filled('category')) {
+            $query->where('category_id', $request->category);
+        }
+
+        // Apply search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('description', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // Apply sorting
+        if ($request->filled('sortField') && $request->filled('sortDirection')) {
+            $query->orderBy($request->sortField, $request->sortDirection);
+        } else {
+            $query->latest();
+        }
+
+        $products = $query->paginate(16)->withQueryString();
+
+        return Inertia::render('Customer/ShopingPage', [
+            'products' => $products,
+            'categories' => Category::all(),
+            'filters' => $request->only(['search', 'sortField', 'sortDirection', 'category']),
+        ]);
     }
 
-    public function product()
+    public function product(string $slug)
     {
-        return Inertia::render('Customer/Product');
+        $product = Product::where('slug', $slug)->firstOrFail();
+        $categories = Category::all();
+
+        // Calculate average rating and total reviews
+        $reviews = ProductReview::where('product_id', $product->id)
+            ->select('rating')
+            ->get();
+        $averageRating = $reviews->avg('rating') ?? 0;
+        $totalReviews = $reviews->count();
+
+        $productRating = [
+            'average_rating' => round($averageRating, 1),
+            'total_reviews' => $totalReviews,
+        ];
+
+        // Get related products from the same category
+        $relatedProducts = Product::where('category_id', $product->category_id)
+            ->where('id', '!=', $product->id)
+            ->withCount('reviews as total_reviews')
+            ->withAvg('reviews as average_rating', 'rating')
+            ->take(4)
+            ->get();
+
+        return Inertia::render('Customer/Product', [
+            'product' => $product,
+            'categories' => $categories,
+            'productRating' => $productRating,
+            'relatedProducts' => $relatedProducts,
+        ]);
     }
 }

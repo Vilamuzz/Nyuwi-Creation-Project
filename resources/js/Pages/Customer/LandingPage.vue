@@ -1,11 +1,12 @@
 <script setup>
 import { Head, Link } from "@inertiajs/vue3";
-import { ref, onMounted } from "vue";
-import axios from "axios";
+import { computed } from "vue";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Product from "@/Components/Customer/Sub-main/Product.vue";
 
 const props = defineProps({
+    products: { type: Array, default: () => [] },
+    categories: { type: Array, default: () => [] },
     canLogin: {
         type: Boolean,
         default: true,
@@ -16,36 +17,12 @@ const props = defineProps({
     },
 });
 
-// Add reactive data
-const products = ref([]);
-const categories = ref([]);
-const isLoading = ref(true);
-const error = ref(null);
+const products = computed(() => props.products);
+const categories = computed(() => props.categories);
+const isLoading = computed(() => false);
+const error = computed(() => null);
 
-// Fetch data from API
-const fetchHomeData = async () => {
-    try {
-        isLoading.value = true;
-        const response = await axios.get("/api/home");
-
-        if (response.data.success) {
-            products.value = response.data.data.products || [];
-            categories.value = response.data.data.categories || [];
-        } else {
-            error.value = "Failed to load data";
-        }
-    } catch (err) {
-        console.error("Error fetching home data:", err);
-        error.value = "Failed to load data";
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-// Fetch data on component mount
-onMounted(() => {
-    fetchHomeData();
-});
+const fetchHomeData = () => {};
 
 const getCategoryName = (categoryId) => {
     const category = categories.value.find((cat) => cat.id === categoryId);
@@ -108,7 +85,6 @@ const formatPrice = (price) => {
                 <div v-else-if="error" class="text-center py-8 text-red-500">
                     <p>{{ error }}</p>
                     <button
-                        @click="fetchHomeData"
                         class="mt-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
                     >
                         Retry

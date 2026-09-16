@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from "vue";
-import axios from "axios";
+import { router, useForm } from "@inertiajs/vue3";
 
 const props = defineProps({
     orders: {
@@ -66,37 +66,27 @@ const closeOrderModal = () => {
     reviewForm.value = { order_id: null, reviews: [] };
 };
 
-// Fetch tracking information from the server
-const fetchTrackingInfo = async (trackingNumber) => {
+const fetchTrackingInfo = (trackingNumber) => {
     isLoadingTracking.value = true;
     trackingError.value = null;
 
-    try {
-        const response = await fetch(`/api/tracking/${trackingNumber}`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRF-TOKEN": document.querySelector(
-                    'meta[name="csrf-token"]'
-                ).content,
-            },
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            trackingInfo.value = data.data;
-        } else {
-            trackingError.value =
-                data.message || "Failed to fetch tracking information";
-        }
-    } catch (error) {
-        trackingError.value =
-            "An error occurred while fetching tracking information";
-        console.error("Tracking API error:", error);
-    } finally {
-        isLoadingTracking.value = false;
-    }
+    router.get(route("customer.orders.tracking", trackingNumber), {}, {
+        preserveState: true,
+        preserveScroll: true,
+        onSuccess: (page) => {
+            const data = page.props.trackingData;
+            if (data) {
+                trackingInfo.value = data;
+            } else {
+                trackingError.value = "Failed to fetch tracking information";
+            }
+            isLoadingTracking.value = false;
+        },
+        onError: () => {
+            trackingError.value = "An error occurred while fetching tracking information";
+            isLoadingTracking.value = false;
+        },
+    });
 };
 
 // Review form state
@@ -146,36 +136,31 @@ const setRating = (product_id, rating) => {
     }
 };
 
-// Complete order after reviewing products
-const completeOrder = async () => {
+const completeForm = useForm({
+    order_id: null,
+    reviews: [],
+});
+
+const completeOrder = () => {
     if (!allProductsReviewed.value) {
         alert("Please rate all products before completing the order");
         return;
     }
 
-    try {
-        const response = await axios.post("/api/orders/complete", {
-            order_id: selectedOrder.value.id,
-            reviews: reviewForm.value.reviews,
-        });
+    completeForm.order_id = selectedOrder.value.id;
+    completeForm.reviews = reviewForm.value.reviews;
 
-        if (response.data.success) {
+    completeForm.post(route("customer.orders.complete"), {
+        preserveScroll: true,
+        onSuccess: () => {
             closeOrderModal();
-            alert(response.data.message || "Order completed successfully!");
+            alert("Order completed successfully!");
             window.location.reload();
-        } else {
-            alert(
-                response.data.message ||
-                    "Failed to complete order. Please try again."
-            );
-        }
-    } catch (error) {
-        console.error("Error completing order:", error);
-        const message =
-            error.response?.data?.message ||
-            "An error occurred. Please try again.";
-        alert(message);
-    }
+        },
+        onError: () => {
+            alert("Failed to complete order. Please try again.");
+        },
+    });
 };
 </script>
 

@@ -1,7 +1,6 @@
 <script setup>
-import { Link } from "@inertiajs/vue3";
+import { Link, useForm } from "@inertiajs/vue3";
 import { ref } from "vue";
-import axios from "axios";
 
 const props = defineProps({
     slug: {
@@ -35,36 +34,26 @@ const successMessage = ref("");
 const errorMessage = ref("");
 const showMessage = ref(false);
 
-const addToWishlist = async (e) => {
+const form = useForm({});
+const addToWishlist = (e) => {
     e.preventDefault();
-
-    try {
-        const response = await axios.post("/api/wishlist/add", {
-            slug: props.slug,
-        });
-
-        if (response.data.success) {
-            successMessage.value = response.data.message;
+    form.post(route("wishlist.store"), {
+        slug: props.slug,
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            successMessage.value = "Product added to wishlist";
             errorMessage.value = "";
             showMessage.value = true;
-
-            // Hide message after 3 seconds
-            setTimeout(() => {
-                showMessage.value = false;
-            }, 3000);
-        }
-    } catch (error) {
-        console.error("Error adding to wishlist:", error);
-        errorMessage.value =
-            error.response?.data?.message || "Failed to add to wishlist";
-        successMessage.value = "";
-        showMessage.value = true;
-
-        // Hide message after 3 seconds
-        setTimeout(() => {
-            showMessage.value = false;
-        }, 3000);
-    }
+            setTimeout(() => { showMessage.value = false; }, 3000);
+        },
+        onError: () => {
+            errorMessage.value = "Failed to add to wishlist";
+            successMessage.value = "";
+            showMessage.value = true;
+            setTimeout(() => { showMessage.value = false; }, 3000);
+        },
+    });
 };
 </script>
 
