@@ -33,6 +33,11 @@ class RemoveApiLayerTest extends TestCase
                 ->has('canRegister'));
     }
 
+    public function test_about_route_is_removed(): void
+    {
+        $this->get('/about')->assertNotFound();
+    }
+
     public function test_shop_page_returns_shop_page_with_products(): void
     {
         $this->get('/shop')

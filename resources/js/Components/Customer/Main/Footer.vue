@@ -50,9 +50,9 @@ const closePaymentModal = () => {
             <Link href="/shop" class="font-bold hover:text-orange-500">
                 Shop
             </Link>
-            <Link href="/about" class="font-bold hover:text-orange-500">
+            <a href="/#about" class="font-bold hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500">
                 About
-            </Link>
+            </a>
         </div>
 
         <div class="flex flex-col space-y-10 relative z-20">
@@ -69,27 +69,29 @@ const closePaymentModal = () => {
             <h1 class="text-center">Contact</h1>
             <div class="flex flex-row">
                 <!-- WhatsApp Link -->
-                <a href="https://wa.me/+6289514923727" target="_blank">
-                    <span
-                        role="button"
-                        class="btn btn-ghost m-1 hover:bg-transparent group"
-                    >
-                        <MessageCircle
-                            class="group-hover:text-orange-500 transition-colors duration-300"
-                        />
-                    </span>
+                <a
+                    href="https://wa.me/+6289514923727"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Chat via WhatsApp"
+                    class="group inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-white/60 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                    <MessageCircle
+                        class="group-hover:text-orange-500 transition-colors duration-300"
+                    />
                 </a>
 
                 <!-- Instagram Link -->
-                <a href="https://instagram.com/nyuwi.creation" target="_blank">
-                    <span
-                        role="button"
-                        class="btn btn-ghost m-1 hover:bg-transparent group"
-                    >
-                        <Instagram
-                            class="group-hover:text-orange-500 transition-colors duration-300"
-                        />
-                    </span>
+                <a
+                    href="https://instagram.com/nyuwi.creation"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Follow Nyuwi Creation on Instagram"
+                    class="group inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-white/60 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                    <Instagram
+                        class="group-hover:text-orange-500 transition-colors duration-300"
+                    />
                 </a>
             </div>
         </div>

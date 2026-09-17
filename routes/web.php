@@ -17,9 +17,6 @@ use App\Http\Controllers\Auth\AdminRegistrationController;
 // Public Routes
 Route::middleware(['customer'])->group(function () {
     Route::get('/', [ProductController::class, 'landingPage'])->name('home');
-    Route::get('/about', function () {
-        return Inertia::render('Customer/About');
-    })->name('about');
     Route::get('/shop', [ProductController::class, 'shopPage'])->name('shop');
     Route::get('/product/{slug}', [ProductController::class, 'product'])->name('product');
 

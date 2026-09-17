@@ -152,7 +152,7 @@ const formatPrice = (price) => {
                         <div class="flex items-center space-x-4 w-full">
                             <!-- Search input -->
                             <label
-                                class="input input-bordered flex items-center gap-2 w-1/3"
+                                class="flex w-1/3 items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 focus-within:border-orange-500 focus-within:ring-1 focus-within:ring-orange-500"
                             >
                                 <Search />
                                 <input
@@ -164,13 +164,15 @@ const formatPrice = (price) => {
                             </label>
 
                             <!-- Sort dropdown -->
-                            <div class="dropdown dropdown-center">
-                                <div tabindex="0" role="button" class="btn m-1">
+                            <div class="relative">
+                                <button
+                                    type="button"
+                                    class="m-1 rounded-lg border border-gray-300 bg-white px-4 py-2 font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                >
                                     {{ currentSortLabel }}
-                                </div>
+                                </button>
                                 <ul
-                                    tabindex="0"
-                                    class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow-sm gap-y-1"
+                                    class="absolute left-0 z-10 mt-1 w-52 rounded-lg border border-gray-200 bg-white p-2 shadow-lg"
                                 >
                                     <li
                                         v-for="option in sortOptions"
@@ -201,7 +203,7 @@ const formatPrice = (price) => {
                         <!-- Add Product button -->
                         <Link
                             :href="route('products.create')"
-                            class="text-white w-1/5 btn btn-neutral"
+                            class="w-1/5 rounded-lg bg-gray-800 px-4 py-2.5 text-center font-semibold text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
                         >
                             Tambah Produk
                         </Link>
@@ -295,14 +297,14 @@ const formatPrice = (price) => {
                                 >
                                     <Link
                                         :href="route('products.edit', item.id)"
-                                        class="text-white btn btn-info"
+                                        class="rounded-lg bg-blue-500 px-3 py-2 font-semibold text-white hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
                                         Edit
                                     </Link>
                                     <button
                                         @click="deleteProduct(item.id)"
                                         type="submit"
-                                        class="text-white btn btn-error"
+                                        class="rounded-lg bg-red-500 px-3 py-2 font-semibold text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
                                     >
                                         Hapus
                                     </button>

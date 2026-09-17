@@ -38,22 +38,22 @@ const removeSize = (index) => {
 </script>
 
 <template>
-    <div class="form-control mb-4">
-        <label class="label">
-            <span class="label-text font-semibold">Ukuran</span>
+    <div class="mb-4">
+        <label class="mb-2 block text-sm font-medium text-gray-700">
+            <span class="font-semibold">Ukuran</span>
         </label>
-        <div class="join">
+        <div class="flex">
             <input
                 type="text"
                 v-model="newSize"
                 placeholder="Masukkan ukuran"
-                class="input input-bordered join-item flex-grow"
+                class="min-w-0 flex-grow rounded-l-lg border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
                 @keyup.enter="addSize"
             />
             <button
                 type="button"
                 @click="addSize"
-                class="btn btn-primary join-item"
+                class="rounded-r-lg bg-orange-500 px-4 py-2 font-semibold text-white hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
                 +
             </button>
@@ -64,13 +64,13 @@ const removeSize = (index) => {
             <div
                 v-for="(size, index) in sizeList"
                 :key="index"
-                class="badge badge-neutral gap-2"
+                class="inline-flex items-center gap-2 rounded-full bg-gray-800 px-3 py-1 text-sm text-white"
             >
                 <span>{{ size }}</span>
                 <button
                     @click="removeSize(index)"
                     type="button"
-                    class="text-error hover:text-error-focus"
+                    class="text-red-300 hover:text-red-100"
                 >
                     ✕
                 </button>

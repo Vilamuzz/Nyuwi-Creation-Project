@@ -18,7 +18,6 @@
 | MySQL | Widely supported, excellent Laravel integration, suitable for e-commerce scale |
 | Tailwind CSS v3 + DaisyUI v4 | Utility-first styling with pre-built components for rapid UI development |
 | Laravel Breeze | Opinionated auth scaffolding with Vue/Inertia preset, reduces auth boilerplate |
-
 | Vite | Fast HMR, native ESM support, excellent Laravel integration via laravel-vite-plugin |
 | Intervention/Image | Image upload processing and manipulation for product images |
 
@@ -47,7 +46,6 @@
 Only these may be installed without asking:
 - `laravel/framework` (core)
 - `inertiajs/inertia-laravel` — Inertia server adapter
-
 - `laravel/breeze` — Auth scaffolding
 - `azishapidin/indoregion` — Indonesian region data
 - `intervention/image` — Image processing
@@ -60,7 +58,6 @@ Only these may be installed without asking:
 - `vue` — Core Vue framework
 - `tailwindcss` + `@tailwindcss/forms` — CSS framework
 - `daisyui` — Tailwind component library
-
 - `lucide-vue-next` — Icon library
 - `laravel-vite-plugin` — Vite integration
 

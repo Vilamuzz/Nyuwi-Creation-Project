@@ -54,12 +54,12 @@ const closeToast = () => {
 
 const getAlertClass = () => {
     const classes = {
-        success: "alert-success",
-        error: "alert-error",
-        warning: "alert-warning",
-        info: "alert-info",
+        success: "bg-green-50 text-green-900 border-green-200",
+        error: "bg-red-50 text-red-900 border-red-200",
+        warning: "bg-yellow-50 text-yellow-900 border-yellow-200",
+        info: "bg-blue-50 text-blue-900 border-blue-200",
     };
-    return classes[props.type] || "alert-info";
+    return classes[props.type] || "bg-blue-50 text-blue-900 border-blue-200";
 };
 
 const getIconComponent = () => {
@@ -77,16 +77,23 @@ const getIconComponent = () => {
 </script>
 
 <template>
-    <div v-if="isVisible" class="toast toast-top toast-end z-50">
-        <div class="alert" :class="getAlertClass()">
+    <div
+        v-if="isVisible"
+        class="fixed top-4 right-4 z-50 flex flex-col gap-2"
+    >
+        <div
+            class="flex items-start gap-3 rounded-lg border px-4 py-3 shadow-lg"
+            :class="getAlertClass()"
+        >
             <component
                 :is="getIconComponent()"
-                class="stroke-current shrink-0 h-6 w-6"
+                class="mt-0.5 h-5 w-5 shrink-0"
             />
-            <span>{{ message }}</span>
+            <span class="text-sm">{{ message }}</span>
             <button
                 @click="closeToast"
-                class="btn btn-sm btn-circle btn-ghost ml-auto"
+                class="ml-2 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-current opacity-70 transition hover:opacity-100 hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-current"
+                aria-label="Close"
             >
                 ✕
             </button>

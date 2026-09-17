@@ -53,7 +53,6 @@
 │   └── css/                      # Stylesheets
 ├── routes/
 │   ├── web.php                   # Web routes (Inertia pages)
-
 │   └── auth.php                  # Auth routes (Breeze)
 ├── tests/
 │   ├── Feature/                  # Feature tests
@@ -164,8 +163,8 @@ class StoreOrderRequest extends FormRequest
 ## 10. Testing Guidelines
 - **Feature tests** in `tests/Feature/` — test HTTP endpoints and authentication
 - **Unit tests** in `tests/Unit/` — test model logic and helpers
-- Use `php artisan test` to run all tests
-- Use `php artisan test --filter=TestName` to run specific tests
+- Use `docker compose exec app php artisan test` to run all tests
+- Use `docker compose exec app php artisan test --filter=TestName` to run specific tests
 - Write tests for:
   - Authentication flows (login, register, logout)
   - CRUD operations for each resource

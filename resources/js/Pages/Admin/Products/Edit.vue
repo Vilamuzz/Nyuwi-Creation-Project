@@ -90,87 +90,87 @@ const handleCategoryChange = (categoryId) => {
                 <div class="flex flex-row space-x-6 w-full">
                     <div class="flex flex-col w-1/2">
                         <!-- Nama Produk -->
-                        <div class="form-control mb-4">
-                            <label class="label">
-                                <span class="label-text font-semibold"
+                        <div class="mb-4">
+                            <label class="mb-2 block text-sm font-medium text-gray-700">
+                                <span class="font-semibold"
                                     >Nama Produk*</span
                                 >
                             </label>
                             <input
                                 type="text"
                                 v-model="form.name"
-                                class="input input-bordered w-full"
-                                :class="{ 'input-error': errors.name }"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                                :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': errors.name }"
                                 required
                             />
-                            <div v-if="errors.name" class="label">
-                                <span class="label-text-alt text-error">{{
+                            <div v-if="errors.name" class="mb-2 block text-sm font-medium text-gray-700">
+                                <span class="mt-1 text-sm text-red-600">{{
                                     errors.name
                                 }}</span>
                             </div>
                         </div>
 
                         <!-- Jumlah Stok -->
-                        <div class="form-control mb-4">
-                            <label class="label">
-                                <span class="label-text font-semibold"
+                        <div class="mb-4">
+                            <label class="mb-2 block text-sm font-medium text-gray-700">
+                                <span class="font-semibold"
                                     >Jumlah Stok*</span
                                 >
                             </label>
                             <input
                                 type="number"
                                 v-model="form.stock"
-                                class="input input-bordered w-full"
-                                :class="{ 'input-error': errors.stock }"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                                :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': errors.stock }"
                                 required
                                 min="1"
                             />
-                            <div v-if="errors.stock" class="label">
-                                <span class="label-text-alt text-error">{{
+                            <div v-if="errors.stock" class="mb-2 block text-sm font-medium text-gray-700">
+                                <span class="mt-1 text-sm text-red-600">{{
                                     errors.stock
                                 }}</span>
                             </div>
                         </div>
 
                         <!-- Harga -->
-                        <div class="form-control mb-4">
-                            <label class="label">
-                                <span class="label-text font-semibold"
+                        <div class="mb-4">
+                            <label class="mb-2 block text-sm font-medium text-gray-700">
+                                <span class="font-semibold"
                                     >Harga*</span
                                 >
                             </label>
                             <input
                                 type="number"
                                 v-model="form.price"
-                                class="input input-bordered w-full"
-                                :class="{ 'input-error': errors.price }"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                                :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': errors.price }"
                                 required
                                 min="1"
                             />
-                            <div v-if="errors.price" class="label">
-                                <span class="label-text-alt text-error">{{
+                            <div v-if="errors.price" class="mb-2 block text-sm font-medium text-gray-700">
+                                <span class="mt-1 text-sm text-red-600">{{
                                     errors.price
                                 }}</span>
                             </div>
                         </div>
 
                         <!-- Berat -->
-                        <div class="form-control mb-4">
-                            <label class="label">
-                                <span class="label-text font-semibold"
+                        <div class="mb-4">
+                            <label class="mb-2 block text-sm font-medium text-gray-700">
+                                <span class="font-semibold"
                                     >Berat*</span
                                 >
                             </label>
                             <input
                                 type="number"
                                 v-model="form.weight"
-                                class="input input-bordered w-full"
-                                :class="{ 'input-error': errors.weight }"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                                :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500': errors.weight }"
                                 required
                                 min="1"
                             />
-                            <div v-if="errors.weight" class="label">
-                                <span class="label-text-alt text-error">{{
+                            <div v-if="errors.weight" class="mb-2 block text-sm font-medium text-gray-700">
+                                <span class="mt-1 text-sm text-red-600">{{
                                     errors.weight
                                 }}</span>
                             </div>
@@ -210,23 +210,23 @@ const handleCategoryChange = (categoryId) => {
 
                 <div>
                     <!-- Deskripsi -->
-                    <div class="form-control mb-4">
-                        <label class="label">
-                            <span class="label-text font-semibold"
+                    <div class="mb-4">
+                        <label class="mb-2 block text-sm font-medium text-gray-700">
+                            <span class="font-semibold"
                                 >Deskripsi*</span
                             >
                         </label>
                         <textarea
                             v-model="form.description"
-                            class="textarea textarea-bordered w-full"
+                            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
                             :class="{
-                                'textarea-error': form.errors.description,
+                                'border-red-300 focus:border-red-500 focus:ring-red-500': form.errors.description,
                             }"
                             rows="4"
                             placeholder="Deskripsi produk..."
                         ></textarea>
-                        <div v-if="form.errors.description" class="label">
-                            <span class="label-text-alt text-error">{{
+                        <div v-if="form.errors.description" class="mb-2 block text-sm font-medium text-gray-700">
+                            <span class="mt-1 text-sm text-red-600">{{
                                 form.errors.description
                             }}</span>
                         </div>
@@ -236,14 +236,14 @@ const handleCategoryChange = (categoryId) => {
                 <div class="flex gap-4 mt-6">
                     <Link
                         :href="route('products.index')"
-                        class="btn btn-neutral flex-1"
+                        class="flex-1 rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-center font-semibold text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-500"
                     >
                         Kembali
                     </Link>
                     <!-- Submit Button -->
                     <button
                         type="submit"
-                        class="btn btn-primary flex-1"
+                        class="flex-1 rounded-lg bg-orange-500 px-4 py-2.5 font-semibold text-white hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
                         :disabled="form.processing"
                     >
                         {{

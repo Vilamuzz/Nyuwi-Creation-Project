@@ -37,9 +37,9 @@ const removeColorButton = (index) => {
 </script>
 
 <template>
-    <div class="form-control mb-4">
-        <label class="label">
-            <span class="label-text font-semibold">Warna</span>
+    <div class="mb-4">
+        <label class="mb-2 block text-sm font-medium text-gray-700">
+            <span class="font-semibold">Warna</span>
         </label>
         <div class="flex flex-wrap gap-2">
             <!-- Color Buttons -->
@@ -49,13 +49,13 @@ const removeColorButton = (index) => {
                 class="flex items-center gap-2"
             >
                 <div
-                    class="w-10 h-10 rounded-full border-2 border-base-300"
+                    class="h-10 w-10 rounded-full border-2 border-gray-300"
                     :style="{ backgroundColor: button.hex }"
                 ></div>
                 <button
                     @click="removeColorButton(index)"
                     type="button"
-                    class="btn btn-circle btn-xs btn-error"
+                    class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500"
                 >
                     ✕
                 </button>
@@ -70,7 +70,7 @@ const removeColorButton = (index) => {
                     class="absolute inset-0 opacity-0 w-10 h-10 cursor-pointer"
                 />
                 <div
-                    class="w-10 h-10 rounded-full border-2 border-dashed border-base-300 flex items-center justify-center hover:border-primary cursor-pointer"
+                    class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-2 border-dashed border-gray-300 hover:border-orange-500"
                 >
                     +
                 </div>

@@ -32,13 +32,13 @@ watch(selectedCategory, (newValue) => {
 </script>
 
 <template>
-    <div class="form-control mb-4">
-        <label class="label">
-            <span class="label-text font-semibold">Kategori*</span>
+    <div class="mb-4">
+        <label class="mb-2 block text-sm font-medium text-gray-700">
+            <span class="font-semibold">Kategori*</span>
         </label>
         <select
             v-model="selectedCategory"
-            class="select select-bordered w-full"
+            class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
         >
             <option disabled value="">Pilih Kategori</option>
             <option
@@ -55,7 +55,7 @@ watch(selectedCategory, (newValue) => {
                 :value="newCategory"
                 @input="$emit('update:newCategory', $event.target.value)"
                 placeholder="Nama Kategori Baru"
-                class="input input-bordered w-full"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
             />
         </div>
     </div>

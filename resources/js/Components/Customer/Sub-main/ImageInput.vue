@@ -183,9 +183,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="form-control mb-4">
-        <label class="label">
-            <span class="label-text font-semibold">
+    <div class="mb-4">
+        <label class="mb-2 block text-sm font-medium text-gray-700">
+            <span class="font-semibold">
                 Gambar Produk* ({{ imagePreviews.length }}/{{ maxImages }})
             </span>
         </label>
@@ -236,7 +236,7 @@ onUnmounted(() => {
             />
 
             <div
-                class="w-full bg-base-100 border-2 border-dashed border-base-300 hover:border-primary rounded-lg flex flex-col items-center justify-center p-8 cursor-pointer transition-all duration-200 min-h-[120px]"
+                class="w-full rounded-lg border-2 border-dashed border-gray-300 bg-white hover:border-orange-500 flex flex-col items-center justify-center p-8 cursor-pointer transition-all duration-200 min-h-[120px]"
                 :class="{
                     'bg-blue-50 border-blue-400 border-2 border-dashed shadow-lg':
                         isDragging,
@@ -257,7 +257,7 @@ onUnmounted(() => {
                     />
                     <div class="text-center">
                         <span
-                            class="text-base-content"
+                            class="text-gray-900"
                             :class="{
                                 'text-gray-400':
                                     imagePreviews.length >= maxImages,
@@ -269,7 +269,7 @@ onUnmounted(() => {
                                     : "Seret dan jatuhkan gambar di sini atau klik untuk memilih"
                             }}
                         </span>
-                        <div class="text-xs text-base-content/60 mt-1">
+                        <div class="text-xs text-gray-500 mt-1">
                             Format: JPEG, JPG, PNG. Maksimal 2MB per file.
                         </div>
                     </div>
@@ -277,8 +277,8 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <div v-if="errors.images" class="label">
-            <span class="label-text-alt text-error">{{ errors.images }}</span>
+        <div v-if="errors.images" class="mt-1">
+            <span class="text-sm text-red-600">{{ errors.images }}</span>
         </div>
     </div>
 </template>

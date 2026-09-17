@@ -1,16 +1,49 @@
 <script setup>
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
-import { usePage, Link } from "@inertiajs/vue3";
-import { computed } from "vue";
+import { Link } from "@inertiajs/vue3";
+import { User } from "lucide-vue-next";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 const props = defineProps({
     isLoggedIn: Boolean,
     orders: Array,
 });
 
-// Computed property untuk cek order awaiting
-const hasAwaitingOrders = computed(() => {
-    return props.orders?.some((order) => order.status === "waiting");
+const hasAwaitingOrders = computed(() =>
+    props.orders?.some((order) => order.status === "waiting")
+);
+
+const isProfileOpen = ref(false);
+const profileMenu = ref(null);
+
+const toggleProfile = () => {
+    isProfileOpen.value = !isProfileOpen.value;
+};
+
+const closeProfile = () => {
+    isProfileOpen.value = false;
+};
+
+const handleClickOutside = (event) => {
+    if (profileMenu.value && !profileMenu.value.contains(event.target)) {
+        closeProfile();
+    }
+};
+
+const handleKeydown = (event) => {
+    if (event.key === "Escape") {
+        closeProfile();
+    }
+};
+
+onMounted(() => {
+    document.addEventListener("click", handleClickOutside);
+    document.addEventListener("keydown", handleKeydown);
+});
+
+onUnmounted(() => {
+    document.removeEventListener("click", handleClickOutside);
+    document.removeEventListener("keydown", handleKeydown);
 });
 </script>
 
@@ -29,13 +62,16 @@ const hasAwaitingOrders = computed(() => {
 
         <!-- Links -->
         <div class="hidden md:flex space-x-10 text-gray-700">
-            <Link href="/" class="font-bold hover:text-orange-500">Home</Link>
-            <Link href="/shop" class="font-bold hover:text-orange-500"
+            <Link
+                href="/"
+                class="font-bold rounded hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                >Home</Link
+            >
+            <Link
+                href="/shop"
+                class="font-bold rounded hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >Shop</Link
             >
-            <Link href="/about" class="font-bold hover:text-orange-500">
-                About
-            </Link>
         </div>
 
         <!-- Icons or Actions -->
@@ -43,89 +79,74 @@ const hasAwaitingOrders = computed(() => {
             <!-- Only show these items if user is logged in -->
             <template v-if="isLoggedIn">
                 <!-- Wishlist -->
-                <Link :href="route('wishlist.index')"
-                    ><span
-                        role="button"
-                        class="btn btn-ghost m-1 hover:bg-transparent"
-                    >
-                        <img :src="'/img/icon/wishlist.svg'" alt="" />
-                    </span>
+                <Link
+                    :href="route('wishlist.index')"
+                    class="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                >
+                    <img :src="'/img/icon/wishlist.svg'" alt="Wishlist" />
                 </Link>
 
                 <!-- Cart -->
                 <Link
                     :href="route('cart.show')"
-                    class="font-bold hover:text-orange-500"
+                    class="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
-                    <span
-                        role="button"
-                        class="btn btn-ghost m-1 hover:bg-transparent"
-                    >
-                        <img :src="'/img/icon/cart.svg'" alt="" />
-                    </span>
+                    <img :src="'/img/icon/cart.svg'" alt="Cart" />
                 </Link>
 
-                <!-- Dropdown -->
-                <div class="dropdown dropdown-end relative">
-                    <span
-                        tabindex="0"
-                        role="button"
-                        class="btn btn-ghost m-1 hover:bg-transparent relative"
+                <!-- Profile Dropdown -->
+                <div ref="profileMenu" class="relative ml-1">
+                    <button
+                        type="button"
+                        @click="toggleProfile"
+                        class="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 relative"
+                        aria-haspopup="true"
+                        :aria-expanded="isProfileOpen"
                     >
-                        <img :src="'/img/icon/profile.svg'" alt="" />
-                        <!-- Badge Notifikasi -->
-                        <div
+                        <img :src="'/img/icon/profile.svg'" alt="Profile" />
+                        <span
                             v-if="hasAwaitingOrders"
-                            class="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"
-                        ></div>
-                    </span>
-                    <ul
-                        tabindex="0"
-                        class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow"
+                            class="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-red-500"
+                        ></span>
+                    </button>
+                    <div
+                        v-if="isProfileOpen"
+                        class="absolute right-0 mt-2 w-52 rounded-lg border border-gray-200 bg-white shadow-lg z-50"
                     >
-                        <li>
-                            <Link
-                                :href="route('customer.profile')"
-                                class="relative"
+                        <Link
+                            :href="route('customer.profile')"
+                            class="flex items-center justify-between rounded-t-lg px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                            @click="closeProfile"
+                        >
+                            Profile
+                            <span
+                                v-if="hasAwaitingOrders"
+                                class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white"
                             >
-                                Profile
-                                <!-- Badge di menu dropdown -->
-                                <span
-                                    v-if="hasAwaitingOrders"
-                                    class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-500 rounded-full ml-2"
-                                >
-                                    !
-                                </span>
-                            </Link>
-                        </li>
-                        <li>
-                            <Link
-                                :href="route('logout')"
-                                method="post"
-                                as="button"
-                                >Logout</Link
-                            >
-                        </li>
-                    </ul>
+                                !
+                            </span>
+                        </Link>
+                        <Link
+                            :href="route('logout')"
+                            method="post"
+                            as="button"
+                            class="block w-full rounded-b-lg px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
+                            @click="closeProfile"
+                        >
+                            Logout
+                        </Link>
+                    </div>
                 </div>
             </template>
 
             <!-- Show login/register buttons if user is not logged in -->
             <template v-else>
-                <div class="flex space-x-4">
-                    <Link :href="route('register')">
-                        <button
-                            class="btn btn-outline border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
-                        >
-                            Register
-                        </button>
-                    </Link>
-                    <Link :href="route('login')">
-                        <button
-                            class="btn bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
-                        >
-                            Login
-                        </button>
+                <div class="flex items-center gap-3">
+                    <Link
+                        :href="route('login')"
+                        class="inline-flex min-h-9 items-center justify-center text-sm"
+                    >
+                        <User />
                     </Link>
                 </div>
             </template>

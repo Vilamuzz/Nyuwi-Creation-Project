@@ -212,13 +212,12 @@ onMounted(async () => {
             </h2>
         </template>
 
-        <!-- DaisyUI Toast Notification -->
-        <div v-if="showMessage" class="toast toast-top toast-end z-50">
+        <!-- Toast Notification -->
+        <div v-if="showMessage" class="fixed right-4 top-4 z-50">
             <div
-                class="alert"
-                :class="
-                    messageType === 'success' ? 'alert-success' : 'alert-error'
-                "
+                class="rounded-lg border px-4 py-3 shadow-lg"
+                :class="messageType === 'success' ? 'border-green-200 bg-green-50 text-green-900' : 'border-red-200 bg-red-50 text-red-900'"
+                role="status"
             >
                 <span
                     v-if="messageType === 'success'"
