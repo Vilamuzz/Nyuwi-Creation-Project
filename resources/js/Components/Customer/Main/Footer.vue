@@ -17,7 +17,7 @@ const closePaymentModal = () => {
 
 <template>
     <div
-        class="flex flex-row space-x-4 px-24 py-10 justify-between item-start bg-[#ffedd5] relative overflow-hidden"
+        class="flex flex-row space-x-4 px-24 py-10 justify-between item-start bg-stone-950 relative overflow-hidden text-white"
     >
         <!-- Overlay Image -->
         <img
@@ -45,17 +45,6 @@ const closePaymentModal = () => {
         </div>
 
         <div class="flex flex-col space-y-10 relative z-20">
-            <h1>Navigation</h1>
-            <Link href="/" class="font-bold hover:text-orange-500"> Home </Link>
-            <Link href="/shop" class="font-bold hover:text-orange-500">
-                Shop
-            </Link>
-            <a href="/#about" class="font-bold hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500">
-                About
-            </a>
-        </div>
-
-        <div class="flex flex-col space-y-10 relative z-20">
             <h1>Help</h1>
             <button
                 @click="openPaymentModal"
@@ -68,26 +57,13 @@ const closePaymentModal = () => {
         <div class="flex flex-col space-y-6 relative z-20">
             <h1 class="text-center">Contact</h1>
             <div class="flex flex-row">
-                <!-- WhatsApp Link -->
-                <a
-                    href="https://wa.me/+6289514923727"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label="Chat via WhatsApp"
-                    class="group inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-white/60 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                    <MessageCircle
-                        class="group-hover:text-orange-500 transition-colors duration-300"
-                    />
-                </a>
-
                 <!-- Instagram Link -->
                 <a
                     href="https://instagram.com/nyuwi.creation"
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Follow Nyuwi Creation on Instagram"
-                    class="group inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-white/60 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    class="group inline-flex items-center justify-center"
                 >
                     <Instagram
                         class="group-hover:text-orange-500 transition-colors duration-300"

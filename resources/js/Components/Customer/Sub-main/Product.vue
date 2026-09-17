@@ -27,6 +27,22 @@ const props = defineProps({
         type: Number,
         default: 0,
     },
+    category: {
+        type: String,
+        default: "",
+    },
+    stock: {
+        type: Number,
+        default: null,
+    },
+    colors: {
+        type: Array,
+        default: () => [],
+    },
+    sizes: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 // Add a success message state
@@ -60,26 +76,23 @@ const addToWishlist = (e) => {
 <template>
     <Link
         :href="route('product', { slug: slug })"
-        class="relative flex flex-col items-start w-[200px] bg-gray-100 rounded-md hover:shadow-lg hover:scale-105 duration-300"
+        class="relative flex w-full flex-col items-start overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-200 transition duration-300 hover:-translate-y-1 hover:shadow-lg"
     >
         <!-- Container Gambar dan Overlay -->
-        <div class="relative w-full h-48">
+        <div class="relative h-72 w-full">
             <img
-                :src="
-                    image
-                        ? `/storage/products/${image}`
-                        : '/img/background/category1.svg'
-                "
+                :src="image ? `/storage/products/${image}` : '/img/products/default.jpg'"
                 :alt="name"
-                class="w-full h-full object-cover rounded-t-md"
+                class="h-full w-full rounded-t-2xl object-cover"
+                @error="$event.target.src = '/img/products/default.jpg'"
             />
             <!-- Overlay untuk tambah ke keranjang -->
             <div
-                class="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 text-white text-lg font-semibold rounded-t-md opacity-0 hover:opacity-100 transition-opacity duration-300"
+                class="absolute inset-0 flex flex-col items-center justify-center rounded-t-2xl bg-black/50 text-lg font-semibold text-white opacity-0 transition-opacity duration-300 hover:opacity-100 focus-within:opacity-100"
             >
                 <button
                     @click.stop="addToWishlist"
-                    class="p-2 px-8 bg-white text-orange-500 text-sm"
+                    class="rounded-full bg-white px-5 py-2 text-sm font-semibold text-orange-600 hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-white"
                 >
                     Add To Wishlist
                 </button>
@@ -100,10 +113,10 @@ const addToWishlist = (e) => {
         </div>
 
         <div class="p-4">
-            <h2 class="text-lg font-bold">{{ name }}</h2>
+            <p v-if="category" class="text-xs font-semibold uppercase tracking-wider text-orange-600">{{ category }}</p>
+            <h2 class="mt-1 line-clamp-2 text-lg font-bold text-stone-900">{{ name }}</h2>
 
-            <!-- Add rating display -->
-            <div class="flex items-center mt-1">
+            <div v-if="totalReviews > 0" class="mt-2 flex items-center">
                 <div class="flex">
                     <div v-for="star in 5" :key="star">
                         <svg
@@ -128,7 +141,14 @@ const addToWishlist = (e) => {
                 >
             </div>
 
-            <h2 class="text-lg font-bold mt-2">{{ price }}</h2>
+            <p class="mt-3 text-xl font-bold text-stone-900">{{ price }}</p>
+            <div class="mt-3 flex flex-wrap gap-2 text-xs text-stone-600">
+                <span v-if="stock !== null" :class="stock > 0 ? 'text-green-700' : 'text-red-600'">
+                    {{ stock > 0 ? `${stock} tersedia` : 'Habis' }}
+                </span>
+                <span v-if="colors.length">{{ colors.length }} warna</span>
+                <span v-if="sizes.length">{{ sizes.length }} ukuran</span>
+            </div>
         </div>
     </Link>
 </template>

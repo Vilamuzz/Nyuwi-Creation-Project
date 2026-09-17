@@ -1,7 +1,7 @@
 <script setup>
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import { Link } from "@inertiajs/vue3";
-import { User } from "lucide-vue-next";
+import { Search, ShoppingCart, User } from "lucide-vue-next";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
 const props = defineProps({
@@ -61,16 +61,36 @@ onUnmounted(() => {
         </div>
 
         <!-- Links -->
-        <div class="hidden md:flex space-x-10 text-gray-700">
+        <div class="hidden md:flex space-x-10 text-gray-700 text-xl">
             <Link
-                href="/"
-                class="font-bold rounded hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >Home</Link
+                href="/shop"
+                class="font-bold rounded hover:text-orange-500"
+                >New & Featured</Link
             >
             <Link
                 href="/shop"
-                class="font-bold rounded hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >Shop</Link
+                class="font-bold rounded hover:text-orange-500"
+                >Boquets</Link
+            >
+            <Link
+                href="/shop"
+                class="font-bold rounded hover:text-orange-500"
+                >Flowers</Link
+            >
+            <Link
+                href="/shop"
+                class="font-bold rounded hover:text-orange-500"
+                >Accessories</Link
+            >
+            <Link
+                href="/shop"
+                class="font-bold rounded hover:text-orange-500"
+                >Bags</Link
+            >
+            <Link
+                href="/shop"
+                class="font-bold rounded hover:text-orange-500"
+                >Sale</Link
             >
         </div>
 
@@ -81,7 +101,7 @@ onUnmounted(() => {
                 <!-- Wishlist -->
                 <Link
                     :href="route('wishlist.index')"
-                    class="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    class="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-orange-500"
                 >
                     <img :src="'/img/icon/wishlist.svg'" alt="Wishlist" />
                 </Link>
@@ -89,7 +109,7 @@ onUnmounted(() => {
                 <!-- Cart -->
                 <Link
                     :href="route('cart.show')"
-                    class="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    class="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-orange-500"
                 >
                     <img :src="'/img/icon/cart.svg'" alt="Cart" />
                 </Link>
@@ -99,7 +119,7 @@ onUnmounted(() => {
                     <button
                         type="button"
                         @click="toggleProfile"
-                        class="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500 relative"
+                        class="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-orange-500 relative"
                         aria-haspopup="true"
                         :aria-expanded="isProfileOpen"
                     >
@@ -141,12 +161,22 @@ onUnmounted(() => {
 
             <!-- Show login/register buttons if user is not logged in -->
             <template v-else>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-8">
+                    <Link
+                        class="inline-flex min-h-9 items-center justify-center text-sm"
+                    >
+                        <Search />
+                    </Link>
                     <Link
                         :href="route('login')"
                         class="inline-flex min-h-9 items-center justify-center text-sm"
                     >
                         <User />
+                    </Link>
+                    <Link
+                        class="inline-flex min-h-9 items-center justify-center text-sm"
+                    >
+                        <ShoppingCart />
                     </Link>
                 </div>
             </template>

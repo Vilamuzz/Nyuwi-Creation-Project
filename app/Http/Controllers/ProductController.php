@@ -248,21 +248,36 @@ class ProductController extends Controller
 
     public function landingPage()
     {
-        // Get products with reviews and ratings
-        $products = Product::query()
+        $productPresentation = fn () => Product::query()
             ->withCount('reviews as total_reviews')
-            ->withAvg('reviews as average_rating', 'rating')
-            ->take(8)
+            ->withAvg('reviews as average_rating', 'rating');
+
+        $newProducts = $productPresentation()
+            ->latest()
+            ->take(10)
             ->get();
 
-        // Get categories
-        $categories = Category::all();
+        $featuredProducts = $productPresentation()
+            ->select('products.*')
+            ->selectRaw(
+                '(SELECT COALESCE(SUM(order_items.quantity), 0)
+                FROM order_items
+                INNER JOIN orders ON orders.id = order_items.order_id
+                WHERE order_items.product_id = products.id
+                AND orders.status = ?) as total_sold',
+                ['completed']
+            )
+            ->orderByDesc('total_sold')
+            ->latest('products.created_at')
+            ->take(10)
+            ->get();
 
         return Inertia::render('Customer/LandingPage', [
             'canLogin' => Route::has('login'),
             'canRegister' => Route::has('register'),
-            'products' => $products,
-            'categories' => $categories,
+            'newProducts' => $newProducts,
+            'featuredProducts' => $featuredProducts,
+            'categories' => Category::all(),
         ]);
     }
 

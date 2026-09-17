@@ -4,9 +4,6 @@
 /public/build
 /public/hot
 /public/storage
-!/public/storage/
-!/public/storage/products/
-!/public/storage/products/*
 /storage/*.key
 /vendor
 .env
@@ -26,3 +23,4 @@ yarn-error.log
 # Docker
 .env.docker
 docker/mysql/
+

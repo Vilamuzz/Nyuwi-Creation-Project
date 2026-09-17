@@ -58,7 +58,23 @@ All DaisyUI-specific classes (`btn`, `dropdown`, `toast`, `alert`, `join`, `badg
 - Routes tested manually in browser (homepage, `/shop`, `/wishlist`, admin pages) confirm no missing styles
 - All components remain fully functional with consistent branding and spacing
 
+## [2026-09-17] — Split landing product rails and sales-based featured products
+
+### Overview
+- Added separate `newProducts` and `featuredProducts` Inertia props to the landing page.
+- `New Drops` now displays the newest products.
+- `Produk Unggulan` now ranks products by quantity sold in completed orders.
+- Added local category image fallbacks and a stable Unsplash fallback for missing or failed images.
+- Converted category and product sections into button-controlled horizontal rails with larger cards.
+- Added category, stock, color-count, and size-count information to product cards.
+- Updated landing-page feature coverage for the new props.
+
+### Verification
+- `npm run build` succeeded.
+- `docker compose exec app php artisan test` could not complete because the default TTY could not attach in this environment.
+- The non-TTY retry (`docker compose exec -T app php artisan test`) was denied by the environment.
+
 ### Next steps
 - Deploy changes and monitor for any visual regression
-- Consider adding a small JavaScript snippet to smooth‑scroll to the `#about` anchor if desired
+- Consider adding a small JavaScript snippet to smooth-scroll to the `#about` anchor if desired
 - Update any external documentation that references the `/about` page

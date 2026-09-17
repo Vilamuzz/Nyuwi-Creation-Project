@@ -27,7 +27,8 @@ class RemoveApiLayerTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Customer/LandingPage')
-                ->has('products')
+                ->has('newProducts')
+                ->has('featuredProducts')
                 ->has('categories')
                 ->has('canLogin')
                 ->has('canRegister'));
