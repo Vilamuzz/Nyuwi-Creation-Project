@@ -1,5 +1,12 @@
 # Changelog
 
+## [2026-09-18] — Add sale-page filter drawer toggle
+
+- Added an accessible filter button that opens the sale-page filter drawer.
+- Added close and backdrop-click controls for the drawer.
+- Updated `resources/js/Pages/Customer/SalePage.vue`.
+
+
 ## [2026-09-17] — Rework landing page, merge About, remove DaisyUI
 
 ### Overview

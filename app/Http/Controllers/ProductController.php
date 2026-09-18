@@ -22,20 +22,20 @@ class ProductController extends Controller
         $query = Product::query();
 
         // Apply search filter
-        if ($request->has('search')) {
+        if ($request->has("search")) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                    ->orWhere('description', 'LIKE', "%{$search}%");
+                $q->where("name", "LIKE", "%{$search}%")->orWhere(
+                    "description",
+                    "LIKE",
+                    "%{$search}%",
+                );
             });
         }
 
         // Apply sorting
-        if ($request->has('sortField') && $request->has('sortDirection')) {
-            $query->orderBy(
-                $request->sortField,
-                $request->sortDirection
-            );
+        if ($request->has("sortField") && $request->has("sortDirection")) {
+            $query->orderBy($request->sortField, $request->sortDirection);
         } else {
             // Default sorting
             $query->latest();
@@ -43,10 +43,14 @@ class ProductController extends Controller
 
         $products = $query->paginate(10);
 
-        return Inertia::render('Admin/Products/Index', [
-            'products' => $products,
-            'categories' => Category::all(),
-            'filters' => $request->only(['search', 'sortField', 'sortDirection'])
+        return Inertia::render("Admin/Products/Index", [
+            "products" => $products,
+            "categories" => Category::all(),
+            "filters" => $request->only([
+                "search",
+                "sortField",
+                "sortDirection",
+            ]),
         ]);
     }
 
@@ -56,8 +60,8 @@ class ProductController extends Controller
     public function create()
     {
         $categories = Category::all();
-        return Inertia::render('Admin/Products/Create', [
-            'categories' => $categories
+        return Inertia::render("Admin/Products/Create", [
+            "categories" => $categories,
         ]);
     }
 
@@ -67,55 +71,62 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $rules = [
-            'name' => 'required|string|max:255',
-            'stock' => 'required|integer|min:1',
-            'price' => 'required|numeric|min:1',
-            'weight' => 'required|numeric|min:1',
-            'category_id' => 'nullable|integer|exists:categories,id',
-            'new_category' => 'nullable|string|max:255',
-            'description' => 'required|string',
-            'images' => 'required|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg|max:2048',
-            'sizes' => 'nullable|array',
-            'sizes.*' => 'string|max:50',
-            'colors' => 'nullable|array',
-            'colors.*' => 'string|max:50',
+            "name" => "required|string|max:255",
+            "stock" => "required|integer|min:1",
+            "price" => "required|numeric|min:1",
+            "weight" => "required|numeric|min:1",
+            "category_id" => "nullable|integer|exists:categories,id",
+            "new_category" => "nullable|string|max:255",
+            "description" => "required|string",
+            "images" => "required|array",
+            "images.*" => "image|mimes:jpeg,png,jpg|max:2048",
+            "sizes" => "nullable|array",
+            "sizes.*" => "string|max:50",
+            "colors" => "nullable|array",
+            "colors.*" => "string|max:50",
         ];
 
         $validatedData = $request->validate($rules);
 
         // Create new category if 'new_category' is filled
-        if ($request->filled('new_category')) {
-            $category = Category::create(['name' => $request->new_category]);
-            $validatedData['category_id'] = $category->id;
+        if ($request->filled("new_category")) {
+            $category = Category::create(["name" => $request->new_category]);
+            $validatedData["category_id"] = $category->id;
         }
 
         // Handle multiple image uploads
         $imageNames = [];
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $image) {
-                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                $image->storeAs('products', $imageName, 'public');
+        if ($request->hasFile("images")) {
+            foreach ($request->file("images") as $image) {
+                $imageName =
+                    time() .
+                    "_" .
+                    uniqid() .
+                    "." .
+                    $image->getClientOriginalExtension();
+                $image->storeAs("products", $imageName, "public");
                 $imageNames[] = $imageName;
             }
         }
 
         $productData = [
-            'name' => $validatedData['name'],
-            'slug' => Str::slug($validatedData['name']),
-            'stock' => $validatedData['stock'],
-            'price' => $validatedData['price'],
-            'weight' => $validatedData['weight'],
-            'category_id' => $validatedData['category_id'],
-            'description' => $validatedData['description'],
-            'images' => $imageNames,
-            'sizes' => $request->sizes,
-            'colors' => $request->colors,
+            "name" => $validatedData["name"],
+            "slug" => Str::slug($validatedData["name"]),
+            "stock" => $validatedData["stock"],
+            "price" => $validatedData["price"],
+            "weight" => $validatedData["weight"],
+            "category_id" => $validatedData["category_id"],
+            "description" => $validatedData["description"],
+            "images" => $imageNames,
+            "sizes" => $request->sizes,
+            "colors" => $request->colors,
         ];
 
         $product = Product::create($productData);
 
-        return redirect()->route('products.index')->with('success', 'Product created successfully.');
+        return redirect()
+            ->route("products.index")
+            ->with("success", "Product created successfully.");
     }
 
     /**
@@ -133,9 +144,9 @@ class ProductController extends Controller
     {
         $product = Product::findOrFail($id);
         $categories = Category::all();
-        return Inertia::render('Admin/Products/Edit', [
-            'product' => $product,
-            'categories' => $categories
+        return Inertia::render("Admin/Products/Edit", [
+            "product" => $product,
+            "categories" => $categories,
         ]);
     }
 
@@ -147,66 +158,74 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
 
         $rules = [
-            'name' => 'required|string|max:255',
-            'stock' => 'required|integer|min:1',
-            'price' => 'required|numeric|min:1',
-            'weight' => 'required|numeric|min:1',
-            'category_id' => 'nullable|integer|exists:categories,id',
-            'new_category' => 'nullable|string|max:255',
-            'description' => 'required|string',
-            'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg|max:2048',
-            'colors' => 'nullable|array',
-            'colors.*' => 'string|max:50',
-            'sizes' => 'nullable|array',
-            'sizes.*' => 'string|max:50',
+            "name" => "required|string|max:255",
+            "stock" => "required|integer|min:1",
+            "price" => "required|numeric|min:1",
+            "weight" => "required|numeric|min:1",
+            "category_id" => "nullable|integer|exists:categories,id",
+            "new_category" => "nullable|string|max:255",
+            "description" => "required|string",
+            "images" => "nullable|array",
+            "images.*" => "image|mimes:jpeg,png,jpg|max:2048",
+            "colors" => "nullable|array",
+            "colors.*" => "string|max:50",
+            "sizes" => "nullable|array",
+            "sizes.*" => "string|max:50",
         ];
 
         $validatedData = $request->validate($rules);
 
         // Create new category if 'new_category' is filled
-        if ($request->filled('new_category')) {
-            $category = Category::create(['name' => $request->new_category]);
-            $validatedData['category_id'] = $category->id;
+        if ($request->filled("new_category")) {
+            $category = Category::create(["name" => $request->new_category]);
+            $validatedData["category_id"] = $category->id;
         }
 
         $updateData = [
-            'name' => $validatedData['name'],
-            'slug' => Str::slug($validatedData['name']),
-            'stock' => $validatedData['stock'],
-            'price' => $validatedData['price'],
-            'weight' => $validatedData['weight'],
-            'category_id' => $validatedData['category_id'],
-            'description' => $validatedData['description'],
-            'sizes' => $request->sizes ?? [],
-            'colors' => $request->colors ?? [],
+            "name" => $validatedData["name"],
+            "slug" => Str::slug($validatedData["name"]),
+            "stock" => $validatedData["stock"],
+            "price" => $validatedData["price"],
+            "weight" => $validatedData["weight"],
+            "category_id" => $validatedData["category_id"],
+            "description" => $validatedData["description"],
+            "sizes" => $request->sizes ?? [],
+            "colors" => $request->colors ?? [],
         ];
 
         // Handle image updates - only if new images are uploaded
-        if ($request->hasFile('images')) {
+        if ($request->hasFile("images")) {
             // Delete old images
             if ($product->images && is_array($product->images)) {
                 foreach ($product->images as $oldImage) {
-                    if (Storage::disk('public')->exists("products/{$oldImage}")) {
-                        Storage::disk('public')->delete("products/{$oldImage}");
+                    if (
+                        Storage::disk("public")->exists("products/{$oldImage}")
+                    ) {
+                        Storage::disk("public")->delete("products/{$oldImage}");
                     }
                 }
             }
 
             // Store new images
             $imageNames = [];
-            foreach ($request->file('images') as $image) {
-                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                $image->storeAs('products', $imageName, 'public');
+            foreach ($request->file("images") as $image) {
+                $imageName =
+                    time() .
+                    "_" .
+                    uniqid() .
+                    "." .
+                    $image->getClientOriginalExtension();
+                $image->storeAs("products", $imageName, "public");
                 $imageNames[] = $imageName;
             }
-            $updateData['images'] = $imageNames;
+            $updateData["images"] = $imageNames;
         }
 
         $product->update($updateData);
 
-        return redirect()->route('products.index')
-            ->with('success', 'Product updated successfully.');
+        return redirect()
+            ->route("products.index")
+            ->with("success", "Product updated successfully.");
     }
 
     /**
@@ -217,13 +236,16 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
 
         // Check if product has any pending or active orders
-        $hasActiveOrders = OrderItem::whereHas('order', function ($query) {
-            $query->whereNotIn('status', ['completed', 'cancelled']);
-        })->where('product_id', $id)->exists();
+        $hasActiveOrders = OrderItem::whereHas("order", function ($query) {
+            $query->whereNotIn("status", ["completed", "cancelled"]);
+        })
+            ->where("product_id", $id)
+            ->exists();
 
         if ($hasActiveOrders) {
-            return redirect()->route('products.index')
-                ->with('error', 'Cannot delete product that has active orders');
+            return redirect()
+                ->route("products.index")
+                ->with("error", "Cannot delete product that has active orders");
         }
 
         // Store images before deletion
@@ -236,76 +258,80 @@ class ProductController extends Controller
         if ($images) {
             foreach ($images as $imageName) {
                 $imagePath = "products/{$imageName}";
-                if (Storage::disk('public')->exists($imagePath)) {
-                    Storage::disk('public')->delete($imagePath);
+                if (Storage::disk("public")->exists($imagePath)) {
+                    Storage::disk("public")->delete($imagePath);
                 }
             }
         }
 
-        return redirect()->route('products.index')
-            ->with('success', 'Product deleted successfully');
+        return redirect()
+            ->route("products.index")
+            ->with("success", "Product deleted successfully");
     }
 
     public function landingPage()
     {
-        $productPresentation = fn () => Product::query()
-            ->withCount('reviews as total_reviews')
-            ->withAvg('reviews as average_rating', 'rating');
+        $productPresentation = fn() => Product::query()
+            ->withCount("reviews as total_reviews")
+            ->withAvg("reviews as average_rating", "rating");
 
-        $newProducts = $productPresentation()
-            ->latest()
-            ->take(10)
-            ->get();
+        $newProducts = $productPresentation()->latest()->take(10)->get();
 
         $featuredProducts = $productPresentation()
-            ->select('products.*')
+            ->select("products.*")
             ->selectRaw(
                 '(SELECT COALESCE(SUM(order_items.quantity), 0)
                 FROM order_items
                 INNER JOIN orders ON orders.id = order_items.order_id
                 WHERE order_items.product_id = products.id
                 AND orders.status = ?) as total_sold',
-                ['completed']
+                ["completed"],
             )
-            ->orderByDesc('total_sold')
-            ->latest('products.created_at')
+            ->orderByDesc("total_sold")
+            ->latest("products.created_at")
             ->take(10)
             ->get();
 
-        return Inertia::render('Customer/LandingPage', [
-            'canLogin' => Route::has('login'),
-            'canRegister' => Route::has('register'),
-            'newProducts' => $newProducts,
-            'featuredProducts' => $featuredProducts,
-            'categories' => Category::all(),
+        return Inertia::render("Customer/LandingPage", [
+            "canLogin" => Route::has("login"),
+            "canRegister" => Route::has("register"),
+            "newProducts" => $newProducts,
+            "featuredProducts" => $featuredProducts,
+            "categories" => Category::all(),
         ]);
     }
 
     /**
      * Show the shop page.
      */
-    public function shopPage(Request $request)
+    public function salePage(Request $request)
     {
         $query = Product::query()
-            ->withCount('reviews as total_reviews')
-            ->withAvg('reviews as average_rating', 'rating');
+            ->withCount("reviews as total_reviews")
+            ->withAvg("reviews as average_rating", "rating");
 
         // Apply category filter
-        if ($request->filled('category')) {
-            $query->where('category_id', $request->category);
+        if ($request->filled("category")) {
+            $query->where("category_id", $request->category);
         }
 
         // Apply search filter
-        if ($request->filled('search')) {
+        if ($request->filled("search")) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                    ->orWhere('description', 'LIKE', "%{$search}%");
+                $q->where("name", "LIKE", "%{$search}%")->orWhere(
+                    "description",
+                    "LIKE",
+                    "%{$search}%",
+                );
             });
         }
 
         // Apply sorting
-        if ($request->filled('sortField') && $request->filled('sortDirection')) {
+        if (
+            $request->filled("sortField") &&
+            $request->filled("sortDirection")
+        ) {
             $query->orderBy($request->sortField, $request->sortDirection);
         } else {
             $query->latest();
@@ -313,43 +339,76 @@ class ProductController extends Controller
 
         $products = $query->paginate(16)->withQueryString();
 
-        return Inertia::render('Customer/ShopingPage', [
-            'products' => $products,
-            'categories' => Category::all(),
-            'filters' => $request->only(['search', 'sortField', 'sortDirection', 'category']),
+        return Inertia::render("Customer/SalePage", [
+            "products" => $products,
+            "categories" => Category::all(),
+            "filters" => $request->only(["search", "category"]),
+        ]);
+    }
+
+    public function boquetsPage(Request $request)
+    {
+        $query = Product::query()
+            ->withCount("reviews as total_reviews")
+            ->withAvg("reviews as average_rating", "rating");
+
+        // Apply category filter
+        if ($request->filled("category")) {
+            $query->where("category_id", $request->category);
+        }
+
+        // Apply search filter
+        if ($request->filled("search")) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where("name", "LIKE", "%{$search}%")->orWhere(
+                    "description",
+                    "LIKE",
+                    "%{$search}%",
+                );
+            });
+        }
+
+        $query->latest();
+        $products = $query->paginate(16)->withQueryString();
+
+        return Inertia::render("Customer/BoquetsPage", [
+            "products" => $products,
+            "categories" => Category::all(),
+            "filters" => $request->only(["search"]),
         ]);
     }
 
     public function product(string $slug)
     {
-        $product = Product::where('slug', $slug)->firstOrFail();
+        $product = Product::where("slug", $slug)->firstOrFail();
         $categories = Category::all();
 
         // Calculate average rating and total reviews
-        $reviews = ProductReview::where('product_id', $product->id)
-            ->select('rating')
+        $reviews = ProductReview::where("product_id", $product->id)
+            ->select("rating")
             ->get();
-        $averageRating = $reviews->avg('rating') ?? 0;
+        $averageRating = $reviews->avg("rating") ?? 0;
         $totalReviews = $reviews->count();
 
         $productRating = [
-            'average_rating' => round($averageRating, 1),
-            'total_reviews' => $totalReviews,
+            "average_rating" => round($averageRating, 1),
+            "total_reviews" => $totalReviews,
         ];
 
         // Get related products from the same category
-        $relatedProducts = Product::where('category_id', $product->category_id)
-            ->where('id', '!=', $product->id)
-            ->withCount('reviews as total_reviews')
-            ->withAvg('reviews as average_rating', 'rating')
+        $relatedProducts = Product::where("category_id", $product->category_id)
+            ->where("id", "!=", $product->id)
+            ->withCount("reviews as total_reviews")
+            ->withAvg("reviews as average_rating", "rating")
             ->take(4)
             ->get();
 
-        return Inertia::render('Customer/Product', [
-            'product' => $product,
-            'categories' => $categories,
-            'productRating' => $productRating,
-            'relatedProducts' => $relatedProducts,
+        return Inertia::render("Customer/Product", [
+            "product" => $product,
+            "categories" => $categories,
+            "productRating" => $productRating,
+            "relatedProducts" => $relatedProducts,
         ]);
     }
 }

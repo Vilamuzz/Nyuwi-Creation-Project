@@ -63,32 +63,32 @@ onUnmounted(() => {
         <!-- Links -->
         <div class="hidden md:flex space-x-10 text-gray-700 text-xl">
             <Link
-                href="/shop"
+                href="/sale"
                 class="font-bold rounded hover:text-orange-500"
                 >New & Featured</Link
             >
             <Link
-                href="/shop"
+                href="/boquets"
                 class="font-bold rounded hover:text-orange-500"
                 >Boquets</Link
             >
             <Link
-                href="/shop"
+                href="/sale"
                 class="font-bold rounded hover:text-orange-500"
                 >Flowers</Link
             >
             <Link
-                href="/shop"
+                href="/sale"
                 class="font-bold rounded hover:text-orange-500"
                 >Accessories</Link
             >
             <Link
-                href="/shop"
+                href="/sale"
                 class="font-bold rounded hover:text-orange-500"
                 >Bags</Link
             >
             <Link
-                href="/shop"
+                href="/sale"
                 class="font-bold rounded hover:text-orange-500"
                 >Sale</Link
             >
@@ -162,22 +162,22 @@ onUnmounted(() => {
             <!-- Show login/register buttons if user is not logged in -->
             <template v-else>
                 <div class="flex items-center gap-8">
-                    <Link
+                    <button
                         class="inline-flex min-h-9 items-center justify-center text-sm"
                     >
                         <Search />
-                    </Link>
+                </button>
                     <Link
                         :href="route('login')"
                         class="inline-flex min-h-9 items-center justify-center text-sm"
                     >
                         <User />
                     </Link>
-                    <Link
+                    <button
                         class="inline-flex min-h-9 items-center justify-center text-sm"
                     >
                         <ShoppingCart />
-                    </Link>
+                </button>
                 </div>
             </template>
         </div>

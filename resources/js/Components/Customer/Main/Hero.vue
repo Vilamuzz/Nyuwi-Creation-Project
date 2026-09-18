@@ -2,22 +2,19 @@
 defineProps({
     title: {
         type: String,
-        default: "Shop",
+        default: "",
     },
-    breadcrumb: {
+    subtitle: {
         type: String,
-        default: "Home > Shop",
-    },
+        default: "",
+    }
 });
 </script>
 
 <template>
     <div
-        class="relative flex flex-col items-center justify-center text-center space-y-2 h-[300px] bg-cover bg-center"
-        :style="{ backgroundImage: `url('/img/background/hero.svg')` }"
-    >
-        <div class="absolute inset-0 bg-white/30 backdrop-blur-sm"></div>
-        <h1 class="text-4xl font-bold z-10">{{ title }}</h1>
-        <h2 class="text-lg font-bold z-10">{{ breadcrumb }}</h2>
+        class="relative flex flex-col items-center justify-center text-center space-y-2 h-36 bg-cover bg-center bg-[#fdf7f2]">
+        <h1 class="text-4xl font-bold underline">{{ title }}</h1>
+        <p class="text-lg font-bold uppercase">{{ subtitle }}</p>
     </div>
 </template>

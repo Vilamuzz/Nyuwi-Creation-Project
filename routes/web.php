@@ -11,13 +11,14 @@ use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileStoreController;
-
 use App\Http\Controllers\Auth\AdminRegistrationController;
 
 // Public Routes
 Route::middleware(['customer'])->group(function () {
     Route::get('/', [ProductController::class, 'landingPage'])->name('home');
-    Route::get('/shop', [ProductController::class, 'shopPage'])->name('shop');
+    Route::get('/sale', [ProductController::class, 'salePage'])->name('sale');
+    Route::get('/boquets', [ProductController::class, 'boquetsPage'])->name('boquets');
+
     Route::get('/product/{slug}', [ProductController::class, 'product'])->name('product');
 
     // Region data (used by address forms)
