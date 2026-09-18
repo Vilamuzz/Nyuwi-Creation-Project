@@ -98,13 +98,6 @@ onUnmounted(() => {
         <div class="flex items-center">
             <!-- Only show these items if user is logged in -->
             <template v-if="isLoggedIn">
-                <!-- Wishlist -->
-                <Link
-                    :href="route('wishlist.index')"
-                    class="inline-flex items-center justify-center rounded-lg p-2 text-gray-700 transition hover:bg-gray-100 hover:text-orange-500"
-                >
-                    <img :src="'/img/icon/wishlist.svg'" alt="Wishlist" />
-                </Link>
 
                 <!-- Cart -->
                 <Link

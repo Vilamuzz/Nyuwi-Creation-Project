@@ -4,7 +4,7 @@
 - **Monolithic Laravel 11 application** with Inertia.js for SPA-like experience
 - Server-side rendering via Inertia + Vue 3 (no separate backend/frontend)
 - Single web controller layer — controllers return Inertia responses for page rendering and redirects for mutations
-- Inertia partial reloads handle dynamic data such as cart updates, regions, shipping, and wishlist changes
+- Inertia partial reloads handle dynamic data such as cart updates, regions, and shipping
 - Role-based middleware (`admin`, `customer`) for route protection
 - MySQL database with Indonesian region data (azishapidin/indoregion package)
 

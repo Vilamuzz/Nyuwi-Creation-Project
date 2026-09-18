@@ -32,7 +32,7 @@
 
 ### Customer Layout
 - Customer pages use a shared top navigation bar, main content area, footer, and floating WhatsApp support action.
-- Navigation must expose Shop, Cart, Wishlist, Orders/Profile, and authentication actions based on login state.
+- Navigation must expose Shop, Cart, Orders/Profile, and authentication actions based on login state.
 - The cart indicator should show the current item count.
 - On small screens, navigation must collapse into a touch-friendly menu; primary shopping actions remain easy to reach.
 - Use responsive grids: one column on mobile, expanding to 3–4 columns for category and product cards on wider screens.
@@ -66,7 +66,7 @@
 ### Product Detail (`/product/{slug}`)
 - Product image gallery is prominent, with image fallback when a product image is unavailable.
 - Display name, category, IDR price, rating/review summary, description, availability, quantity controls, and primary “Add to Cart” action above the fold on desktop where possible.
-- Provide a wishlist control adjacent to the cart action for authenticated customers.
+
 - Clearly distinguish disabled/out-of-stock purchase controls from available products.
 - Reviews appear below product details, with rating summary and a clear review CTA only for eligible authenticated customers.
 
@@ -88,10 +88,6 @@
 - Order detail shows order timeline/status, items, address, payment status, tracking information where available, and payment-proof upload action when required.
 - Profile screens group personal information and account actions separately.
 
-### Wishlist (`/wishlist`)
-- Reuse product-card visual language.
-- Each saved item provides “Add to Cart” and remove actions.
-- Empty state points customers back to product browsing.
 
 ### Admin Dashboard (`/dashboard`)
 - Welcome the signed-in admin by name.

@@ -16,7 +16,7 @@ use App\Models\Product;
 use App\Models\Cart;
 use Inertia\Inertia;
 use App\Models\ProductReview;
-use App\Models\Wishlist;
+
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 class OrderController extends Controller
@@ -201,14 +201,11 @@ class OrderController extends Controller
             ->where('user_id', Auth::id())
             ->get();
 
-        $wishlistItems = Wishlist::with('product')
-            ->where('user_id', Auth::id())
-            ->get();
 
         return Inertia::render('Customer/Dashboard', [
             'orders' => $orders,
             'reviews' => $reviews,
-            'wishlistItems' => $wishlistItems,
+
             'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => session('status'),
         ]);

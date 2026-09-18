@@ -144,17 +144,6 @@
 **Eloquent model:** `App\Models\ProductReview`
 - `$fillable`: `user_id`, `product_id`, `order_id`, `rating`
 
-### `wishlists`
-| Column | Type | Constraints | Notes |
-|--------|------|-------------|-------|
-| `id` | bigint | PK, auto-increment | |
-| `user_id` | bigint | FK → `users.id`, ON DELETE CASCADE | |
-| `product_id` | bigint | FK → `products.id`, ON DELETE CASCADE | |
-| `created_at` | timestamp | | |
-| `updated_at` | timestamp | | |
-
-**Eloquent model:** `App\Models\Wishlist`
-- `$fillable`: `user_id`, `product_id`
 
 ---
 
@@ -271,14 +260,14 @@ erDiagram
     users ||--o{ carts : "has"
     users ||--o{ orders : "places"
     users ||--o{ product_reviews : "writes"
-    users ||--o{ wishlists : "saves"
+
 
     categories ||--o{ products : "contains"
 
     products ||--o{ carts : "in cart"
     products ||--o{ order_items : "ordered as"
     products ||--o{ product_reviews : "reviewed in"
-    products ||--o{ wishlists : "saved in"
+
 
     orders ||--o{ order_items : "contains"
     orders ||--o{ product_reviews : "verified by"
@@ -362,11 +351,6 @@ erDiagram
         int rating
     }
 
-    wishlists {
-        bigint id PK
-        bigint user_id FK
-        bigint product_id FK
-    }
 
     profile_stores {
         bigint id PK
@@ -404,8 +388,7 @@ erDiagram
 | `ProductReview` | `user()` | `User` | belongsTo |
 | `ProductReview` | `product()` | `Product` | belongsTo |
 | `ProductReview` | `order()` | `Order` | belongsTo |
-| `Wishlist` | `user()` | `User` | belongsTo |
-| `Wishlist` | `product()` | `Product` | belongsTo |
+
 | `Province` | `regencies()` | `Regency` | hasMany |
 | `Regency` | `province()` | `Province` | belongsTo |
 | `Regency` | `districts()` | `District` | hasMany |
@@ -419,10 +402,7 @@ The database defines the following relationships, but the corresponding Eloquent
 
 - `orders.user_id` → `users.id` (`Order::user()` and `User::orders()` are absent)
 - `product_reviews.user_id` → `users.id` (`User::reviews()` is absent)
-- `wishlists.user_id` → `users.id` (`User::wishlists()` is absent)
-- `wishlists.product_id` → `products.id` (`Product::wishlists()` is absent)
-
-All foreign keys in `carts`, `orders`, `order_items`, `product_reviews`, and `wishlists` use `ON DELETE CASCADE`; IndoRegion hierarchy foreign keys use `ON DELETE RESTRICT` and `ON UPDATE CASCADE`.
+All foreign keys in `carts`, `orders`, `order_items`, and `product_reviews` use `ON DELETE CASCADE`; IndoRegion hierarchy foreign keys use `ON DELETE RESTRICT` and `ON UPDATE CASCADE.
 
 ---
 

@@ -12,7 +12,7 @@
 - [x] Code formatting: Laravel Pint
 
 ## Phase 2: Database & Migrations ✅ COMPLETE
-- [x] Core e-commerce tables: `users`, `categories`, `products`, `carts`, `orders`, `order_items`, `product_reviews`, `wishlists`
+- [x] Core e-commerce tables: `users`, `categories`, `products`, `carts`, `orders`, `order_items`, `product_reviews`
 - [x] Store config table: `profile_stores`
 - [x] Indonesian region tables: `provinces`, `regencies`, `districts`, `villages` (IndoRegion package)
 - [x] Laravel framework tables: `sessions`, `password_reset_tokens`, `cache`, `jobs`, `personal_access_tokens` (Sanctum)
@@ -37,7 +37,7 @@
 ## Phase 5: Public Storefront (Customer) ✅ COMPLETE
 - [x] Landing page (`/`) — hero, categories, featured products, promo section
 - [x] Shop page (`/shop`) — product catalog with search/filter/sort
-- [x] Product detail (`/product/{slug}`) — gallery, variants, add-to-cart, wishlist, reviews
+- [x] Product detail (`/product/{slug}`) — gallery, variants, add-to-cart, reviews
 - [x] Category filtering and dynamic product loading via API
 - [x] Responsive grids: 1-col mobile → 4-col desktop
 
@@ -55,11 +55,6 @@
 - [x] Order completion flow (customer confirms receipt)
 - [x] API endpoints: `GET/POST /api/orders/*`, `GET /api/tracking/{trackingNumber}`
 
-## Phase 8: Wishlist ✅ COMPLETE
-- [x] Wishlist page (`/wishlist`) — saved products grid
-- [x] API endpoints: `GET/POST/DELETE /api/wishlist/*`, `GET /api/wishlist/count`
-- [x] Add-to-wishlist from product detail
-- [x] Move to cart / remove from wishlist
 
 ## Phase 9: Product Reviews ✅ COMPLETE
 - [x] Customer reviews linked to completed orders
@@ -88,16 +83,16 @@
 - [x] Feature tests: `ExampleTest.php`, `ProfileTest.php`
 - [x] Auth tests: `tests/Feature/Auth/`
 - [ ] Unit tests for models, services, and helpers
-- [ ] Feature tests for cart, checkout, orders, wishlist, reviews
+- [ ] Feature tests for cart, checkout, orders, and reviews
 - [ ] Feature tests for admin inventory and order management
-- [ ] API endpoint tests (region, cart, wishlist, orders, shipping)
+- [ ] API endpoint tests (region, cart, orders, shipping)
 - [ ] Authorization tests (admin vs customer access)
 - [ ] Form validation tests
 
 ## Phase 14: Polish & Production Readiness ⬜ IN PROGRESS
 - [ ] Comprehensive error handling & user-friendly messages
 - [ ] Loading skeletons for product grids and admin tables
-- [ ] Empty states for cart, wishlist, orders, reviews
+- [ ] Empty states for cart, orders, reviews
 - [ ] CSRF & XSS hardening audit
 - [ ] Rate limiting configuration on API routes
 - [ ] Performance: eager loading audit (prevent N+1 on product lists, order detail, dashboard)

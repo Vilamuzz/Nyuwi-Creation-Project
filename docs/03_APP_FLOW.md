@@ -7,14 +7,14 @@
 | Landing Page | `/` | No | Guest | Marketing, featured products, CTA to shop |
 | About Page | `/about` | No | Guest | Store information |
 | Shop / Product Catalog | `/shop` | No | Guest | Browse products, search, filter by category |
-| Product Detail | `/product/{slug}` | No | Guest | View product details, add to cart/wishlist |
+| Product Detail | `/product/{slug}` | No | Guest | View product details and add to cart |
 | Admin Registration | `/admin/register` | No | Guest | Create admin account (store owner) |
 | Login | `/login` | No | Guest | User authentication |
 | Register | `/register` | No | Guest | Customer registration |
 | Customer Profile | `/customer/profile` | Yes | Customer | View order history, profile info |
 | Shopping Cart | `/cart` | Yes | Customer | Manage cart items, quantities, view totals |
 | Checkout | `/checkout` | Yes | Customer | Shipping address, payment method, order review |
-| Wishlist | `/wishlist` | Yes | Customer | Saved products for later |
+
 | Order History | `/orders/info` | Yes | Customer | List all orders with status |
 | Order Detail | `/orders/{id}` | Yes | Customer | View order items, shipping, payment proof |
 | Upload Payment Proof | `/orders/upload-proof` | Yes | Customer | Upload bank transfer screenshot |
@@ -125,14 +125,8 @@ Login (both roles):
    - Customer → intended page or `/shop`
 ```
 
-### Flow 5: Wishlist & Reviews
+### Flow 5: Reviews
 ```
-Wishlist:
-1. Customer on product page clicks "Add to Wishlist" (heart icon)
-2. API POST `/api/wishlist/add` → Saved to wishlist
-3. Customer views `/wishlist` → Sees saved products
-4. Can move to cart or remove
-
 Reviews:
 1. Customer on completed order detail page
 2. Clicks "Write Review" for eligible products
@@ -175,7 +169,7 @@ Customer Navigation (authenticated):
 ├── Shop (/shop)
 ├── Product Detail (/product/{slug})
 ├── Cart (/cart) → Checkout (/checkout)
-├── Wishlist (/wishlist)
+
 ├── Orders
 │   ├── Order List (/orders/info)
 │   ├── Order Detail (/orders/{id})

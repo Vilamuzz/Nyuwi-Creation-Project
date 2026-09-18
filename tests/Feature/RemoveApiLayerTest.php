@@ -50,6 +50,13 @@ class RemoveApiLayerTest extends TestCase
                 ->has('filters'));
     }
 
+    public function test_wishlist_routes_are_not_registered(): void
+    {
+        $this->get('/wishlist')->assertNotFound();
+        $this->post('/wishlist')->assertNotFound();
+        $this->delete('/wishlist/1')->assertNotFound();
+    }
+
     public function test_cart_mutation_routes_require_authentication(): void
     {
         $this->post('/cart')->assertRedirect('/login');

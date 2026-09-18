@@ -8,7 +8,7 @@ use App\Http\Controllers\RegionController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShippingController;
-use App\Http\Controllers\WishlistController;
+
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileStoreController;
 use App\Http\Controllers\Auth\AdminRegistrationController;
@@ -51,12 +51,6 @@ Route::middleware(['auth', 'customer'])->group(function () {
     // Checkout
     Route::get('/checkout', [CartController::class, 'showCheckout'])->middleware('check.cart')->name('checkout');
 
-    // Wishlist Management
-    Route::controller(WishlistController::class)->prefix('wishlist')->name('wishlist.')->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::post('/', 'store')->name('store');
-        Route::delete('/{id}', 'destroy')->name('destroy');
-    });
 
     // Customer Order Management
     Route::controller(OrderController::class)->prefix('customer/orders')->name('customer.orders.')->group(function () {

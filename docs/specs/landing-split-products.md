@@ -61,7 +61,7 @@ return Inertia::render('Customer/LandingPage', [
   - Remove the duplicate second “Produk Unggulan” section.
 - Update `Product.vue`:
   - Increase card size and add optional category label.
-  - Add wishlist interaction improvements (visible button).
+
   - Show availability, colors, sizes if provided.
 
 ## Test Updates

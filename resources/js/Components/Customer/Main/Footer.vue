@@ -70,11 +70,7 @@ const closePaymentModal = () => {
                                 Cerita Kami
                             </a>
                         </li>
-                        <li>
-                            <Link :href="route('wishlist.index')" class="transition-colors hover:text-orange-400">
-                                Daftar Keinginan
-                            </Link>
-                        </li>
+
                     </ul>
                 </div>
 

@@ -5,7 +5,7 @@ import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import ToastNotification from "@/Components/Customer/Sub-main/ToastNotification.vue";
 import Product from "@/Components/Customer/Sub-main/Product.vue";
 import {
-    HeartPlus,
+
     ShoppingCart,
     ChevronLeft,
     ChevronRight,
@@ -38,9 +38,6 @@ const form = useForm({
     color: "",
 });
 
-const favoriteForm = useForm({
-    slug: "",
-});
 
 const quantity = ref(1);
 const selectedSize = ref("");
@@ -169,19 +166,6 @@ const addToCart = () => {
     });
 };
 
-const addToWishlist = (e) => {
-    e.preventDefault();
-    favoriteForm.slug = product.value.slug;
-    favoriteForm.post(route("wishlist.store"), {
-        preserveScroll: true,
-        onSuccess: () => {
-            showToast("Produk berhasil ditambahkan ke favorit!", "success");
-        },
-        onError: () => {
-            showToast("Gagal menambahkan produk ke favorit", "error");
-        },
-    });
-};
 
 const getCategoryName = (categoryId) => {
     const category = categories.value.find((cat) => cat.id === categoryId);
@@ -491,13 +475,6 @@ onUnmounted(() => {
                             }}</span>
                         </button>
 
-                        <button
-                            @click.prevent="addToWishlist"
-                            class="flex space-x-2 rounded-md border border-gray-300 px-6 py-2 hover:bg-orange-500 hover:text-white duration-300"
-                        >
-                            <HeartPlus />
-                            <span>Add To Wishlist</span>
-                        </button>
                     </div>
                 </div>
             </section>

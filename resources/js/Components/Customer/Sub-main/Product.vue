@@ -1,6 +1,5 @@
 <script setup>
-import { Link, useForm } from "@inertiajs/vue3";
-import { ref } from "vue";
+import { Link } from "@inertiajs/vue3";
 
 const props = defineProps({
     slug: {
@@ -45,32 +44,6 @@ const props = defineProps({
     },
 });
 
-// Add a success message state
-const successMessage = ref("");
-const errorMessage = ref("");
-const showMessage = ref(false);
-
-const form = useForm({});
-const addToWishlist = (e) => {
-    e.preventDefault();
-    form.post(route("wishlist.store"), {
-        slug: props.slug,
-    }, {
-        preserveScroll: true,
-        onSuccess: () => {
-            successMessage.value = "Product added to wishlist";
-            errorMessage.value = "";
-            showMessage.value = true;
-            setTimeout(() => { showMessage.value = false; }, 3000);
-        },
-        onError: () => {
-            errorMessage.value = "Failed to add to wishlist";
-            successMessage.value = "";
-            showMessage.value = true;
-            setTimeout(() => { showMessage.value = false; }, 3000);
-        },
-    });
-};
 </script>
 
 <template>
@@ -81,23 +54,7 @@ const addToWishlist = (e) => {
             <img :src="image ? `/storage/products/${image}` : '/img/products/default.jpg'" :alt="name"
                 class="h-full w-full rounded-t-2xl object-cover"
                 @error="$event.target.src = '/img/products/default.jpg'" />
-            <!-- Overlay untuk tambah ke keranjang -->
-            <div
-                class="absolute inset-0 flex flex-col items-center justify-center rounded-t-2xl bg-black/50 text-lg font-semibold text-white opacity-0 transition-opacity duration-300 hover:opacity-100 focus-within:opacity-100">
-                <button @click.stop="addToWishlist"
-                    class="rounded-full bg-white px-5 py-2 text-sm font-semibold text-orange-600 hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-white">
-                    Add To Wishlist
-                </button>
-            </div>
 
-            <!-- Success/Error notification -->
-            <div v-if="showMessage" class="absolute bottom-0 left-0 right-0 p-2 text-center text-sm" :class="[
-                successMessage
-                    ? 'bg-green-500 text-white'
-                    : 'bg-red-500 text-white',
-            ]">
-                {{ successMessage || errorMessage }}
-            </div>
         </div>
 
         <div class="p-4">

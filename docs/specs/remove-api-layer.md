@@ -6,7 +6,7 @@ Draft — pending implementation on `dev` branch.
 ## Context
 The project currently maintains a **dual controller layer**:
 - **Web controllers** (`app/Http/Controllers/`) — return Inertia responses for page rendering.
-- **API controllers** (`app/Http/Controllers/API/`) — return JSON for AJAX operations (cart, wishlist, shipping, orders, regions, catalog).
+- **API controllers** (`app/Http/Controllers/API/`) — return JSON for AJAX operations (cart, shipping, orders, regions, catalog).
 
 This specification removes the API layer entirely and consolidates all data flow through **Laravel web routes + Inertia.js props/forms**. Sanctum is also removed because token-based API authentication becomes unnecessary.
 
@@ -14,7 +14,7 @@ This specification removes the API layer entirely and consolidates all data flow
 1. Eliminate `app/Http/Controllers/API/` and `routes/api.php`.
 2. Remove `laravel/sanctum` from dependencies, configuration, and `User` model.
 3. Make every page receive its initial data via Inertia props instead of client-side `axios`/`fetch` calls to `/api/*`.
-4. Handle mutations (cart updates, wishlist changes, checkout, reviews) through Inertia `useForm` / `router` with server-side redirects and flash messages.
+4. Handle mutations (cart updates, checkout, reviews) through Inertia `useForm` / `router` with server-side redirects and flash messages.
 5. Support dynamic UI (region dropdowns, shipping recalculation) via **Inertia partial reloads**, not JSON endpoints.
 6. Enforce server-side ownership checks and stock validation on every mutation.
 7. Replace inline `$request->validate()` with dedicated Form Request classes.
@@ -38,10 +38,7 @@ This specification removes the API layer entirely and consolidates all data flow
 | Cart | `DELETE /api/cart/{id}` | `Cart.vue` |
 | Cart | `GET /api/cart/count` | (check if used) |
 | Cart | `GET /api/cart/validate` | (check if used) |
-| Wishlist | `GET /api/wishlist` | `WishlistTab.vue` |
-| Wishlist | `POST /api/wishlist/add` | `Product.vue`, `Sub-main/Product.vue` |
-| Wishlist | `DELETE /api/wishlist/{id}` | `WishlistTab.vue` |
-| Wishlist | `GET /api/wishlist/count` | (check if used) |
+
 | Orders | `GET /api/orders` | `OrderHistoryTab.vue` |
 | Orders | `GET /api/orders/{orderId}` | `OrderHistoryTab.vue` |
 | Orders | `POST /api/orders/complete` | `OrderHistoryTab.vue` |
@@ -73,18 +70,18 @@ Keep in `HandleInertiaRequests::share()`:
 - `flash.message`
 - `recaptchaSiteKey`
 - `storeName`
-- Cart count and wishlist count (optional, if needed for header badge)
+- Cart count (optional, if needed for a header badge)
 
 ### Page-specific props
 | Page | Props |
 |------|-------|
 | `LandingPage` | `products` (featured), `categories` |
 | `ShopingPage` | `products` (paginated), `categories`, `filters` |
-| `Product` | `product`, `categories`, `productRating`, `relatedProducts`, `isInWishlist` |
+| `Product` | `product`, `categories`, `productRating`, `relatedProducts` |
 | `Cart` | `cartItems`, `summary` (subtotal, totalItems, itemCount) |
 | `Checkout` | `cartItems`, `summary`, `provinces`, `regencies?`, `districts?`, `villages?`, `shippingOptions?` |
-| `Wishlist` | `wishlistItems` (paginated) |
-| `Customer/Dashboard` | `orders`, `reviews`, `wishlistItems`, `mustVerifyEmail`, `status` |
+
+| `Customer/Dashboard` | `orders`, `reviews`, `mustVerifyEmail`, `status` |
 | `Admin/Orders/Show` | `order`, `trackingData?` |
 | `Admin/ProfileStore/Edit` | `profile`, `provinces`, `cities?` |
 
@@ -110,9 +107,6 @@ DELETE /cart/{id}                  CartController@destroy               name: ca
 GET    /checkout                   CartController@showCheckout          name: checkout
 POST   /checkout                   OrderController@store                name: orders.store
 
-GET    /wishlist                   WishlistController@index             name: wishlist.index
-POST   /wishlist                   WishlistController@store             name: wishlist.store
-DELETE /wishlist/{id}              WishlistController@destroy           name: wishlist.destroy
 
 GET    /customer/profile           OrderController@orderUser            name: customer.profile
 GET    /customer/orders            OrderController@userOrders           name: customer.orders.index
@@ -166,7 +160,7 @@ POST   /admin/register             AdminRegistrationController@store
 ## Form Requests to create
 - `CartStoreRequest` — `product_id`, `quantity`, `size`, `color`
 - `CartUpdateRequest` — `quantity`
-- `WishlistStoreRequest` — `slug`
+
 - `OrderStoreRequest` — address fields, payment_method, shipping_method, shipping_cost
 - `OrderCompleteRequest` — `order_id`, `reviews[]`
 - `PaymentProofRequest` — `order_id`, `payment_proof`
@@ -188,14 +182,14 @@ POST   /admin/register             AdminRegistrationController@store
 ### Phase 3 — Read operations → web controllers
 - `ProductController`: `landingPage`, `shopPage`, `product` pass props.
 - `CartController`: `showCart`, `showCheckout` pass props.
-- `WishlistController`: `index` passes paginated items.
+
 - `OrderController`: consolidate `orderUser`, add `userOrders`, `userOrderDetail`.
 - `RegionController` (new web controller): provinces, regencies, districts, villages, city lookup, search.
 - `ShippingController` (new web controller): calculate (returns as Inertia prop or redirect).
 
 ### Phase 4 — Mutations → web routes
 - Cart: `store`, `update`, `destroy` in `CartController`.
-- Wishlist: `store`, `destroy` in `WishlistController`.
+
 - Orders: `store`, `complete`, `uploadPaymentProof` in `OrderController`.
 - Admin orders: `update`, `tracking` in `OrderController`.
 - Enforce ownership checks and DB transactions.

@@ -1,5 +1,13 @@
 # Changelog
 
+## [2026-09-18] — Remove wishlist feature
+
+- Removed wishlist routes, controller, request, model, customer pages/components, navigation links, and product-card/detail controls.
+- Removed wishlist data from the customer dashboard and added a forward migration that drops the `wishlists` table (with a rollback definition).
+- Added feature coverage confirming former wishlist endpoints return `404`.
+- Updated active product, technical, flow, UX, schema, and implementation documentation to remove wishlist references.
+
+
 ## [2026-09-18] — Add sale-page filter drawer toggle
 
 - Added an accessible filter button that opens the sale-page filter drawer.

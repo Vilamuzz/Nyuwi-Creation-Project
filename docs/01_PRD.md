@@ -25,11 +25,10 @@ A tailored e-commerce solution with built-in Indonesian region data and shipping
 | 9 | Product/inventory management | P0 | Create, read, update, delete products and categories |
 | 10 | Order management (Admin) | P0 | View all orders, update order status, process orders |
 | 11 | Customer profile | P1 | View and update profile information |
-| 12 | Wishlist management | P1 | Save products for later, remove from wishlist |
-| 13 | Store profile settings | P1 | Customize store name, logo, and branding |
-| 14 | Indonesian region data | P1 | Province, regency, district, village data for addresses |
-| 15 | Shipping calculation | P1 | Calculate shipping cost based on destination |
-| 16 | Product reviews | P2 | Customers can rate and review purchased products |
+| 12 | Store profile settings | P1 | Customize store name, logo, and branding |
+| 13 | Indonesian region data | P1 | Province, regency, district, village data for addresses |
+| 14 | Shipping calculation | P1 | Calculate shipping cost based on destination |
+| 15 | Product reviews | P2 | Customers can rate and review purchased products |
 
 ## Out of Scope (v1)
 - Payment gateway integration (manual payment proof upload for now)

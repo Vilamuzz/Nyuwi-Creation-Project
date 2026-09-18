@@ -7,14 +7,14 @@ import UpdateProfileInformationForm from "@/Pages/Admin/Profile/Partials/UpdateP
 import UpdatePasswordForm from "@/Pages/Admin/Profile/Partials/UpdatePasswordForm.vue";
 import DeleteUserForm from "@/Pages/Admin/Profile/Partials/DeleteUserForm.vue";
 import OrderHistoryTab from "@/Components/Customer/Main/OrderHistoryTab.vue";
-import WishlistTab from "@/Components/Customer/Main/WishlistTab.vue";
+
 import ReviewsTab from "@/Components/Customer/Main/ReviewsTab.vue";
 import SettingsTab from "@/Components/Customer/Main/SettingsTab.vue";
 
 const props = defineProps({
     orders: Array,
     reviews: Array, // Tambahkan props reviews
-    wishlistItems: Array, // Add this prop
+
     mustVerifyEmail: {
         type: Boolean,
     },
@@ -98,7 +98,7 @@ const closeOrderModal = () => {
 
 const actions = [
     { id: "history", label: "Riwayat Belanja" },
-    { id: "wishlist", label: "Wishlist" },
+
     { id: "reviews", label: "Ulasan Belanja" },
     { id: "settings", label: "Pengaturan" }, // Add settings option
 ];
@@ -242,22 +242,6 @@ const submitPaymentProof = () => {
     });
 };
 
-// Add form for wishlist operations
-const wishlistForm = useForm({});
-
-// Add function to remove from wishlist
-const removeFromWishlist = (id) => {
-    if (
-        confirm("Are you sure you want to remove this item from your wishlist?")
-    ) {
-        wishlistForm.delete(route("wishlist.destroy", id), {
-            preserveScroll: true,
-            onSuccess: () => {
-                // Optional: Add success notification
-            },
-        });
-    }
-};
 </script>
 
 <template>
@@ -303,11 +287,6 @@ const removeFromWishlist = (id) => {
                     @upload-payment="openPaymentProofModal"
                 />
 
-                <WishlistTab
-                    v-else-if="selectedAction === 'wishlist'"
-                    :wishlist-items="wishlistItems"
-                    @remove-from-wishlist="removeFromWishlist"
-                />
 
                 <ReviewsTab
                     v-else-if="selectedAction === 'reviews'"
