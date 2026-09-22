@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class OrderStoreRequest extends FormRequest
 {
@@ -29,6 +31,7 @@ class OrderStoreRequest extends FormRequest
             'village' => ['required', 'string', 'max:255'],
             'province' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:15'],
+            'email' => ['nullable', 'string', 'email', 'max:255', Rule::requiredIf(!Auth::check())],
             'payment_method' => ['required', 'in:digital_wallet,qris'],
             'shipping_method' => ['required', 'in:JNE,GoSend'],
             'shipping_cost' => ['required', 'numeric', 'min:0'],

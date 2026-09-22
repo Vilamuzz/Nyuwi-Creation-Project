@@ -14,6 +14,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Cart;
+use App\Services\CartService;
 use Inertia\Inertia;
 use App\Models\ProductReview;
 
@@ -102,33 +103,35 @@ class OrderController extends Controller
         $validated = $request->validated();
 
         try {
-            DB::transaction(function () use ($validated) {
+            DB::transaction(function () use ($request, $validated) {
                 $user = Auth::user();
-                $cartItems = Cart::with('product')
-                    ->where('user_id', $user->id)
-                    ->lockForUpdate()
-                    ->get();
+                $cartService = new CartService();
+
+                $cartItems = $user
+                    ? Cart::with('product')->where('user_id', $user->id)->lockForUpdate()->get()
+                    : collect($cartService->items($request));
 
                 if ($cartItems->isEmpty()) {
                     throw new \Exception('Cart is empty');
                 }
 
                 foreach ($cartItems as $cartItem) {
-                    if (!$cartItem->product || $cartItem->quantity > $cartItem->product->stock) {
-                        throw new \RuntimeException("Insufficient stock for {$cartItem->product?->name}");
+                    $product = $user ? $cartItem->product : $cartItem['product'];
+                    $quantity = $user ? $cartItem->quantity : $cartItem['quantity'];
+
+                    if (!$product || $quantity > $product->stock) {
+                        throw new \RuntimeException("Insufficient stock for {$product?->name}");
                     }
                 }
 
                 // Calculate total price
-                $subtotal = $cartItems->sum(fn ($item) => $item->price * $item->quantity);
+                $subtotal = $cartItems->sum(fn ($item) => $user
+                    ? $item->price * $item->quantity
+                    : (float) $item['price'] * $item['quantity']);
                 $totalPrice = $subtotal + $validated['shipping_cost'];
 
-                // Manual payment starts in a waiting state.
-                $initialStatus = 'waiting';
-
-                // Create order
                 $order = Order::create([
-                    'user_id' => $user->id,
+                    'user_id' => $user?->id,
                     'name' => $validated['name'],
                     'address' => $validated['address'],
                     'city' => $validated['city'],
@@ -136,28 +139,34 @@ class OrderController extends Controller
                     'village' => $validated['village'],
                     'province' => $validated['province'],
                     'phone' => $validated['phone'],
+                    'email' => $validated['email'] ?? $user?->email,
                     'total_price' => $totalPrice,
                     'payment_method' => $validated['payment_method'],
                     'shipping_method' => $validated['shipping_method'],
                     'note' => $validated['note'] ?? null,
-                    'status' => $initialStatus // Use dynamic initial status
+                    'status' => 'waiting'
                 ]);
 
                 // Create order items and clear cart
                 foreach ($cartItems as $cartItem) {
                     OrderItem::create([
                         'order_id' => $order->id,
-                        'product_id' => $cartItem->product_id,
-                        'quantity' => $cartItem->quantity,
-                        'price' => $cartItem->price,
-                        'total_price' => $cartItem->price * $cartItem->quantity,
-                        'size' => $cartItem->size,
-                        'color' => $cartItem->color
+                        'product_id' => $user ? $cartItem->product_id : $cartItem['product_id'],
+                        'quantity' => $user ? $cartItem->quantity : $cartItem['quantity'],
+                        'price' => $user ? $cartItem->price : $cartItem['price'],
+                        'total_price' => $user
+                            ? $cartItem->price * $cartItem->quantity
+                            : (float) $cartItem['price'] * $cartItem['quantity'],
+                        'size' => $user ? $cartItem->size : $cartItem['size'],
+                        'color' => $user ? $cartItem->color : $cartItem['color']
                     ]);
                 }
 
-                // Clear cart
-                Cart::where('user_id', $user->id)->delete();
+                if ($user) {
+                    Cart::where('user_id', $user->id)->delete();
+                } else {
+                    $cartService->clear($request);
+                }
             });
 
             return redirect()->route('cart.show')->with('success', 'Order placed successfully!');

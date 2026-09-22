@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, onMounted } from "vue";
-import { CircleCheck, CircleX, CircleAlert, Info } from "lucide-vue-next";
+import { CircleCheck, CircleX, CircleAlert, Info, X, XIcon } from "lucide-vue-next";
 
 const props = defineProps({
     message: {
@@ -77,26 +77,23 @@ const getIconComponent = () => {
 </script>
 
 <template>
-    <div
-        v-if="isVisible"
-        class="fixed top-4 right-4 z-50 flex flex-col gap-2"
-    >
-        <div
-            class="flex items-start gap-3 rounded-lg border px-4 py-3 shadow-lg"
-            :class="getAlertClass()"
-        >
-            <component
-                :is="getIconComponent()"
-                class="mt-0.5 h-5 w-5 shrink-0"
-            />
-            <span class="text-sm">{{ message }}</span>
-            <button
-                @click="closeToast"
-                class="ml-2 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-current opacity-70 transition hover:opacity-100 hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-current"
-                aria-label="Close"
-            >
-                ✕
-            </button>
+    <Transition enter-active-class="transition-all duration-300 ease-out"
+        enter-from-class="opacity-0 translate-y-[-8px] sm:translate-y-0 sm:translate-x-2"
+        enter-to-class="opacity-100 translate-y-0 sm:translate-x-0"
+        leave-active-class="transition-all duration-200 ease-in"
+        leave-from-class="opacity-100 translate-y-0 sm:translate-x-0"
+        leave-to-class="opacity-0 translate-y-[-8px] sm:translate-y-0 sm:translate-x-2">
+        <div v-if="isVisible" class="fixed top-4 left-4 right-4 sm:left-auto sm:right-4 z-50 flex flex-col sm:max-w-md w-auto">
+            <div class="flex items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-xl backdrop-blur-sm"
+                :class="getAlertClass()">
+                <component :is="getIconComponent()" class="h-5 w-5 shrink-0" />
+                <span class="text-sm font-medium flex-1 break-words">{{ message }}</span>
+                <button @click="closeToast"
+                    class="inline-flex p-1 shrink-0 rounded-full opacity-70 transition hover:opacity-100 hover:bg-black/10 focus:outline-none"
+                    aria-label="Close">
+                    <XIcon :size="18" />
+                </button>
+            </div>
         </div>
-    </div>
+    </Transition>
 </template>

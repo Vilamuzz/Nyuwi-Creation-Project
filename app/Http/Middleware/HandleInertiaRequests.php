@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Inertia\Middleware;
 use App\Models\ProfileStore;
+use App\Services\CartService;
 use Illuminate\Http\Request;
 
 class HandleInertiaRequests extends Middleware
@@ -46,7 +47,19 @@ class HandleInertiaRequests extends Middleware
             'storePaymentMethod' => [
                 'storeDana' => $profileStore?->phone,
                 'storeQris' => $profileStore?->qris,
-            ]
+            ],
+            'cart' => fn () => $this->cartPayload($request),
         ]);
+    }
+
+    private function cartPayload(Request $request): array
+    {
+        $cart = new CartService();
+        $items = $cart->items($request);
+
+        return [
+            'items' => $items,
+            'summary' => $cart->summarize($items),
+        ];
     }
 }

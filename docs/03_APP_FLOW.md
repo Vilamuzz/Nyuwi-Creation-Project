@@ -8,7 +8,6 @@
 | About Page | `/about` | No | Guest | Store information |
 | Shop / Product Catalog | `/shop` | No | Guest | Browse products, search, filter by category |
 | Product Detail | `/product/{slug}` | No | Guest | View product details and add to cart |
-| Admin Registration | `/admin/register` | No | Guest | Create admin account (store owner) |
 | Login | `/login` | No | Guest | User authentication |
 | Register | `/register` | No | Guest | Customer registration |
 | Customer Profile | `/customer/profile` | Yes | Customer | View order history, profile info |
@@ -112,7 +111,7 @@ Customer Registration:
 4. Verified → Redirected to `/shop` or intended page
 
 Admin Registration:
-1. Guest visits `/admin/register` (guest only)
+1. Guest visits `/register` (guest only)
 2. Fills admin details (name, email, password, store name)
 3. Submits → Admin account created with `is_admin` flag
 4. Auto-login → Redirected to `/dashboard`
@@ -162,8 +161,7 @@ Guest Navigation:
 ├── Shop (/shop)
 ├── Product Detail (/product/{slug})
 ├── Login (/login)
-├── Register (/register)
-└── Admin Register (/admin/register)
+└── Register (/register)
 
 Customer Navigation (authenticated):
 ├── Shop (/shop)

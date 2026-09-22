@@ -18,6 +18,7 @@ class Order extends Model
         'village',
         'province',
         'phone',
+        'email',
         'total_price',
         'payment_method',
         'payment_proof',

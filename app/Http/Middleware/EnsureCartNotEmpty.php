@@ -4,8 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Cart;
+use App\Services\CartService;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureCartNotEmpty
@@ -17,7 +16,7 @@ class EnsureCartNotEmpty
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $hasItems = Cart::where('user_id', Auth::id())->exists();
+        $hasItems = (new CartService())->items($request) !== [];
 
         if (!$hasItems) {
             return redirect()->route('cart.show')

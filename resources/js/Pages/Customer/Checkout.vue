@@ -1,8 +1,12 @@
 <script setup>
-import { Head, useForm, router, usePage } from "@inertiajs/vue3";
+import { Head, useForm, router, usePage, Link } from "@inertiajs/vue3";
+import ApplicationLogo from "@/Components/ApplicationLogo.vue";
+import FormInput from "@/Components/FormInput.vue";
+import FormSelect from "@/Components/FormSelect.vue";
+import ToastNotification from "@/Components/Customer/Sub-main/ToastNotification.vue";
 import { computed, ref, onMounted, watch } from "vue";
-import CustomersLayout from "@/Layouts/CustomersLayout.vue";
-import Hero from "@/Components/Customer/Main/Hero.vue";
+import { ChevronDown, ChevronLeft, ChevronRight, Mail } from "lucide-vue-next";
+import { formatPrice } from "@/Utils/format";
 
 const form = useForm({
     name: "",
@@ -12,57 +16,12 @@ const form = useForm({
     village: "",
     province: "",
     phone: "",
+    email: "",
     note: "",
     payment_method: "",
     shipping_method: "",
     shipping_cost: 0,
 });
-
-const showModal = ref(false);
-
-const openConfirmModal = () => {
-    showModal.value = true;
-};
-
-const closeModal = () => {
-    showModal.value = false;
-};
-
-// Di Checkout.vue, modifikasi fungsi confirmCheckout
-const confirmCheckout = () => {
-    if (!form.payment_method) {
-        form.setError("payment_method", "Payment method is required");
-        return;
-    }
-
-    form.shipping_cost = selectedShippingRate.value
-        ? parseInt(selectedShippingRate.value.price)
-        : 0;
-
-    form.post(route("customer.orders.store"), {
-        preserveScroll: true,
-        onSuccess: () => {
-            closeModal();
-            if (
-                form.payment_method === "digital_wallet" ||
-                form.payment_method === "qris"
-            ) {
-                localStorage.setItem("showPaymentInfo", "true");
-                localStorage.setItem("paymentAmount", totalWithShipping.value);
-                localStorage.setItem("paymentMethod", form.payment_method); // Store payment method
-            }
-            router.visit(route("cart.show"));
-        },
-    });
-};
-
-const formatPrice = (price) => {
-    return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-    }).format(price);
-};
 
 const cartTotal = computed(() => {
     if (!cartItems.value || cartItems.value.length === 0) return 0;
@@ -79,709 +38,515 @@ const props = defineProps({
 const cartItems = computed(() => props.cartItems);
 const isLoading = ref(false);
 const error = ref(null);
+const isOrderSummaryOpen = ref(false);
 
-const fetchCartItems = () => {};
-
-const provinces = ref([]);
-const cities = ref([]);
-const districts = ref([]);
-const villages = ref([]);
-
-const selectedProvince = ref(null);
-const selectedCity = ref(null);
-const selectedDistrict = ref(null);
-const selectedVillage = ref(null);
-
-const regionTarget = ref(null);
-
-const getProvinces = async () => {
-    regionTarget.value = "provinces";
-    try {
-        await router.get(route("regions.provinces"), {}, {
-            only: ['regionData'],
-            preserveState: true,
-            preserveScroll: true,
-        });
-    } catch (error) {
-        console.error("Error fetching provinces:", error);
-    }
+const onEnter = (el) => {
+    el.style.height = '0';
+    void el.offsetHeight;
+    el.style.height = `${el.scrollHeight}px`;
 };
 
-const getCities = async (provinceId) => {
-    if (!provinceId) return;
-    regionTarget.value = "cities";
-    try {
-        await router.get(route("regions.regencies", provinceId), {}, {
-            only: ['regionData'],
-            preserveState: true,
-            preserveScroll: true,
-        });
-        form.city = null;
-        form.district = null;
-        form.village = null;
-    } catch (error) {
-        console.error("Error fetching cities:", error);
-    }
+const onAfterEnter = (el) => {
+    el.style.height = 'auto';
 };
 
-const getDistricts = async (cityId) => {
-    if (!cityId) return;
-    regionTarget.value = "districts";
-    try {
-        await router.get(route("regions.districts", cityId), {}, {
-            only: ['regionData'],
-            preserveState: true,
-            preserveScroll: true,
-        });
-        form.district = null;
-        form.village = null;
-    } catch (error) {
-        console.error("Error fetching districts:", error);
-    }
+const onLeave = (el) => {
+    el.style.height = `${el.scrollHeight}px`;
+    void el.offsetHeight;
+    el.style.height = '0';
 };
 
-const getVillages = async (districtId) => {
-    if (!districtId) return;
-    regionTarget.value = "villages";
-    try {
-        await router.get(route("regions.villages", districtId), {}, {
-            only: ['regionData'],
-            preserveState: true,
-            preserveScroll: true,
-        });
-        form.village = null;
-    } catch (error) {
-        console.error("Error fetching villages:", error);
-    }
-};
-
-onMounted(() => {
-    getProvinces();
+const regions = ref({
+    provinces: [],
+    cities: [],
+    districts: [],
+    villages: [],
 });
 
-// Add these functions to convert IDs to names before form submission
-const setSelectedProvince = (provinceId) => {
-    const province = provinces.value.find((p) => p.id === parseInt(provinceId));
-    form.province = province ? province.name : "";
-    getCities(provinceId);
+const currentType = ref(null);
+
+const regionConfig = {
+    provinces: { route: "regions.provinces", param: () => null },
+    cities: {
+        route: "regions.regencies",
+        param: () => regions.value.provinces.find((p) => p.name === form.province || p.id === form.province)?.id ?? form.province,
+    },
+    districts: {
+        route: "regions.districts",
+        param: () => regions.value.cities.find((c) => c.name === form.city || c.id === form.city)?.id ?? form.city,
+    },
+    villages: {
+        route: "regions.villages",
+        param: () => regions.value.districts.find((d) => d.name === form.district || d.id === form.district)?.id ?? form.district,
+    },
 };
 
-// Add function to clean city name
-const cleanCityName = (cityName) => {
-    return cityName.replace(/KABUPATEN\s+/i, "").replace(/KOTA\s+/i, "");
-};
+const fetchRegions = async (type) => {
+    const config = regionConfig[type];
+    if (!config) return;
+    currentType.value = type;
+    const param = config.param?.();
 
-// Update setSelectedCity function
-const setSelectedCity = (cityId) => {
-    const city = cities.value.find((c) => c.id === parseInt(cityId));
-    form.city = city ? city.name : "";
-    getDistricts(cityId);
+    if (type !== "provinces" && (param === undefined || param === null || param === "")) return;
 
-    if (form.city && form.shipping_method) {
-        fetchShippingRates(form.city);
-    }
-};
-
-const setSelectedDistrict = (districtId) => {
-    const district = districts.value.find((d) => d.id === parseInt(districtId));
-    form.district = district ? district.name : "";
-    getVillages(districtId);
-};
-
-const setSelectedVillage = (villageId) => {
-    const village = villages.value.find((v) => v.id === parseInt(villageId));
-    form.village = village ? village.name : "";
-};
-
-// Update the computed property to check if the selected city matches the store city
-const isGoSendAvailable = computed(() => {
-    if (!form.city || !storeCity.value) return false;
-
-    // Clean both city names for comparison
-    const selectedCityClean = cleanCityName(form.city).toLowerCase();
-    const storeCityClean = cleanCityName(storeCity.value).toLowerCase();
-
-    return selectedCityClean === storeCityClean;
-});
-
-const shippingRates = ref([]);
-const selectedShippingRate = ref(null);
-const isLoadingRates = ref(false);
-
-// Modify fetchShippingRates function
-const fetchShippingRates = async (destination) => {
     try {
-        const cleanDestination = cleanCityName(destination);
-        isLoadingRates.value = true;
-
-        await router.post(route("shipping.calculate"), {
-            courier: form.shipping_method?.toLowerCase(),
-            origin: storeCity.value,
-            destination: cleanDestination,
-            weight: totalWeight.value,
-        }, {
-            only: ['shippingResult'],
-            preserveState: true,
-            preserveScroll: true,
-        });
-    } catch (error) {
-        console.error("Error fetching shipping rates:", error);
-    } finally {
-        isLoadingRates.value = false;
-    }
-};
-
-// Add watcher for shipping method changes
-watch(
-    () => form.shipping_method,
-    (newMethod) => {
-        if (form.city && newMethod) {
-            fetchShippingRates(form.city);
+        if (type === "cities") {
+            form.city = null;
+            form.district = null;
+            form.village = null;
+            regions.value.cities = [];
+            regions.value.districts = [];
+            regions.value.villages = [];
+        } else if (type === "districts") {
+            form.district = null;
+            form.village = null;
+            regions.value.districts = [];
+            regions.value.villages = [];
+        } else if (type === "villages") {
+            form.village = null;
+            regions.value.villages = [];
         }
-    }
-);
 
-// Add computed for total with shipping
+        await router.get(
+            param !== null && param !== undefined ? route(config.route, param) : route(config.route),
+            {},
+            {
+                only: ["regionData"],
+                preserveState: true,
+                preserveScroll: true,
+            },
+        );
+    } catch (error) {
+        console.error(`Error fetching ${type}:`, error);
+    }
+};
+
 const totalWithShipping = computed(() => {
     const subtotal = cartTotal.value;
-    const shippingCost = selectedShippingRate.value
-        ? parseInt(selectedShippingRate.value.price)
-        : 0;
+    const shippingCost = form.shipping_cost || 0;
     return subtotal + shippingCost;
 });
 
-// Add this function after your other computed properties
-const totalWeight = computed(() => {
-    if (!cartItems.value || cartItems.value.length === 0) return 1000; // Default to 1kg
-
-    return cartItems.value.reduce((total, item) => {
-        // Get the weight from product (in grams) and multiply by quantity
-        const itemWeight = item.product.weight * item.quantity;
-        return total + itemWeight;
-    }, 0);
-});
-
-// Add this after your other imports
 const page = usePage();
-watch(() => page.props.regionData, (data) => {
-    if (!data || !Array.isArray(data)) return;
-    const target = regionTarget.value;
-    if (target === "provinces") provinces.value = data;
-    else if (target === "cities") cities.value = data;
-    else if (target === "districts") districts.value = data;
-    else if (target === "villages") villages.value = data;
-}, { deep: true });
-watch(() => page.props.shippingResult, (result) => {
-    shippingRates.value = result?.data?.costs || [];
-}, { deep: true });
 
-const storeCity = computed(() => {
-    // Access the profile store data from Inertia shared props
-    const profileStore = page.props.storeCity;
-    return profileStore.toLowerCase();
+watch(
+    () => page.props.regionData,
+    (data) => {
+        if (!data || !Array.isArray(data)) return;
+        if (currentType.value) {
+            regions.value[currentType.value] = data;
+        }
+    },
+    { deep: true },
+);
+
+const currentStep = ref("information"); // 'information' | 'shipping' | 'payment'
+
+const shippingOptions = [
+    { id: "jne", name: "JNE Regular (2-3 Hari)", service: "JNE", cost: 15000 },
+    { id: "gosend", name: "GoSend Instant", service: "GoSend", cost: 30000 },
+];
+
+const paymentOptions = [
+    { id: "qris", name: "QRIS", description: "Scan QRIS (GoPay, OVO, ShopeePay, DANA, Mobile Banking)" },
+    { id: "digital_wallet", name: "Digital Wallet", description: "Pembayaran instan via E-Wallet" },
+];
+
+const selectShippingOption = (option) => {
+    form.shipping_method = option.service;
+    form.shipping_cost = option.cost;
+};
+
+const toast = ref({
+    show: false,
+    message: "",
+    type: "warning",
 });
 
-// Add this function after your other formatting functions
-const formatWeight = (weight) => {
-    if (weight < 1000) {
-        return `${weight} g`;
-    } else {
-        return `${(weight / 1000).toFixed(1)} kg`;
-    }
+const triggerToast = (message, type = "warning") => {
+    toast.value = {
+        show: true,
+        message,
+        type,
+    };
 };
+
+const hideToast = () => {
+    toast.value.show = false;
+};
+
+const goToStep = (step) => {
+    if (step === "shipping") {
+        if (!form.name || !form.address || !form.province || !form.city || !form.district || !form.village || !form.phone) {
+            triggerToast("Silakan lengkapi semua data alamat pengiriman terlebih dahulu.", "warning");
+            return;
+        }
+        if (!form.shipping_method && shippingOptions.length > 0) {
+            selectShippingOption(shippingOptions[0]);
+        }
+    }
+    if (step === "payment") {
+        if (!form.shipping_method) {
+            triggerToast("Silakan pilih metode pengiriman terlebih dahulu.", "warning");
+            return;
+        }
+        if (!form.payment_method && paymentOptions.length > 0) {
+            form.payment_method = paymentOptions[0].id;
+        }
+    }
+    currentStep.value = step;
+};
+
+const submitOrder = () => {
+    form.post(route("customer.orders.store"), {
+        preserveScroll: true,
+        onError: (errors) => {
+            console.error("Error submitting order:", errors);
+        },
+    });
+};
+
+onMounted(() => {
+    fetchRegions("provinces");
+});
 </script>
 
 <template>
+
     <Head title="Checkout" />
-    <CustomersLayout>
-        <Hero title="Checkout" breadcrumb="Home > Cart > Checkout" />
+    <ToastNotification :show="toast.show" :message="toast.message" :type="toast.type" @close="hideToast" />
+    <!-- Add loading state -->
+    <div v-if="isLoading" class="flex justify-center items-center py-20">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+        <p class="ml-3">Loading cart items...</p>
+    </div>
 
-        <!-- Add loading state -->
-        <div v-if="isLoading" class="flex justify-center items-center py-20">
-            <div
-                class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"
-            ></div>
-            <p class="ml-3">Loading cart items...</p>
-        </div>
+    <!-- Add error state -->
+    <div v-else-if="error" class="text-center py-20">
+        <p class="text-red-500">{{ error }}</p>
+        <button @click="() => { }" class="mt-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">
+            Retry
+        </button>
+    </div>
 
-        <!-- Add error state -->
-        <div v-else-if="error" class="text-center py-20">
-            <p class="text-red-500">{{ error }}</p>
-            <button
-                @click="() => {}"
-                class="mt-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
-            >
-                Retry
-            </button>
-        </div>
-
-        <form v-else>
-            <section class="mx-24 flex flex-row my-16 gap-x-8">
-                <div class="felx flex-col space-y-4 w-1/2">
-                    <h1 class="font-bold text-2xl">Billing details</h1>
-
-                    <div class="flex flex-col space-y-2">
-                        <label for="first_name">Nama*</label>
-                        <input
-                            v-model="form.name"
-                            type="text"
-                            class="rounded-md border-gray-400"
-                            required
-                        />
-                        <div
-                            v-if="form.errors.name"
-                            class="text-red-500 text-sm mt-1"
-                        >
-                            {{ form.errors.name }}
-                        </div>
-                    </div>
-                    <div class="flex flex-col space-y-2">
-                        <label for="address">Alamat*</label>
-                        <input
-                            v-model="form.address"
-                            type="text"
-                            class="rounded-md border-gray-400"
-                            required
-                        />
-                        <div
-                            v-if="form.errors.address"
-                            class="text-red-500 text-sm mt-1"
-                        >
-                            {{ form.errors.address }}
-                        </div>
-                    </div>
-                    <div class="flex flex-col space-y-2">
-                        <label for="province">Provinsi*</label>
-                        <select
-                            @change="setSelectedProvince($event.target.value)"
-                            class="rounded-md border-gray-400"
-                            required
-                        >
-                            <option value="">Pilih Provinsi</option>
-                            <option
-                                v-for="province in provinces"
-                                :key="province.id"
-                                :value="province.id"
-                            >
-                                {{ province.name }}
-                            </option>
-                        </select>
-                        <div
-                            v-if="form.errors.province"
-                            class="text-red-500 text-sm mt-1"
-                        >
-                            {{ form.errors.province }}
-                        </div>
-                    </div>
-                    <div class="flex flex-col space-y-2">
-                        <label for="city">Kota*</label>
-                        <select
-                            @change="setSelectedCity($event.target.value)"
-                            class="rounded-md border-gray-400"
-                            required
-                            :disabled="!form.province"
-                        >
-                            <option value="">Pilih Kota</option>
-                            <option
-                                v-for="city in cities"
-                                :key="city.id"
-                                :value="city.id"
-                            >
-                                {{ city.name }}
-                            </option>
-                        </select>
-                        <div
-                            v-if="form.errors.city"
-                            class="text-red-500 text-sm mt-1"
-                        >
-                            {{ form.errors.city }}
-                        </div>
-                    </div>
-                    <div class="flex flex-col space-y-2">
-                        <label for="district">Kecamatan*</label>
-                        <select
-                            @change="setSelectedDistrict($event.target.value)"
-                            class="rounded-md border-gray-400"
-                            required
-                            :disabled="!form.city"
-                        >
-                            <option value="">Pilih Kecamatan</option>
-                            <option
-                                v-for="district in districts"
-                                :key="district.id"
-                                :value="district.id"
-                            >
-                                {{ district.name }}
-                            </option>
-                        </select>
-                        <div
-                            v-if="form.errors.district"
-                            class="text-red-500 text-sm mt-1"
-                        >
-                            {{ form.errors.district }}
-                        </div>
-                    </div>
-                    <div class="flex flex-col space-y-2">
-                        <label for="village">Kelurahan*</label>
-                        <select
-                            @change="setSelectedVillage($event.target.value)"
-                            class="rounded-md border-gray-400"
-                            required
-                            :disabled="!form.district"
-                        >
-                            <option value="">Pilih Kelurahan</option>
-                            <option
-                                v-for="village in villages"
-                                :key="village.id"
-                                :value="village.id"
-                            >
-                                {{ village.name }}
-                            </option>
-                        </select>
-                        <div
-                            v-if="form.errors.village"
-                            class="text-red-500 text-sm mt-1"
-                        >
-                            {{ form.errors.village }}
-                        </div>
-                    </div>
-                    <div class="flex flex-col space-y-2">
-                        <label for="phone">Telepon*</label>
-                        <input
-                            v-model="form.phone"
-                            type="text"
-                            class="rounded-md border-gray-400"
-                            required
-                        />
-                        <div
-                            v-if="form.errors.phone"
-                            class="text-red-500 text-sm mt-1"
-                        >
-                            {{ form.errors.phone }}
-                        </div>
-                    </div>
-                    <div class="flex flex-col space-y-2">
-                        <label for="note">Catatan</label>
-                        <input
-                            v-model="form.note"
-                            type="text"
-                            class="rounded-md border-gray-400"
-                        />
-                    </div>
-                </div>
-                <div class="flex flex-col w-1/2">
-                    <div class="flex flex-row justify-between">
-                        <h1 class="font-bold text-2xl">Produk</h1>
-                        <h1 class="font-bold text-2xl">Harga</h1>
-                    </div>
-                    <div
-                        v-for="item in cartItems"
-                        :key="item.id"
-                        class="flex flex-row justify-between py-2"
-                    >
-                        <div class="flex flex-col">
-                            <h1 class="text-gray-400">
-                                {{ item.product.name }} x {{ item.quantity }}
-                            </h1>
-                            <div class="text-sm text-gray-500">
-                                <span v-if="item.size"
-                                    >Size: {{ item.size }}</span
-                                >
-                                <span v-if="item.color" class="ml-2">
-                                    Color:
-                                    <span
-                                        class="inline-block w-4 h-4 rounded-full ml-1"
-                                        :style="{ backgroundColor: item.color }"
-                                    ></span>
+    <form v-else>
+        <div class="flex min-h-screen">
+            <section class="flex flex-col items-center w-full md:w-1/2 px-4 sm:px-10 py-10 md:py-14 gap-12">
+                <div class="w-full max-w-md space-y-10">
+                    <div class="flex flex-col items-center gap-5">
+                        <ApplicationLogo class="h-16 w-auto fill-current text-gray-800" />
+                        <div>
+                            <button type="button" @click="isOrderSummaryOpen = !isOrderSummaryOpen"
+                                class="flex md:hidden justify-between items-center w-[100vw] -mx-4 sm:-mx-10 px-4 sm:px-10 py-3 bg-orange-500 text-white cursor-pointer shadow-sm">
+                                <span class="flex items-center gap-2 font-medium"> Order Summary
+                                    <ChevronDown class="w-5 h-5 transition-transform duration-300"
+                                        :class="{ 'rotate-180': isOrderSummaryOpen }" />
                                 </span>
-                            </div>
-                        </div>
-                        <h1 class="text-gray-400">
-                            {{ formatPrice(item.price * item.quantity) }}
-                        </h1>
-                    </div>
-                    <div
-                        class="flex flex-row justify-between mt-4 pt-4 border-t"
-                    >
-                        <h1 class="font-bold">Total</h1>
-                        <h1 class="font-bold">{{ formatPrice(cartTotal) }}</h1>
-                    </div>
-                    <div class="flex flex-col space-y-3">
-                        <h1 class="font-bold text-2xl">Metode Pengiriman</h1>
-                        <div class="flex flex-col space-y-2">
-                            <div class="space-x-2">
-                                <input
-                                    type="radio"
-                                    id="jne"
-                                    value="JNE"
-                                    v-model="form.shipping_method"
-                                    name="shipping_method"
-                                    class="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300"
-                                />
-                                <label
-                                    for="jne"
-                                    class="text-sm font-medium text-gray-700"
-                                    >JNE</label
-                                >
-                            </div>
-                            <div
-                                v-if="isLoadingRates"
-                                class="flex items-center space-x-2 text-gray-500 ml-6"
-                            >
-                                <svg
-                                    class="animate-spin h-5 w-5"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <circle
-                                        class="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        stroke-width="4"
-                                    ></circle>
-                                    <path
-                                        class="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                    ></path>
-                                </svg>
-                                <span>Loading shipping rates...</span>
-                            </div>
-                            <div
-                                v-if="shippingRates.length > 0"
-                                class="mt-4 ml-6"
-                            >
-                                <h3 class="font-semibold mb-2">
-                                    Shipping Options
-                                </h3>
-                                <div class="space-y-2">
-                                    <div
-                                        v-for="rate in shippingRates"
-                                        :key="rate.service"
-                                        class="flex items-center space-x-2"
-                                    >
-                                        <input
-                                            type="radio"
-                                            :id="rate.service"
-                                            :value="rate"
-                                            v-model="selectedShippingRate"
-                                            name="shipping_rate"
-                                            class="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300"
-                                        />
-                                        <label
-                                            :for="rate.service"
-                                            class="flex justify-between w-full"
-                                        >
-                                            <span
-                                                >{{ rate.service }} ({{
-                                                    rate.estimated
-                                                }})</span
-                                            >
-                                            <span>{{
-                                                formatPrice(
-                                                    parseInt(rate.price)
-                                                )
-                                            }}</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="space-x-2">
-                                <input
-                                    type="radio"
-                                    id="GoSend"
-                                    value="GoSend"
-                                    v-model="form.shipping_method"
-                                    name="shipping_method"
-                                    :disabled="!isGoSendAvailable"
-                                    class="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300 disabled:opacity-50"
-                                />
-                                <label
-                                    for="GoSend"
-                                    :class="[
-                                        'text-sm font-medium',
-                                        isGoSendAvailable
-                                            ? 'text-gray-700'
-                                            : 'text-gray-400',
-                                    ]"
-                                >
-                                    Go Send
-                                    {{
-                                        !isGoSendAvailable && storeCity
-                                            ? `(Only available in ${storeCity})`
-                                            : !isGoSendAvailable
-                                            ? "(City not available)"
-                                            : ""
-                                    }}
-                                </label>
-                            </div>
-                        </div>
+                                <h1 class="font-extrabold text-lg">
+                                    {{ formatPrice(totalWithShipping) }}
+                                </h1>
+                            </button>
 
-                        <div
-                            v-if="form.errors.shipping_method"
-                            class="text-red-500 text-sm mt-1"
-                        >
-                            {{ form.errors.shipping_method }}
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col space-y-3">
-                        <h1 class="font-bold text-2xl">Metode Pembayaran</h1>
-                        <div class="flex flex-col space-y-2">
-                            <div class="space-x-2">
-                                <input
-                                    type="radio"
-                                    id="digital_wallet"
-                                    value="digital_wallet"
-                                    v-model="form.payment_method"
-                                    name="payment_method"
-                                />
-                                <label for="digital_wallet"
-                                    >Digital Wallet (Dana)</label
-                                >
-                            </div>
-                            <div class="space-x-2">
-                                <input
-                                    type="radio"
-                                    id="qris"
-                                    value="qris"
-                                    v-model="form.payment_method"
-                                    name="payment_method"
-                                />
-                                <label for="qris">QRIS Payment</label>
-                            </div>
-
-                            <div
-                                v-if="form.errors.payment_method"
-                                class="text-red-500 text-sm mt-1"
-                            >
-                                {{ form.errors.payment_method }}
-                            </div>
-                            <div class="items-center flex">
-                                <button
-                                    type="button"
-                                    @click="openConfirmModal"
-                                    class="mx-auto w-1/2 mt-4 py-2 border border-black hover:border-transparent hover:text-white rounded-md hover:bg-orange-500 duration-150"
-                                >
-                                    Place Order
-                                </button>
-                                <div
-                                    v-if="showModal"
-                                    class="fixed inset-0 z-50 overflow-y-auto"
-                                >
-                                    <div
-                                        class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-                                    ></div>
-
-                                    <div
-                                        class="flex min-h-full items-center justify-center p-4"
-                                    >
-                                        <div
-                                            class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
-                                        >
-                                            <div
-                                                class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4"
-                                            >
-                                                <div
-                                                    class="sm:flex sm:items-start"
-                                                >
-                                                    <div
-                                                        class="mt-3 text-center sm:mt-0 sm:text-left"
-                                                    >
-                                                        <h3
-                                                            class="text-lg font-bold leading-6 text-gray-900"
-                                                        >
-                                                            Confirm Order
-                                                        </h3>
-                                                        <div class="mt-2">
-                                                            <p
-                                                                class="text-sm text-gray-500"
-                                                            >
-                                                                Are you sure you
-                                                                want to place
-                                                                this order?
-                                                                Total amount:
-                                                                {{
-                                                                    formatPrice(
-                                                                        cartTotal
-                                                                    )
-                                                                }}
-                                                            </p>
-                                                        </div>
+                            <!-- Collapsible Order Summary for Mobile -->
+                            <Transition enter-active-class="transition-all duration-300 ease-out overflow-hidden"
+                                enter-from-class="opacity-0" enter-to-class="opacity-100"
+                                leave-active-class="transition-all duration-300 ease-in overflow-hidden"
+                                leave-from-class="opacity-100" leave-to-class="opacity-0" @enter="onEnter"
+                                @after-enter="onAfterEnter" @leave="onLeave">
+                                <div v-if="isOrderSummaryOpen"
+                                    class="block md:hidden w-[100vw] -mx-4 sm:-mx-10 bg-orange-500 text-white border-t border-orange-400">
+                                    <div class="px-6 sm:px-10 py-6 flex flex-col">
+                                        <div v-for="item in cartItems" :key="item.id"
+                                            class="flex flex-row justify-between items-center py-2 text-white border-orange-400/40 last:border-0">
+                                            <div class="flex items-center gap-4">
+                                                <img :src="'/storage/products/' + item.product.images[0]"
+                                                    :alt="item.product.name"
+                                                    class="w-16 h-16 object-cover rounded-2xl" />
+                                                <div class="flex flex-col">
+                                                    <h1 class="font-bold">
+                                                        {{ item.product.name }} x {{ item.quantity }}
+                                                    </h1>
+                                                    <div class="flex items-center text-gray-200 text-sm">
+                                                        <span v-if="item.size">Size: {{ item.size }}</span>
+                                                        <span v-if="item.color" class="ml-2 flex items-center">
+                                                            Color:
+                                                            <span
+                                                                class="inline-block w-4 h-4 rounded-full ml-1 border border-white/30"
+                                                                :style="{ backgroundColor: item.color }"></span>
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>
+                                            <h1 class="text-xl font-semibold">
+                                                {{ formatPrice(item.price * item.quantity) }}
+                                            </h1>
+                                        </div>
+                                        <div
+                                            class="flex flex-col mt-4 pt-4 border-t border-orange-300 text-white text-xl">
+                                            <div class="flex justify-between">
+                                                <h1>Subtotal</h1>
+                                                <h1>{{ formatPrice(cartTotal) }}</h1>
+                                            </div>
+                                            <div v-if="form.shipping_cost > 0"
+                                                class="flex justify-between text-gray-200">
+                                                <h1>Shipping</h1>
+                                                <h1>{{ formatPrice(form.shipping_cost) }}</h1>
+                                            </div>
                                             <div
-                                                class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6"
-                                            >
-                                                <button
-                                                    type="button"
-                                                    class="inline-flex w-full justify-center rounded-md bg-orange-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 sm:ml-3 sm:w-auto"
-                                                    @click="confirmCheckout"
-                                                    :disabled="form.processing"
-                                                >
-                                                    {{
-                                                        form.processing
-                                                            ? "Processing..."
-                                                            : "Confirm Order"
-                                                    }}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-                                                    @click="closeModal"
-                                                >
-                                                    Cancel
-                                                </button>
+                                                class="flex justify-between pt-2 font-extrabold text-2xl border-orange-400">
+                                                <h1>Total</h1>
+                                                <h1>{{ formatPrice(totalWithShipping) }}</h1>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+                            </Transition>
+                        </div>
+
+                        <nav aria-label="Checkout progress"
+                            class="flex items-center justify-center text-sm text-gray-600 flex-wrap gap-y-1">
+                            <Link href="/cart"
+                                class="px-1 font-medium text-gray-900 hover:text-orange-500 transition-colors">Cart
+                            </Link>
+                            <ChevronRight :size="16" class="text-gray-400" />
+                            <button type="button" @click="goToStep('information')" class="px-1 transition-colors"
+                                :class="currentStep === 'information' ? 'font-semibold text-gray-900' : 'font-medium text-gray-500 hover:text-gray-800'">
+                                Information
+                            </button>
+                            <ChevronRight :size="16" class="text-gray-400" />
+                            <button type="button" @click="goToStep('shipping')" class="px-1 transition-colors"
+                                :class="currentStep === 'shipping' ? 'font-semibold text-gray-900' : 'font-medium text-gray-400 hover:text-gray-800'">
+                                Shipping
+                            </button>
+                            <ChevronRight :size="16" class="text-gray-400" />
+                            <button type="button" @click="goToStep('payment')" class="px-1 transition-colors"
+                                :class="currentStep === 'payment' ? 'font-semibold text-gray-900' : 'font-medium text-gray-400 hover:text-gray-800'">
+                                Payment
+                            </button>
+                        </nav>
+                    </div>
+
+                    <!-- STEP 1: INFORMATION -->
+                    <div v-if="currentStep === 'information'" class="space-y-6">
+                        <div class="space-y-5">
+                            <h2 class="flex items-center gap-3 text-xl font-bold text-gray-900">
+                                Contact
+                            </h2>
+                            <FormInput v-if="!page.props.auth?.user" v-model="form.email" type="email"
+                                placeholder="contoh@email.com" :error="form.errors.email" required />
+                            <p v-else class="flex items-center gap-2 text-sm text-gray-600">
+                                <Mail :size="16" class="text-gray-400" />
+                                {{ page.props.auth.user.email }}
+                            </p>
+                        </div>
+
+                        <div class="space-y-4">
+                            <h2 class="flex items-center gap-3 text-xl font-bold text-gray-900 mb-5">
+                                Shipping address
+                            </h2>
+                            <FormInput v-model="form.name" type="text" placeholder="Nama lengkap penerima"
+                                :error="form.errors.name" required />
+                            <FormInput v-model="form.address" type="text" placeholder="Alamat lengkap"
+                                :error="form.errors.address" required />
+                            <FormSelect v-model="form.province" :options="regions.provinces" option-label="name"
+                                option-value="name" placeholder="Pilih Provinsi" :error="form.errors.province" required
+                                @update:model-value="() => fetchRegions('cities')" />
+                            <FormSelect v-model="form.city" :options="regions.cities" option-label="name"
+                                option-value="name" placeholder="Pilih Kota" :error="form.errors.city" required
+                                :disabled="!form.province" @update:model-value="() => fetchRegions('districts')" />
+                            <FormSelect v-model="form.district" :options="regions.districts" option-label="name"
+                                option-value="name" placeholder="Pilih Kecamatan" :error="form.errors.district" required
+                                :disabled="!form.city" @update:model-value="() => fetchRegions('villages')" />
+                            <FormSelect v-model="form.village" :options="regions.villages" option-label="name"
+                                option-value="name" placeholder="Pilih Kelurahan" :error="form.errors.village" required
+                                :disabled="!form.district" />
+                            <FormInput v-model="form.phone" type="text" placeholder="08xxxxxxxxxx"
+                                :error="form.errors.phone" required />
+                        </div>
+                        <div class="flex flex-col sm:flex-row items-center justify-between pt-2 gap-4">
+                            <Link :href="route('cart.show')"
+                                class="inline-flex items-center justify-center w-full sm:w-auto gap-1 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors">
+                                <ChevronLeft :size="18" />Kembali ke Cart
+                            </Link>
+                            <button type="button" @click="goToStep('shipping')"
+                                class="inline-flex items-center justify-center w-full sm:w-auto gap-2 rounded-full bg-slate-800 py-3.5 px-8 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-900 hover:shadow-md active:scale-[0.98]">
+                                Lanjutkan ke Pengiriman
+                                <ChevronRight :size="18" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: SHIPPING TAB -->
+                    <div v-else-if="currentStep === 'shipping'" class="space-y-6">
+                        <!-- Summary Card -->
+                        <div class="rounded-xl border border-gray-200 p-4 space-y-3 bg-gray-50 text-sm">
+                            <div class="flex justify-between items-center pb-2 border-b border-gray-200">
+                                <div>
+                                    <span class="text-gray-500 block text-xs">Kontak</span>
+                                    <span class="text-gray-900 font-medium">{{ form.email ||
+                                        page.props.auth?.user?.email }}</span>
+                                </div>
+                                <button type="button" @click="goToStep('information')"
+                                    class="text-xs font-semibold text-orange-600 hover:underline">Ubah</button>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="text-gray-500 block text-xs">Kirim ke</span>
+                                    <span class="text-gray-900 font-medium">{{ form.name }}, {{ form.address }}, {{
+                                        form.city }}, {{ form.province }} ({{ form.phone }})</span>
+                                </div>
+                                <button type="button" @click="goToStep('information')"
+                                    class="text-xs font-semibold text-orange-600 hover:underline">Ubah</button>
                             </div>
                         </div>
-                    </div>
-                    <div
-                        class="flex flex-row justify-between mt-4 pt-4 border-t"
-                    >
-                        <div>
-                            <h1 class="font-bold">Subtotal</h1>
-                            <h1
-                                v-if="selectedShippingRate"
-                                class="text-gray-600"
-                            >
-                                Shipping ({{ selectedShippingRate.service }})
-                            </h1>
-                            <h1 class="font-bold mt-2">Total</h1>
+
+                        <!-- Shipping Method Selection -->
+                        <div class="space-y-3">
+                            <h2 class="text-xl font-bold text-gray-900">Metode Pengiriman</h2>
+                            <div class="space-y-2">
+                                <label v-for="option in shippingOptions" :key="option.id"
+                                    @click="selectShippingOption(option)"
+                                    class="flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-all"
+                                    :class="form.shipping_cost === option.cost && form.shipping_method === option.service ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500' : 'border-gray-200 hover:border-gray-300'">
+                                    <div class="flex items-center gap-3">
+                                        <input type="radio" name="shipping_option"
+                                            :checked="form.shipping_cost === option.cost && form.shipping_method === option.service"
+                                            class="text-orange-500 focus:ring-orange-500" />
+                                        <div>
+                                            <p class="font-semibold text-gray-900">{{ option.name }}</p>
+                                            <p class="text-xs text-gray-500">Kurir {{ option.service }}</p>
+                                        </div>
+                                    </div>
+                                    <span class="font-bold text-gray-900">{{ formatPrice(option.cost) }}</span>
+                                </label>
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <h1 class="font-bold">
-                                {{ formatPrice(cartTotal) }}
-                            </h1>
-                            <h1
-                                v-if="selectedShippingRate"
-                                class="text-gray-600"
-                            >
-                                {{
-                                    formatPrice(
-                                        parseInt(selectedShippingRate.price)
-                                    )
-                                }}
-                            </h1>
-                            <h1 class="font-bold mt-2">
-                                {{ formatPrice(totalWithShipping) }}
-                            </h1>
+
+                        <div class="flex flex-col sm:flex-row items-center justify-between pt-4 gap-4">
+                            <button type="button" @click="goToStep('information')"
+                                class="inline-flex items-center justify-center w-full sm:w-auto gap-1 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors">
+                                <ChevronLeft :size="18" />Kembali ke Informasi
+                            </button>
+                            <button type="button" @click="goToStep('payment')"
+                                class="inline-flex items-center justify-center w-full sm:w-auto gap-2 rounded-full bg-slate-800 py-3.5 px-8 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-900 hover:shadow-md active:scale-[0.98]">
+                                Lanjutkan ke Pembayaran
+                                <ChevronRight :size="18" />
+                            </button>
                         </div>
                     </div>
-                    <div class="border-t pt-2 mt-2">
-                        <p class="text-sm text-gray-500">
-                            Total weight: {{ formatWeight(totalWeight) }}
-                        </p>
+
+                    <!-- STEP 3: PAYMENT TAB -->
+                    <div v-else-if="currentStep === 'payment'" class="space-y-6">
+                        <!-- Summary Card -->
+                        <div class="rounded-xl border border-gray-200 p-4 space-y-3 bg-gray-50 text-sm">
+                            <div class="flex justify-between items-center pb-2 border-b border-gray-200">
+                                <div>
+                                    <span class="text-gray-500 block text-xs">Kirim ke</span>
+                                    <span class="text-gray-900 font-medium">{{ form.name }}, {{ form.address }}, {{
+                                        form.city }}</span>
+                                </div>
+                                <button type="button" @click="goToStep('information')"
+                                    class="text-xs font-semibold text-orange-600 hover:underline">Ubah</button>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="text-gray-500 block text-xs">Metode Pengiriman</span>
+                                    <span class="text-gray-900 font-medium">{{ form.shipping_method }} ({{
+                                        formatPrice(form.shipping_cost) }})</span>
+                                </div>
+                                <button type="button" @click="goToStep('shipping')"
+                                    class="text-xs font-semibold text-orange-600 hover:underline">Ubah</button>
+                            </div>
+                        </div>
+
+                        <!-- Payment Method Selection -->
+                        <div class="space-y-3">
+                            <h2 class="text-xl font-bold text-gray-900">Metode Pembayaran</h2>
+                            <div class="space-y-2">
+                                <label v-for="option in paymentOptions" :key="option.id"
+                                    @click="form.payment_method = option.id"
+                                    class="flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-all"
+                                    :class="form.payment_method === option.id ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500' : 'border-gray-200 hover:border-gray-300'">
+                                    <div class="flex items-center gap-3">
+                                        <input type="radio" name="payment_option"
+                                            :checked="form.payment_method === option.id"
+                                            class="text-orange-500 focus:ring-orange-500" />
+                                        <div>
+                                            <p class="font-semibold text-gray-900">{{ option.name }}</p>
+                                            <p class="text-xs text-gray-500">{{ option.description }}</p>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row items-center justify-between pt-2 gap-4">
+                            <button type="button" @click="goToStep('shipping')"
+                                class="inline-flex items-center justify-center w-full sm:w-auto gap-1 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors">
+                                <ChevronLeft :size="18" />Kembali ke Pengiriman
+                            </button>
+                            <button type="button" @click="submitOrder" :disabled="form.processing"
+                                class="inline-flex items-center justify-center w-full sm:w-auto gap-2 rounded-full bg-orange-500 py-3.5 px-8 text-sm font-bold text-white shadow-md transition-all hover:bg-orange-600 hover:shadow-lg active:scale-[0.98] disabled:opacity-50">
+                                {{ form.processing ? 'Memproses...' : 'Buat Pesanan' }}
+                                <ChevronRight :size="18" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </section>
-        </form>
-    </CustomersLayout>
+            <section
+                class="md:flex flex-col items-center w-full md:w-1/2 px-6 sm:px-10 py-10 md:py-14 gap-12 hidden bg-orange-500 p-10">
+                <div class="w-1/2">
+                    <div class="flex flex-col">
+                        <div v-for="item in cartItems" :key="item.id"
+                            class="flex flex-row justify-between items-center py-2 text-white">
+                            <div class="flex items-center gap-4">
+                                <img :src="'/storage/products/' +
+                                    item.product.images[0]
+                                    " :alt="item.product.name" class="w-16 h-16 object-cover rounded-2xl" />
+                                <div class="flex flex-col">
+                                    <h1 class="font-bold">
+                                        {{ item.product.name }} x
+                                        {{ item.quantity }}
+                                    </h1>
+                                    <div class="flex items-center text-gray-200">
+                                        <span v-if="item.size">Size: {{ item.size }}</span>
+                                        <span v-if="item.color" class="ml-2 flex items-center">
+                                            Color:
+                                            <span class="inline-block w-4 h-4 rounded-full ml-1" :style="{
+                                                backgroundColor: item.color,
+                                            }"></span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <h1 class="text-xl">
+                                {{ formatPrice(item.price * item.quantity) }}
+                            </h1>
+                        </div>
+                        <div class="flex flex-col mt-4 pt-4 border-t text-white text-xl">
+                            <div class="flex justify-between">
+                                <h1>Subtotal</h1>
+                                <h1>{{ formatPrice(cartTotal) }}</h1>
+                            </div>
+                            <div class="flex justify-between">
+                                <h1 v-if="form.shipping_cost > 0">
+                                    Shipping
+                                </h1>
+                                <h1 v-if="form.shipping_cost > 0">
+                                    {{ formatPrice(form.shipping_cost) }}
+                                </h1>
+                            </div>
+                            <div class="flex justify-between">
+                                <h1 class="font-extrabold text-2xl">Total</h1>
+                                <h1 class="font-extrabold text-2xl">
+                                    {{ formatPrice(totalWithShipping) }}
+                                </h1>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </form>
 </template>

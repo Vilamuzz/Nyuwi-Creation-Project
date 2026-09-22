@@ -13,7 +13,7 @@ const cartItems = computed(() => props.cartItems);
 const isLoading = ref(false);
 const error = ref(null);
 
-const fetchCart = () => {};
+const fetchCart = () => { };
 
 const deleteForm = useForm({});
 const updateForm = useForm({ quantity: 1 });
@@ -73,23 +73,23 @@ const closePaymentModal = () => {
 };
 </script>
 <template>
-    <Head title="Shoping Cart" />
+
+    <Head title="Your Shoping Cart" />
     <CustomersLayout>
-        <Hero title="Cart" breadcrumb="Home > Cart" />
-        <section class="mx-24 flex flex-row my-16 gap-x-8">
+        <div class="relative flex flex-col items-center justify-center text-center h-48">
+            <h1 class="text-7xl font-bold">Cart</h1>
+        </div>
+        <section class="mx-auto max-w-7xl flex flex-col md:flex-row my-8 md:my-16 gap-8 px-4 sm:px-6 lg:px-8">
             <!-- Bagian Tabel Produk -->
-            <div class="w-3/4">
+            <div class="w-full md:w-3/4 overflow-x-auto">
                 <div>
                     <table class="w-full text-left">
                         <!-- Header Tabel -->
                         <thead>
                             <tr class="px-4 py-8 bg-orange-100">
-                                <th class="px-4 py-5">Gambar</th>
-                                <th class="px-4 py-5">Nama</th>
-                                <th class="px-4 py-5">Harga</th>
-                                <th class="px-4 py-5">Jumlah</th>
-                                <th class="px-4 py-5">Harga</th>
-                                <th class="px-4 py-5">Aksi</th>
+                                <th class="px-4 py-5">Produk</th>
+                                <th class="px-4 py-5 text-center">Jumlah</th>
+                                <th class="px-4 py-5">Total</th>
                             </tr>
                         </thead>
 
@@ -98,64 +98,47 @@ const closePaymentModal = () => {
                             <!-- Contoh Item Produk -->
                             <tr v-for="item in cartItems" :key="item.id">
                                 <td class="px-4 py-4">
-                                    <img
-                                        :src="
-                                            '/storage/products/' +
+                                    <div class="flex gap-4 items-center">
+                                        <img :src="'/storage/products/' +
                                             item.product.images[0]
-                                        "
-                                        alt="Product Image"
-                                        class="w-16 h-16 object-cover rounded-md"
-                                    />
-                                </td>
-                                <td class="px-4 py-4">
-                                    {{ item.product.name }}
-                                    <div class="text-sm text-gray-500">
-                                        <span v-if="item.size"
-                                            >Size: {{ item.size }}</span
-                                        >
-                                        <span v-if="item.color" class="ml-2"
-                                            >Color:
-                                            <span
-                                                class="inline-block w-4 h-4 rounded-full ml-1"
-                                                :style="{
+                                            " alt="Product Image" class="w-16 h-16 object-cover rounded-md" />
+
+                                        <div class="flex flex-col text-sm text-gray-500">
+                                            <p class="font-semibold text-black">{{ item.product.name }}</p>
+                                            <p class="font-semibold text-black">{{ formatPrice(item.price) }}</p>
+                                            <span v-if="item.color">Color:
+                                                <span class="inline-block w-4 h-4 rounded-full" :style="{
                                                     backgroundColor: item.color,
-                                                }"
-                                            ></span>
-                                        </span>
+                                                }"></span>
+                                            </span>
+                                            <span v-if="item.size">Size: {{ item.size }}</span>
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="px-4 py-4">
-                                    {{ formatPrice(item.price) }}
-                                </td>
-                                <td class="px-4 py-4">
-                                    <input
-                                        type="number"
-                                        :value="item.quantity"
-                                        min="1"
-                                        class="text-center w-16 px-2 py-1 border rounded-md [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                        @change="
-                                            updateQuantity(
-                                                item,
-                                                $event.target.value
-                                            )
-                                        "
-                                    />
+                                    <div class="flex flex-col items-center gap-2">
+                                        <input type="number" :value="item.quantity" min="1"
+                                            class="h-10 w-10 p-0 text-center font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            @change="
+                                                updateQuantity(
+                                                    item,
+                                                    $event.target.value
+                                                )
+                                                " />
+
+                                        <button @click="deleteCartItem(item.id)"
+                                            class="text-red-500 hover:text-red-700 underline">
+                                            Hapus
+                                        </button>
+                                    </div>
+
                                 </td>
                                 <td class="px-4 py-4">
                                     {{
                                         formatPrice(item.price * item.quantity)
                                     }}
                                 </td>
-                                <td class="px-4 py-4">
-                                    <button
-                                        @click="deleteCartItem(item.id)"
-                                        class="text-red-500 hover:text-red-700"
-                                    >
-                                        Hapus
-                                    </button>
-                                </td>
                             </tr>
-                            <!-- Tambahkan item lain sesuai kebutuhan -->
                         </tbody>
 
                         <tbody v-else>
@@ -169,35 +152,23 @@ const closePaymentModal = () => {
                 </div>
             </div>
 
-            <!-- Bagian Ringkasan Keranjang -->
-            <div class="bg-red-100 w-1/4 p-8">
+            <div class="bg-red-100 w-full md:w-1/4 p-6 md:p-8 rounded-lg shrink-0">
                 <h2 class="text-xl font-bold mb-4">Ringkasan Belanja</h2>
                 <p>Total: {{ formatPrice(summary.subtotal || cartTotal) }}</p>
                 <div class="mt-4 flex items-center">
-                    <Link
-                        v-if="cartItems && cartItems.length > 0"
-                        :href="route('checkout')"
-                        class="w-full text-center px-8 py-2 border border-black hover:border-transparent hover:text-white rounded-md hover:bg-orange-500 duration-150"
-                    >
+                    <Link v-if="cartItems && cartItems.length > 0" :href="route('checkout')"
+                        class="w-full text-center px-8 py-2 border border-black hover:border-transparent hover:text-white rounded-md hover:bg-orange-500 duration-150">
                         Checkout
                     </Link>
-                    <button
-                        v-else
-                        disabled
-                        class="w-full text-center px-8 py-2 border border-gray-300 text-gray-500 rounded-md bg-gray-100 cursor-not-allowed"
-                    >
+                    <button v-else disabled
+                        class="w-full text-center px-8 py-2 border border-gray-300 text-gray-500 rounded-md bg-gray-100 cursor-not-allowed">
                         Checkout
                     </button>
                 </div>
             </div>
         </section>
         <!-- Payment Information Modal -->
-        <PaymentInformationModal
-            v-if="showPaymentModal"
-            :onClose="closePaymentModal"
-            :paymentMethod="
-                localStorage.getItem('paymentMethod') || 'digital_wallet'
-            "
-        />
+        <PaymentInformationModal v-if="showPaymentModal" :onClose="closePaymentModal" :paymentMethod="localStorage.getItem('paymentMethod') || 'digital_wallet'
+            " />
     </CustomersLayout>
 </template>

@@ -11,7 +11,6 @@ use App\Http\Controllers\ShippingController;
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileStoreController;
-use App\Http\Controllers\Auth\AdminRegistrationController;
 
 // Public Routes
 Route::middleware(['customer'])->group(function () {
@@ -33,14 +32,8 @@ Route::middleware(['customer'])->group(function () {
 
     // Shipping calculation
     Route::post('/shipping/calculate', [ShippingController::class, 'calculate'])->name('shipping.calculate');
-});
 
-// Authenticated Customer Routes
-Route::middleware(['auth', 'customer'])->group(function () {
-    // Customer Profile / Dashboard
-    Route::get('/customer/profile', [OrderController::class, 'orderUser'])->name('customer.profile');
-
-    // Cart Management
+    // Cart Management (available to guests via session-backed cart)
     Route::controller(CartController::class)->prefix('cart')->name('cart.')->group(function () {
         Route::get('/', 'showCart')->name('show');
         Route::post('/', 'store')->name('store');
@@ -48,14 +41,19 @@ Route::middleware(['auth', 'customer'])->group(function () {
         Route::delete('/{id}', 'destroy')->name('destroy');
     });
 
-    // Checkout
+    // Checkout (available to guests and customers)
     Route::get('/checkout', [CartController::class, 'showCheckout'])->middleware('check.cart')->name('checkout');
+    Route::post('/customer/orders/checkout', [OrderController::class, 'store'])->name('customer.orders.store');
+});
 
+// Authenticated Customer Routes
+Route::middleware(['auth', 'customer'])->group(function () {
+    // Customer Profile / Dashboard
+    Route::get('/customer/profile', [OrderController::class, 'orderUser'])->name('customer.profile');
 
     // Customer Order Management
     Route::controller(OrderController::class)->prefix('customer/orders')->name('customer.orders.')->group(function () {
         Route::get('/', 'userOrders')->name('index');
-        Route::post('/checkout', 'store')->name('store');
         Route::post('/complete', 'complete')->name('complete');
         Route::post('/upload-proof', 'uploadPaymentProof')->name('proof');
         Route::get('/tracking/{trackingNumber}', 'tracking')->name('tracking');
@@ -106,12 +104,6 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/data', function () {
         return Inertia::render('Admin/Database');
     })->name('data');
-});
-
-// Guest Routes
-Route::middleware('guest')->group(function () {
-    Route::get('admin/register', [AdminRegistrationController::class, 'create'])->name('admin.register');
-    Route::post('admin/register', [AdminRegistrationController::class, 'store']);
 });
 
 require __DIR__ . '/auth.php';

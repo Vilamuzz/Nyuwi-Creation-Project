@@ -25,7 +25,6 @@ const form = useForm({
     instagram: props.profile.instagram || "",
     facebook: props.profile.facebook || "",
     tiktok: props.profile.tiktok || "",
-    admin_registration_code: "",
     _method: "PUT",
 });
 
@@ -489,38 +488,6 @@ onMounted(async () => {
                                 class="mt-2"
                                 :message="form.errors.phone"
                             />
-                        </div>
-
-                        <!-- Admin Registration Code -->
-                        <div class="border-t pt-4">
-                            <h3 class="text-lg font-medium mb-4">
-                                Admin Settings
-                            </h3>
-
-                            <div>
-                                <InputLabel
-                                    for="admin_registration_code"
-                                    value="Admin Registration Code"
-                                />
-                                <TextInput
-                                    id="admin_registration_code"
-                                    type="password"
-                                    class="mt-1 block w-full"
-                                    v-model="form.admin_registration_code"
-                                    placeholder="Enter new admin registration code"
-                                />
-                                <div class="mt-1 text-sm text-gray-500">
-                                    Leave empty to keep current admin
-                                    registration code. This code is required for
-                                    admin registration.
-                                </div>
-                                <InputError
-                                    class="mt-2"
-                                    :message="
-                                        form.errors.admin_registration_code
-                                    "
-                                />
-                            </div>
                         </div>
 
                         <!-- Social Media - Optional Fields -->

@@ -1,19 +1,28 @@
 <script setup>
 import Navbar from "@/Components/Customer/Main/Navbar.vue";
 import Footer from "@/Components/Customer/Main/Footer.vue";
+import CartDrawer from "@/Components/Customer/Main/CartDrawer.vue";
 import { usePage } from "@inertiajs/vue3";
+import { ref } from "vue";
 
 const page = usePage();
 const auth = page.props.auth;
 const orders = [];
+
+const isCartOpen = ref(false);
 </script>
 
 <template>
-    <Navbar :is-logged-in="!!auth.user" :orders="orders" />
+    <Navbar
+        :is-logged-in="!!auth.user"
+        :orders="orders"
+        @show-cart="isCartOpen = true"
+    />
     <main>
         <slot></slot>
     </main>
     <Footer />
+    <CartDrawer :is-open="isCartOpen" @close="isCartOpen = false" />
 
     <!-- Floating WhatsApp Button -->
     <a

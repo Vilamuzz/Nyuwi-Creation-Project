@@ -151,12 +151,6 @@ DELETE /profile                    ProfileController@destroy            name: pr
 GET    /data                       (closure)                            name: data
 ```
 
-### Guest routes
-```
-GET    /admin/register             AdminRegistrationController@create   name: admin.register
-POST   /admin/register             AdminRegistrationController@store
-```
-
 ## Form Requests to create
 - `CartStoreRequest` — `product_id`, `quantity`, `size`, `color`
 - `CartUpdateRequest` — `quantity`

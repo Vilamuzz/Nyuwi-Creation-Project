@@ -126,7 +126,7 @@ const handleImageError = (event) => {
                     <div ref="newProductsRail"
                         class="flex snap-x snap-mandatory gap-6 overflow-x-auto py-4 no-scrollbar">
                         <Product v-for="item in props.newProducts" :key="item.slug"
-                            class="w-[18rem] shrink-0 snap-start sm:w-[21rem]" :slug="item.slug" :name="item.name"
+                            class="w-[18rem] shrink-0 snap-start sm:w-[21rem]" :id="item.id" :slug="item.slug" :name="item.name"
                             :price="formatPrice(item.price)" :category="getCategoryName(item.category_id)"
                             :image="item.image" :rating="item.average_rating || 0"
                             :total-reviews="item.total_reviews || 0" :stock="item.stock" :colors="item.colors"
@@ -201,7 +201,7 @@ const handleImageError = (event) => {
                     <div ref="featuredProductsRail"
                         class="flex snap-x snap-mandatory gap-6 overflow-x-auto py-4 no-scrollbar">
                         <Product v-for="item in props.featuredProducts" :key="item.slug"
-                            class="w-[18rem] shrink-0 snap-start sm:w-[21rem]" :slug="item.slug" :name="item.name"
+                            class="w-[18rem] shrink-0 snap-start sm:w-[21rem]" :id="item.id" :slug="item.slug" :name="item.name"
                             :price="formatPrice(item.price)" :category="getCategoryName(item.category_id)"
                             :image="item.image" :rating="item.average_rating || 0"
                             :total-reviews="item.total_reviews || 0" :stock="item.stock" :colors="item.colors"

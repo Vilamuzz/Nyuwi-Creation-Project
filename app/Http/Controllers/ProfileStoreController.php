@@ -6,7 +6,6 @@ use Inertia\Inertia;
 use App\Models\ProfileStore;
 use Illuminate\Http\Request;
 use Intervention\Image\ImageManager;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
 
@@ -27,7 +26,6 @@ class ProfileStoreController extends Controller
             'instagram' => 'nullable|string|max:255',
             'facebook' => 'nullable|string|max:255',
             'tiktok' => 'nullable|string|max:255',
-            'admin_registration_code' => 'nullable|string|min:6|max:50',
         ];
 
         // Only require the logo if a new one is uploaded
@@ -88,11 +86,6 @@ class ProfileStoreController extends Controller
             $updateData['qris'] = $qrisPath;
         }
 
-        // Update admin registration code in .env if provided
-        if (!empty($validatedData['admin_registration_code'])) {
-            $this->updateEnvFile('ADMIN_REGISTRATION_CODE', $validatedData['admin_registration_code']);
-        }
-
         $profile->update($updateData);
 
         return back()->with('success', 'Store profile updated successfully!');
@@ -104,31 +97,5 @@ class ProfileStoreController extends Controller
         return Inertia::render('Admin/ProfileStore/Edit', [
             'profile' => $profile
         ]);
-    }
-
-    /**
-     * Update environment file
-     */
-    private function updateEnvFile($key, $value)
-    {
-        $envFile = base_path('.env');
-        $envContent = file_get_contents($envFile);
-
-        // Escape special characters for regex
-        $escapedKey = preg_quote($key, '/');
-
-        // Check if key exists
-        if (preg_match("/^{$escapedKey}=.*/m", $envContent)) {
-            // Update existing key
-            $envContent = preg_replace("/^{$escapedKey}=.*/m", "{$key}={$value}", $envContent);
-        } else {
-            // Add new key
-            $envContent .= "\n{$key}={$value}";
-        }
-
-        file_put_contents($envFile, $envContent);
-
-        // Clear config cache to reflect changes
-        Artisan::call('config:clear');
     }
 }

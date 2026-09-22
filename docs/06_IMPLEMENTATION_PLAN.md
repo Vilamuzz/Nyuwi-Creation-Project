@@ -23,10 +23,10 @@
 - [x] Laravel Breeze auth scaffolding (Vue + Inertia preset)
 - [x] Laravel Sanctum for API token authentication
 - [x] Role-based middleware: `admin`, `customer`, `check.cart`
-- [x] Guest routes: `/login`, `/register`, `/admin/register`
+- [x] Guest routes: `/login`, `/register`
 - [x] Email verification (`MustVerifyEmail` on User model)
 - [x] Password reset flow
-- [x] Admin registration restricted to guest middleware
+- [x] Admin accounts created via `php artisan create:admin` or `UserSeeder` (no public registration)
 
 ## Phase 4: Indonesian Region Data ✅ COMPLETE
 - [x] `azishapidin/indoregion` package installed

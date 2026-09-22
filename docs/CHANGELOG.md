@@ -1,95 +1,105 @@
 # Changelog
 
-## [2026-09-18] — Remove wishlist feature
+## [2026-09-22] — Polish checkout information step (form section)
 
-- Removed wishlist routes, controller, request, model, customer pages/components, navigation links, and product-card/detail controls.
-- Removed wishlist data from the customer dashboard and added a forward migration that drops the `wishlists` table (with a rollback definition).
-- Added feature coverage confirming former wishlist endpoints return `404`.
-- Updated active product, technical, flow, UX, schema, and implementation documentation to remove wishlist references.
-
-
-## [2026-09-18] — Add sale-page filter drawer toggle
-
-- Added an accessible filter button that opens the sale-page filter drawer.
-- Added close and backdrop-click controls for the drawer.
-- Updated `resources/js/Pages/Customer/SalePage.vue`.
-
-
-## [2026-09-17] — Rework landing page, merge About, remove DaisyUI
-
-### Overview
-- Reworked `LandingPage.vue` into a focused, accessible, responsive e‑commerce landing page following UI‑UX‑Pro‑Max guidance
-- Merged the content of `About.vue` into the homepage as an anchor‑link section (`/#about`)
-- Removed the dedicated `/about` route and deleted `About.vue`
-- Updated `Navbar.vue` and `Footer.vue` to point to `/#about` instead of `/about`
-- **Removed DaisyUI package** (`daisyui`) from the project, replacing all DaisyUI classes with pure Tailwind CSS equivalents
-- Updated all components that used DaisyUI (admin and customer UI) to use custom, accessible Tailwind styles
-- Verified that the Vite build compiles without errors
+- Redesigned the left checkout section in `resources/js/Pages/Customer/Checkout.vue` into a centered `max-w-md` column (was a half-width, right-aligned, double-nested layout) so the form reads cleanly on both desktop and mobile; parent container changed from `h-screen` to `min-h-screen` so the form scrolls instead of clipping on short screens.
+- Rebuilt the step indicator (Cart → Information → Shipping → Payment): active step is now `font-semibold` with an orange dot, inactive steps are muted `text-gray-400`, separators are consistent 16px chevrons, and the `nav` got an `aria-label`.
+- Replaced placeholder-only fields with real `<label>`s (Email, Nama, Alamat, Provinsi, Kota, Kecamatan, Kelurahan, Telepon) via a new optional `label` prop on `FormInput`/`FormSelect`; placeholders remain as hints. Required fields show a red `*`.
+- When a user is logged in, the Contact block now shows their email as a muted read-only row instead of an empty heading.
+- Switched input focus styling from `indigo` to the brand `orange-500`, and unified corner radius to `rounded-lg` (previously mixed `rounded-lg`/`rounded-md`).
+- Section headings now have numbered orange badges (1 · 2) for hierarchy.
+- "Kembali" is now a `Link` to `route('cart.show')` with a proper hover state; "Lanjutkan" is a styled `type="button"` (visual-only for now — the Shipping/Payment steps that provide `payment_method`/`shipping_method` aren't built yet, so submission stays unwired).
+- Added `role="alert"` to `InputError.vue` so validation errors are announced to screen readers.
+- Verified with `npm run build` and `php artisan test`.
 
 ### Files changed
-#### Frontend pages
-- `resources/js/Pages/Customer/LandingPage.vue` – complete rewrite with improved UX flow
-- `resources/js/Pages/Customer/About.vue` – deleted
-- `routes/web.php` – removed `/about` route
+- `resources/js/Pages/Customer/Checkout.vue`
+- `resources/js/Components/FormInput.vue`
+- `resources/js/Components/FormSelect.vue`
+- `resources/js/Components/InputError.vue`
 
-#### Shared components (customer)
-- `resources/js/Components/Customer/Main/Navbar.vue`
-- `resources/js/Components/Customer/Main/Footer.vue`
-- `resources/js/Components/Customer/Main/WishlistTab.vue`
-- `resources/js/Components/Customer/Sub-main/ToastNotification.vue`
-- `resources/js/Components/Customer/Sub-main/CategoryInput.vue`
-- `resources/js/Components/Customer/Sub-main/ColorPicker.vue`
-- `resources/js/Components/Customer/Sub-main/SizeInput.vue`
-- `resources/js/Components/Customer/Sub-main/ImageInput.vue`
+## [2026-09-19] — Remove confirmation prompt when deleting item from Cart Drawer
 
-#### Admin components
-- `resources/js/Pages/Admin/Orders/Index.vue`
-- `resources/js/Pages/Admin/Products/Create.vue`
-- `resources/js/Pages/Admin/Products/Edit.vue`
-- `resources/js/Pages/Admin/Products/Index.vue`
-- `resources/js/Pages/Admin/ProfileStore/Edit.vue`
-- `resources/js/Pages/Customer/Wishlist.vue`
+- Removed `confirm(...)` browser prompt in `removeItem(item)` method in `resources/js/Components/Customer/Main/CartDrawer.vue`.
 
-#### Configuration
-- `package.json` – removed `daisyui` dependency
-- `tailwind.config.js` – removed DaisyUI plugin and theme
-- `tests/Feature/RemoveApiLayerTest.php` – added test for `/about` route removal
+### Files changed
+- `resources/js/Components/Customer/Main/CartDrawer.vue`
 
-### UX improvements in the landing page
-- **Hero section** – concise value proposition with two CTAs (shop now / learn about us)
-- **Category discovery** – clickable category cards with hover effects
-- **Featured products** – preserved existing product data and card component
-- **Brand story section** – merged About content into an accessible `id="about"` anchor
-- **Service benefits** – four‑column responsive grid of trust signals
-- **Final CTA** – strong conversion‑oriented prompt to browse the collection
-- **Accessibility** – semantic headings, descriptive image alternatives, keyboard‑visible focus states, reduced‑motion respect
+## [2026-09-19] — Bottom-right option selection confirmation pop-up for product add-to-cart
 
-### DaisyUI removal details
-All DaisyUI-specific classes (`btn`, `dropdown`, `toast`, `alert`, `join`, `badge`, `form-control`, `label-text`, `input‑bordered`, `textarea‑bordered`, `select‑bordered`, `input‑error`, `textarea‑error`, `bg‑base‑*`, `text‑base‑content`, `border‑base‑*`) were replaced with Tailwind‑only utility classes that maintain the same visual hierarchy and interactive states.
+- Added hover overlay button to `resources/js/Components/Customer/Sub-main/Product.vue`.
+- Added a bottom-right option confirmation pop-up window (`Teleport` to `body`, styled consistently with cart/filter drawers).
+- Added smooth dark backdrop overlay transition (`bg-black/30`) with `@click="closeOptionModal"` to dismiss modal on outside click.
+- Safely parsed `colors` and `sizes` (handling arrays, stringified JSON, or null) into computed `parsedColors` and `parsedSizes`.
+- Passed `:colors` and `:sizes` props across all `<Product />` list instances (`LandingPage.vue`, `BoquetsPage.vue`, `SalePage.vue`, `Pages/Customer/Product.vue`).
+- Submits selected options (`product_id`, `quantity`, `color`, `size`) to `cart.store` via Inertia `router.post`.
 
-### Verification
-- `npm run build` succeeded without errors
-- Package dependency tree updated and `node_modules` cleaned
-- Routes tested manually in browser (homepage, `/shop`, `/wishlist`, admin pages) confirm no missing styles
-- All components remain fully functional with consistent branding and spacing
+### Files changed
+- `resources/js/Components/Customer/Sub-main/Product.vue`
+- `resources/js/Pages/Customer/LandingPage.vue`
+- `resources/js/Pages/Customer/BoquetsPage.vue`
+- `resources/js/Pages/Customer/SalePage.vue`
+- `resources/js/Pages/Customer/Product.vue`
 
-## [2026-09-17] — Split landing product rails and sales-based featured products
+## [2026-09-19] — Guest checkout: buy without authentication
 
-### Overview
-- Added separate `newProducts` and `featuredProducts` Inertia props to the landing page.
-- `New Drops` now displays the newest products.
-- `Produk Unggulan` now ranks products by quantity sold in completed orders.
-- Added local category image fallbacks and a stable Unsplash fallback for missing or failed images.
-- Converted category and product sections into button-controlled horizontal rails with larger cards.
-- Added category, stock, color-count, and size-count information to product cards.
-- Updated landing-page feature coverage for the new props.
+- Moved `GET /checkout` and `POST /customer/orders/checkout` (order placement) into the public `customer` route group, so guests can complete a purchase without an account. Order history, tracking, payment-proof upload, and the review/complete flow stay login-only.
+- `orders.user_id` is now nullable and an `orders.email` column was added via migration `2026_09_19_053218_make_orders_user_id_nullable_add_email.php`, so guest orders carry no user reference but capture the buyer's email (required for guests, defaults to the account email for logged-in users).
+- `OrderController::store` now handles both flows in one transaction: authenticated users order from their DB cart, guests order from the session cart (`CartService`); the guest session cart is cleared after the order is placed.
+- `CartController` now delegates cart read/write to `CartService` (single source for guest and user carts); `EnsureCartNotEmpty` uses the service too.
+- `OrderStoreRequest` requires `email` for guests via `Rule::requiredIf(!Auth::check())`; added an email field to `Checkout.vue` (shown only for guests).
+- The cart drawer's guest CTA changed from "Login untuk Checkout" to a direct `Checkout` link.
+- Added `tests/Feature/GuestCheckoutTest.php` (guest checkout page access, empty-cart redirect, guest order placement with email, missing-email validation, empty-cart rejection, authenticated user order linking) and updated `RemoveApiLayerTest.php` (order placement no longer redirects guests to `/login`).
+- Verified with `php artisan test --testsuite=Feature` (49 passed) and `npm run build`.
 
-### Verification
-- `npm run build` succeeded.
-- `docker compose exec app php artisan test` could not complete because the default TTY could not attach in this environment.
-- The non-TTY retry (`docker compose exec -T app php artisan test`) was denied by the environment.
+### Files changed
+- `database/migrations/2026_09_19_053218_make_orders_user_id_nullable_add_email.php`
+- `app/Http/Controllers/CartController.php`
+- `app/Http/Controllers/OrderController.php`
+- `app/Http/Middleware/EnsureCartNotEmpty.php`
+- `app/Services/CartService.php`
+- `app/Models/Order.php`
+- `app/Http/Requests/OrderStoreRequest.php`
+- `routes/web.php`
+- `resources/js/Pages/Customer/Checkout.vue`
+- `resources/js/Components/Customer/Main/CartDrawer.vue`
+- `tests/Feature/GuestCheckoutTest.php`
+- `tests/Feature/RemoveApiLayerTest.php`
 
-### Next steps
-- Deploy changes and monitor for any visual regression
-- Consider adding a small JavaScript snippet to smooth-scroll to the `#about` anchor if desired
-- Update any external documentation that references the `/about` page
+## [2026-09-22] — Modernize Authentication UI & Remove Default Breeze Styling
+
+- Replaced default Laravel Breeze gray theme (`bg-gray-100`) and standard centered box in `GuestLayout.vue` with an ambient warm-toned background gradient (`from-amber-50/50 via-stone-50 to-orange-50/40`), brand logo, and a top navigation link to return to the storefront ("Kembali ke Beranda").
+- Enhanced `GuestLayout` card container with responsive padding, modern rounded corners (`rounded-2xl`), subtle borders, and soft elevation (`shadow-xl shadow-stone-200/60`).
+- Updated core form components (`TextInput.vue`, `Checkbox.vue`, `PrimaryButton.vue`) to replace Breeze default indigo accents and dark gray uppercase buttons with Nyuwi Creation brand orange styling (`orange-500`, `focus:ring-orange-400/500`, modern border radii).
+- Modernized all authentication views:
+  - `Login.vue`: Welcoming title and subtitle, brand input placeholders, full-width CTA button, and clear link to registration.
+  - `Register.vue`: Modern stacked fields, full-width CTA button, and link to login.
+  - `ForgotPassword.vue`: Clean instructions, branded status alerts, full-width reset link button, and link back to login.
+  - `ResetPassword.vue`: Clean password reset card with full-width submit button.
+  - `VerifyEmail.vue`: Branded verification status card with mail icon, full-width resend button, and logout action.
+  - `ConfirmPassword.vue`: Secure area prompt with lock icon and branded controls.
+- Verified with `docker compose exec app php artisan test tests/Feature/Auth/` (all 18 tests passed) and `npm run build` (built cleanly).
+
+### Files changed
+- `resources/js/Layouts/GuestLayout.vue`
+- `resources/js/Components/TextInput.vue`
+- `resources/js/Components/Checkbox.vue`
+- `resources/js/Components/PrimaryButton.vue`
+- `resources/js/Pages/Auth/Login.vue`
+- `resources/js/Pages/Auth/Register.vue`
+- `resources/js/Pages/Auth/ForgotPassword.vue`
+- `resources/js/Pages/Auth/ResetPassword.vue`
+- `resources/js/Pages/Auth/VerifyEmail.vue`
+- `resources/js/Pages/Auth/ConfirmPassword.vue`
+- `docs/CHANGELOG.md`
+
+## [2026-09-22] — Update README with Current Setup, Migrations, Seeders & Admin Command
+
+- Updated project overview from outdated "simple to do list using laravel and react" to Nyuwi Creation E-Commerce (Laravel 11, Vue 3 Inertia, Tailwind CSS).
+- Documented Docker and local startup steps, ports, and Vite dev server usage.
+- Documented database migrations (`php artisan migrate`) and seeders (`php artisan db:seed`) along with default test accounts.
+- Documented CLI command for creating admin accounts (`php artisan create:admin` interactive and option flags).
+
+### Files changed
+- `README.md`
+- `docs/CHANGELOG.md`

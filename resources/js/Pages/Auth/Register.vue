@@ -22,99 +22,110 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Register" />
+        <Head title="Daftar Akun" />
 
-        <form @submit.prevent="submit">
+        <div class="mb-6 text-center">
+            <h1 class="text-2xl font-bold tracking-tight text-stone-900">
+                Buat Akun Baru
+            </h1>
+            <p class="mt-1.5 text-sm text-stone-500">
+                Daftar untuk menikmati kemudahan berbelanja di Nyuwi Creation
+            </p>
+        </div>
+
+        <form @submit.prevent="submit" class="space-y-4">
             <div>
-                <InputLabel for="name" value="Name" />
+                <InputLabel for="name" value="Nama Lengkap" class="text-stone-700 font-medium" />
 
                 <TextInput
                     id="name"
                     type="text"
-                    class="mt-1 block w-full"
+                    class="mt-1.5 block w-full"
                     v-model="form.name"
+                    placeholder="Nama Lengkap Anda"
                     required
                     autofocus
                     autocomplete="name"
                 />
 
-                <InputError class="mt-2" :message="form.errors.name" />
+                <InputError class="mt-1.5" :message="form.errors.name" />
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="email" value="Email" />
+            <div>
+                <InputLabel for="email" value="Email" class="text-stone-700 font-medium" />
 
                 <TextInput
                     id="email"
                     type="email"
-                    class="mt-1 block w-full"
+                    class="mt-1.5 block w-full"
                     v-model="form.email"
+                    placeholder="nama@email.com"
                     required
                     autocomplete="username"
                 />
 
-                <InputError class="mt-2" :message="form.errors.email" />
+                <InputError class="mt-1.5" :message="form.errors.email" />
             </div>
 
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
+            <div>
+                <InputLabel for="password" value="Kata Sandi" class="text-stone-700 font-medium" />
 
                 <TextInput
                     id="password"
                     type="password"
-                    class="mt-1 block w-full"
+                    class="mt-1.5 block w-full"
                     v-model="form.password"
+                    placeholder="Minimal 8 karakter"
                     required
                     autocomplete="new-password"
                 />
 
-                <InputError class="mt-2" :message="form.errors.password" />
+                <InputError class="mt-1.5" :message="form.errors.password" />
             </div>
 
-            <div class="mt-4">
+            <div>
                 <InputLabel
                     for="password_confirmation"
-                    value="Confirm Password"
+                    value="Konfirmasi Kata Sandi"
+                    class="text-stone-700 font-medium"
                 />
 
                 <TextInput
                     id="password_confirmation"
                     type="password"
-                    class="mt-1 block w-full"
+                    class="mt-1.5 block w-full"
                     v-model="form.password_confirmation"
+                    placeholder="Ulangi kata sandi"
                     required
                     autocomplete="new-password"
                 />
 
                 <InputError
-                    class="mt-2"
+                    class="mt-1.5"
                     :message="form.errors.password_confirmation"
                 />
             </div>
 
-            <div class="mt-4 flex items-center justify-end space-x-4">
-                <Link
-                    :href="route('login')"
-                    class="underline text-sm text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                >
-                    Already registered?
-                </Link>
-
-                <Link
-                    :href="route('admin.register')"
-                    class="inline-flex items-center px-4 py-2 bg-orange-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-orange-600 focus:bg-orange-600 active:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition ease-in-out duration-150"
-                >
-                    Register as Admin
-                </Link>
-
+            <div class="pt-3">
                 <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
+                    class="w-full"
+                    :class="{ 'opacity-50 cursor-not-allowed': form.processing }"
                     :disabled="form.processing"
                 >
-                    Register
+                    <span v-if="form.processing">Mendaftarkan...</span>
+                    <span v-else>Daftar Akun</span>
                 </PrimaryButton>
             </div>
         </form>
+
+        <div class="mt-6 pt-5 border-t border-stone-100 text-center text-sm text-stone-600">
+            Sudah memiliki akun?
+            <Link
+                :href="route('login')"
+                class="font-semibold text-orange-600 hover:text-orange-700 hover:underline ml-1 transition-colors"
+            >
+                Masuk di Sini
+            </Link>
+        </div>
     </GuestLayout>
 </template>
