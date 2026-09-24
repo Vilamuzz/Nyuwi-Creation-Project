@@ -1,4 +1,3 @@
-resources\js\Components\Customer\Sub-main\ImageInput.vue
 <script setup>
 import { ref, onUnmounted, onMounted, watch } from "vue";
 import { ImageUp } from "lucide-vue-next";
@@ -184,7 +183,7 @@ onUnmounted(() => {
 
 <template>
     <div class="mb-4">
-        <label class="mb-2 block text-sm font-medium text-gray-700">
+        <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
             <span class="font-semibold">
                 Gambar Produk* ({{ imagePreviews.length }}/{{ maxImages }})
             </span>

@@ -3,15 +3,35 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\Order;
 use App\Models\Product;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    //
-
     public function index()
     {
+        // Store Key Performance Indicators
+        $totalRevenue = (int) Order::whereNotIn('status', ['cancelled', 'waiting'])->sum('total_price');
+        $pendingOrdersCount = Order::whereIn('status', ['waiting', 'checking', 'processing'])->count();
+        $totalProductsCount = Product::count();
+        $lowStockCount = Product::where('stock', '<', 10)->count();
+
+        // Recent Orders
+        $recentOrders = Order::latest()
+            ->take(5)
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'name' => $order->name,
+                    'total_price' => $order->total_price,
+                    'status' => $order->status,
+                    'payment_method' => $order->payment_method,
+                    'created_at' => $order->created_at?->toISOString() ?? now()->toISOString(),
+                ];
+            });
+
         // Get top selling products
         $topSelling = Product::withCount(['orderItems as total_sold' => function ($query) {
             $query->whereHas('order', function ($q) {
@@ -72,6 +92,13 @@ class DashboardController extends Controller
             });
 
         return Inertia::render('Admin/Dashboard', [
+            'stats' => [
+                'totalRevenue' => $totalRevenue,
+                'pendingOrdersCount' => $pendingOrdersCount,
+                'totalProductsCount' => $totalProductsCount,
+                'lowStockCount' => $lowStockCount,
+            ],
+            'recentOrders' => $recentOrders,
             'topSelling' => $topSelling,
             'mostRated' => $mostRated,
             'lowStock' => $lowStock

@@ -54,7 +54,7 @@ const handleImageError = (event) => {
 
 <template>
 
-    <Head title="Nyuwi Creation | Handmade pieces with meaning" />
+    <Head title="Nyuwi Creation" />
     <CustomersLayout>
         <section class="relative isolate overflow-hidden bg-stone-950 text-white" aria-labelledby="hero-title">
             <img src="/img/background/hero.svg" alt=""
@@ -95,7 +95,7 @@ const handleImageError = (event) => {
                         maupun pelengkap ruangmu.</p>
                 </div>
                 <div v-if="props.categories.length" class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    <Link v-for="category in props.categories" :key="category.id" href="/sale"
+                    <Link v-for="category in props.categories.slice(0, 3)" :key="category.id" href="/sale"
                         class="group overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-200 transition hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-orange-500">
                         <img :src="categoryImage(category)" :alt="category.name"
                             class="h-72 w-full object-cover transition duration-500 group-hover:scale-105"

@@ -40,7 +40,7 @@ const removeSize = (index) => {
 <template>
     <div class="mb-4">
         <label class="mb-2 block text-sm font-medium text-gray-700">
-            <span class="font-semibold">Ukuran</span>
+            <span class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">Ukuran</span>
         </label>
         <div class="flex">
             <input

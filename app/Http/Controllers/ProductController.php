@@ -76,7 +76,6 @@ class ProductController extends Controller
             "price" => "required|numeric|min:1",
             "weight" => "required|numeric|min:1",
             "category_id" => "nullable|integer|exists:categories,id",
-            "new_category" => "nullable|string|max:255",
             "description" => "required|string",
             "images" => "required|array",
             "images.*" => "image|mimes:jpeg,png,jpg|max:2048",
@@ -87,12 +86,6 @@ class ProductController extends Controller
         ];
 
         $validatedData = $request->validate($rules);
-
-        // Create new category if 'new_category' is filled
-        if ($request->filled("new_category")) {
-            $category = Category::create(["name" => $request->new_category]);
-            $validatedData["category_id"] = $category->id;
-        }
 
         // Handle multiple image uploads
         $imageNames = [];
@@ -163,7 +156,6 @@ class ProductController extends Controller
             "price" => "required|numeric|min:1",
             "weight" => "required|numeric|min:1",
             "category_id" => "nullable|integer|exists:categories,id",
-            "new_category" => "nullable|string|max:255",
             "description" => "required|string",
             "images" => "nullable|array",
             "images.*" => "image|mimes:jpeg,png,jpg|max:2048",
@@ -174,12 +166,6 @@ class ProductController extends Controller
         ];
 
         $validatedData = $request->validate($rules);
-
-        // Create new category if 'new_category' is filled
-        if ($request->filled("new_category")) {
-            $category = Category::create(["name" => $request->new_category]);
-            $validatedData["category_id"] = $category->id;
-        }
 
         $updateData = [
             "name" => $validatedData["name"],
@@ -302,7 +288,49 @@ class ProductController extends Controller
     }
 
     /**
-     * Show the shop page.
+     * Show the new & featured page.
+     */
+    public function newFeaturedPage(Request $request)
+    {
+        $query = Product::query()
+            ->withCount("reviews as total_reviews")
+            ->withAvg("reviews as average_rating", "rating");
+
+        if ($request->filled("search")) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where("name", "LIKE", "%{$search}%")->orWhere(
+                    "description",
+                    "LIKE",
+                    "%{$search}%",
+                );
+            });
+        }
+
+        if ($request->filled("category")) {
+            $query->where("category_id", $request->category);
+        }
+
+        if (
+            $request->filled("sortField") &&
+            $request->filled("sortDirection")
+        ) {
+            $query->orderBy($request->sortField, $request->sortDirection);
+        } else {
+            $query->latest();
+        }
+
+        $products = $query->paginate(16)->withQueryString();
+
+        return Inertia::render("Customer/NewFeaturedPage", [
+            "products" => $products,
+            "categories" => Category::all(),
+            "filters" => $request->only(["search", "category", "sortField", "sortDirection"]),
+        ]);
+    }
+
+    /**
+     * Show the shop / sale page (all categories).
      */
     public function salePage(Request $request)
     {
@@ -342,22 +370,28 @@ class ProductController extends Controller
         return Inertia::render("Customer/SalePage", [
             "products" => $products,
             "categories" => Category::all(),
-            "filters" => $request->only(["search", "category"]),
+            "filters" => $request->only(["search", "category", "sortField", "sortDirection"]),
         ]);
     }
 
-    public function boquetsPage(Request $request)
+    /**
+     * Helper to render category-specific catalog pages.
+     */
+    protected function renderCategoryPage(Request $request, string $categoryName, string $pageComponent, string $fallbackCategoryName = "")
     {
+        $category = Category::where("name", $categoryName)->first();
+        if (!$category && $fallbackCategoryName !== "") {
+            $category = Category::where("name", $fallbackCategoryName)->first();
+        }
+
         $query = Product::query()
             ->withCount("reviews as total_reviews")
             ->withAvg("reviews as average_rating", "rating");
 
-        // Apply category filter
-        if ($request->filled("category")) {
-            $query->where("category_id", $request->category);
+        if ($category) {
+            $query->where("category_id", $category->id);
         }
 
-        // Apply search filter
         if ($request->filled("search")) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -369,14 +403,42 @@ class ProductController extends Controller
             });
         }
 
-        $query->latest();
+        if (
+            $request->filled("sortField") &&
+            $request->filled("sortDirection")
+        ) {
+            $query->orderBy($request->sortField, $request->sortDirection);
+        } else {
+            $query->latest();
+        }
+
         $products = $query->paginate(16)->withQueryString();
 
-        return Inertia::render("Customer/BoquetsPage", [
+        return Inertia::render($pageComponent, [
             "products" => $products,
             "categories" => Category::all(),
-            "filters" => $request->only(["search"]),
+            "filters" => $request->only(["search", "sortField", "sortDirection"]),
         ]);
+    }
+
+    public function boquetsPage(Request $request)
+    {
+        return $this->renderCategoryPage($request, "Buket", "Customer/BoquetsPage", "Boquets");
+    }
+
+    public function flowersPage(Request $request)
+    {
+        return $this->renderCategoryPage($request, "Bunga", "Customer/FlowersPage", "Flowers");
+    }
+
+    public function accessoriesPage(Request $request)
+    {
+        return $this->renderCategoryPage($request, "Aksesoris", "Customer/AccessoriesPage", "Accessories");
+    }
+
+    public function bagsPage(Request $request)
+    {
+        return $this->renderCategoryPage($request, "Tas", "Customer/BagsPage", "Bags");
     }
 
     public function product(string $slug)
@@ -410,5 +472,47 @@ class ProductController extends Controller
             "productRating" => $productRating,
             "relatedProducts" => $relatedProducts,
         ]);
+    }
+
+    /**
+     * API search for live search dropdown.
+     */
+    public function apiSearch(Request $request)
+    {
+        $search = trim($request->get('q', $request->get('search', '')));
+
+        if (empty($search)) {
+            return response()->json([]);
+        }
+
+        $products = Product::query()
+            ->with('category')
+            ->where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                  ->orWhere('description', 'LIKE', "%{$search}%");
+            })
+            ->take(6)
+            ->get()
+            ->map(function ($product) {
+                $imagePath = null;
+                if (!empty($product->images) && is_array($product->images) && count($product->images) > 0) {
+                    $imageName = $product->images[0];
+                    $imagePath = str_starts_with($imageName, 'http')
+                        ? $imageName
+                        : asset('storage/products/' . $imageName);
+                }
+
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'slug' => $product->slug,
+                    'price' => (float) $product->price,
+                    'formatted_price' => 'Rp ' . number_format($product->price, 0, ',', '.'),
+                    'category' => $product->category ? $product->category->name : null,
+                    'image' => $imagePath,
+                ];
+            });
+
+        return response()->json($products);
     }
 }

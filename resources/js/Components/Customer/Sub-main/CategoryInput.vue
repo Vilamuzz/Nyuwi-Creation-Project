@@ -10,17 +10,9 @@ const props = defineProps({
         type: [String, Number],
         default: "",
     },
-    newCategory: {
-        type: String,
-        default: "",
-    },
 });
 
-const emit = defineEmits([
-    "update:modelValue",
-    "update:newCategory",
-    "categoryChange",
-]);
+const emit = defineEmits(["update:modelValue", "categoryChange"]);
 
 const selectedCategory = ref(props.modelValue);
 
@@ -33,7 +25,7 @@ watch(selectedCategory, (newValue) => {
 
 <template>
     <div class="mb-4">
-        <label class="mb-2 block text-sm font-medium text-gray-700">
+        <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
             <span class="font-semibold">Kategori*</span>
         </label>
         <select
@@ -48,15 +40,6 @@ watch(selectedCategory, (newValue) => {
             >
                 {{ category.name }}
             </option>
-            <option value="new">Tambah Kategori Baru</option>
         </select>
-        <div v-if="selectedCategory === 'new'" class="mt-2">
-            <input
-                :value="newCategory"
-                @input="$emit('update:newCategory', $event.target.value)"
-                placeholder="Nama Kategori Baru"
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-            />
-        </div>
     </div>
 </template>

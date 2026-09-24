@@ -13,18 +13,20 @@ class ProfileStoreSeeder extends Seeder
      */
     public function run(): void
     {
-        ProfileStore::create([
-            'name' => 'Nyuwi Creation',
-            'logo' => 'logo/nyuwi-creation-logo.png', // Assumes this file exists in storage/app/public/logo
-            'address' => 'Jl. Mawar No. 123, Kecamatan Peterongan',
-            'city' => 'Jombang',
-            'phone' => '081234567890',
-            'qris' => 'barcode.jpg',
-            'instagram' => 'nyuwi_creation',
-            'facebook' => 'nyuwicreation',
-            'tiktok' => '@nyuwicreation',
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
-        ]);
+        ProfileStore::firstOrCreate(
+            ['name' => 'Nyuwi Creation'],
+            [
+                'logo' => 'logo/nyuwi-creation-logo.png',
+                'address' => 'Jl. Mawar No. 123, Kecamatan Peterongan',
+                'city' => 'Jombang',
+                'phone' => '081234567890',
+                'qris' => 'barcode.jpg',
+                'instagram' => 'nyuwi_creation',
+                'facebook' => 'nyuwicreation',
+                'tiktok' => '@nyuwicreation',
+                'created_at' => Carbon::now(),
+                'updated_at' => Carbon::now(),
+            ]
+        );
     }
 }

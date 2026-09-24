@@ -6,6 +6,7 @@ use Inertia\Middleware;
 use App\Models\ProfileStore;
 use App\Services\CartService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -31,7 +32,7 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $profileStore = ProfileStore::first();
+        $profileStore = Cache::rememberForever('store_profile', fn () => ProfileStore::first());
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $request->user(),

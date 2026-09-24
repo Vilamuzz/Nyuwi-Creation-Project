@@ -38,7 +38,7 @@ selectedCategory.value = props.filters.category || "";
 const fetchShopData = () => {
     error.value = null;
     router.get(
-        route("boquets"),
+        route("new-featured"),
         {
             search: search.value,
             sortField: sortField.value,
@@ -56,7 +56,7 @@ const fetchShopData = () => {
                 isLoading.value = false;
             },
             onError: () => {
-                error.value = "Failed to load shop data";
+                error.value = "Failed to load products";
             },
         },
     );
@@ -66,14 +66,14 @@ const fetchShopData = () => {
 watch(
     search,
     debounce((value) => {
-        currentPage.value = 1; // Reset to page 1 on search
+        currentPage.value = 1;
         fetchShopData();
     }, 300),
 );
 
 // Watch for category changes
 watch(selectedCategory, (value) => {
-    currentPage.value = 1; // Reset to page 1 on category change
+    currentPage.value = 1;
     fetchShopData();
 });
 
@@ -82,7 +82,7 @@ const handleSort = (event) => {
     const [field, direction] = event.target.value.split("|");
     sortField.value = field;
     sortDirection.value = direction;
-    currentPage.value = 1; // Reset to page 1 on sort
+    currentPage.value = 1;
     fetchShopData();
 };
 
@@ -91,11 +91,10 @@ const changePage = async (page) => {
     currentPage.value = page;
     fetchShopData();
 
-    // Instantly scroll to top after data is loaded
     await nextTick();
     window.scrollTo({
         top: 0,
-        behavior: "auto", // Changed from "smooth" to "auto" for instant scroll
+        behavior: "auto",
     });
 };
 
@@ -114,17 +113,16 @@ const formatPrice = (price) => {
 </script>
 
 <template>
-
-    <Head title="Boquets" />
+    <Head title="New & Featured" />
     <CustomersLayout>
-        <Hero title="BOQUETS" subtitle="All kinds of boquets" />
+        <Hero title="NEW & FEATURED" subtitle="Check out our newest drops and all-time favorites" />
         <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
             <section class="mt-8 sm:mt-16 flex items-center justify-between">
                 <Breadcrumb :items="[
                     { label: 'Home', href: '/' },
-                    { label: 'Boquets' }
+                    { label: 'New & Featured' }
                 ]" />
-                <button type="button" class="flex items-center space-x-2 hover:underline" aria-controls="sale-filters"
+                <button type="button" class="flex items-center space-x-2 hover:underline" aria-controls="product-filters"
                     :aria-expanded="isFilterOpen" @click="isFilterOpen = true">
                     <Settings2 /> <span>FILTERS</span>
                 </button>
@@ -147,7 +145,7 @@ const formatPrice = (price) => {
                         </button>
                     </div>
 
-                    <!-- Products grid - Added class for targeting -->
+                    <!-- Products grid -->
                     <div v-else class="flex flex-col items-center space-y-8 my-14 products-grid">
                         <div v-if="products.length > 0" class="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
                             <Product v-for="(item, index) in products" :key="index" :id="item.id" :slug="item.slug"
@@ -162,12 +160,12 @@ const formatPrice = (price) => {
 
                         <!-- Empty state -->
                         <div v-else class="text-center py-16 text-gray-500">
-                            <p class="text-lg font-medium">No boquets found</p>
-                            <p class="text-sm mt-1">Check back soon for new boquet arrangements!</p>
+                            <p class="text-lg font-medium">No products found</p>
+                            <p class="text-sm mt-1">Check back soon for new arrivals!</p>
                         </div>
 
                         <!-- Pagination -->
-                        <div v-if="products.length > 0 && meta.last_page > 1" class="flex gap-2">
+                        <div v-if="meta.last_page > 1" class="flex gap-2">
                             <button v-for="page in meta.last_page" :key="page" @click="changePage(page)" :class="[
                                 'py-2 px-4 rounded-md border',
                                 page === meta.current_page
@@ -193,11 +191,11 @@ const formatPrice = (price) => {
         enter-to-class="translate-y-0 md:translate-x-0" leave-active-class="transition-transform duration-300 ease-in"
         leave-from-class="translate-y-0 md:translate-x-0"
         leave-to-class="translate-y-full md:translate-y-0 md:translate-x-full">
-        <div v-if="isFilterOpen" id="sale-filters"
+        <div v-if="isFilterOpen" id="product-filters"
             class="fixed inset-0 z-[51] overflow-hidden pointer-events-none p-4 flex items-end justify-center md:items-stretch md:justify-end">
             <div
                 class="pointer-events-auto h-3/4 max-h-[80vh] w-full max-w-md bg-white flex flex-col justify-between pb-6 shadow-xl md:h-full md:max-h-none rounded-2xl">
-                <div class="">
+                <div>
                     <div class="flex h-20 w-full px-10 items-center justify-between border-b border-slate-500">
                         <h1 class="font-bold text-2xl tracking-wider">
                             FILTERS
@@ -214,6 +212,10 @@ const formatPrice = (price) => {
                         </div>
                         <div class="flex items-center py-6 justify-between border-b border-slate-500">
                             <p>Ukuran</p>
+                            <ChevronDown />
+                        </div>
+                        <div class="flex items-center py-6 justify-between border-b border-slate-500">
+                            <p>Kategori</p>
                             <ChevronDown />
                         </div>
                     </div>

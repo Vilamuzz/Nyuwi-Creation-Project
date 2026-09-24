@@ -28,22 +28,19 @@ const isFilterOpen = ref(false);
 const search = ref("");
 const sortField = ref("created_at");
 const sortDirection = ref("desc");
-const selectedCategory = ref("");
 const currentPage = ref(props.products.current_page || 1);
 search.value = props.filters.search || "";
 sortField.value = props.filters.sortField || "created_at";
 sortDirection.value = props.filters.sortDirection || "desc";
-selectedCategory.value = props.filters.category || "";
 
 const fetchShopData = () => {
     error.value = null;
     router.get(
-        route("boquets"),
+        route("flowers"),
         {
             search: search.value,
             sortField: sortField.value,
             sortDirection: sortDirection.value,
-            category: selectedCategory.value,
             page: currentPage.value,
         },
         {
@@ -56,7 +53,7 @@ const fetchShopData = () => {
                 isLoading.value = false;
             },
             onError: () => {
-                error.value = "Failed to load shop data";
+                error.value = "Failed to load flowers";
             },
         },
     );
@@ -66,23 +63,17 @@ const fetchShopData = () => {
 watch(
     search,
     debounce((value) => {
-        currentPage.value = 1; // Reset to page 1 on search
+        currentPage.value = 1;
         fetchShopData();
     }, 300),
 );
-
-// Watch for category changes
-watch(selectedCategory, (value) => {
-    currentPage.value = 1; // Reset to page 1 on category change
-    fetchShopData();
-});
 
 // Handle sorting
 const handleSort = (event) => {
     const [field, direction] = event.target.value.split("|");
     sortField.value = field;
     sortDirection.value = direction;
-    currentPage.value = 1; // Reset to page 1 on sort
+    currentPage.value = 1;
     fetchShopData();
 };
 
@@ -91,17 +82,16 @@ const changePage = async (page) => {
     currentPage.value = page;
     fetchShopData();
 
-    // Instantly scroll to top after data is loaded
     await nextTick();
     window.scrollTo({
         top: 0,
-        behavior: "auto", // Changed from "smooth" to "auto" for instant scroll
+        behavior: "auto",
     });
 };
 
 const getCategoryName = (categoryId) => {
     const category = categories.value.find((cat) => cat.id === categoryId);
-    return category ? category.name : "No category";
+    return category ? category.name : "Flowers";
 };
 
 const formatPrice = (price) => {
@@ -114,17 +104,16 @@ const formatPrice = (price) => {
 </script>
 
 <template>
-
-    <Head title="Boquets" />
+    <Head title="Flowers" />
     <CustomersLayout>
-        <Hero title="BOQUETS" subtitle="All kinds of boquets" />
+        <Hero title="FLOWERS" subtitle="Fresh & artificial handmade flower arrangements" />
         <div class="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
             <section class="mt-8 sm:mt-16 flex items-center justify-between">
                 <Breadcrumb :items="[
                     { label: 'Home', href: '/' },
-                    { label: 'Boquets' }
+                    { label: 'Flowers' }
                 ]" />
-                <button type="button" class="flex items-center space-x-2 hover:underline" aria-controls="sale-filters"
+                <button type="button" class="flex items-center space-x-2 hover:underline" aria-controls="flowers-filters"
                     :aria-expanded="isFilterOpen" @click="isFilterOpen = true">
                     <Settings2 /> <span>FILTERS</span>
                 </button>
@@ -135,7 +124,7 @@ const formatPrice = (price) => {
                     <!-- Loading state -->
                     <div v-if="isLoading" class="text-center py-8">
                         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
-                        <p class="mt-4 text-gray-600">Loading products...</p>
+                        <p class="mt-4 text-gray-600">Loading flowers...</p>
                     </div>
 
                     <!-- Error state -->
@@ -147,7 +136,7 @@ const formatPrice = (price) => {
                         </button>
                     </div>
 
-                    <!-- Products grid - Added class for targeting -->
+                    <!-- Products grid -->
                     <div v-else class="flex flex-col items-center space-y-8 my-14 products-grid">
                         <div v-if="products.length > 0" class="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
                             <Product v-for="(item, index) in products" :key="index" :id="item.id" :slug="item.slug"
@@ -162,12 +151,12 @@ const formatPrice = (price) => {
 
                         <!-- Empty state -->
                         <div v-else class="text-center py-16 text-gray-500">
-                            <p class="text-lg font-medium">No boquets found</p>
-                            <p class="text-sm mt-1">Check back soon for new boquet arrangements!</p>
+                            <p class="text-lg font-medium">No flowers found</p>
+                            <p class="text-sm mt-1">Check back soon for new flower arrangements!</p>
                         </div>
 
                         <!-- Pagination -->
-                        <div v-if="products.length > 0 && meta.last_page > 1" class="flex gap-2">
+                        <div v-if="meta.last_page > 1" class="flex gap-2">
                             <button v-for="page in meta.last_page" :key="page" @click="changePage(page)" :class="[
                                 'py-2 px-4 rounded-md border',
                                 page === meta.current_page
@@ -193,11 +182,11 @@ const formatPrice = (price) => {
         enter-to-class="translate-y-0 md:translate-x-0" leave-active-class="transition-transform duration-300 ease-in"
         leave-from-class="translate-y-0 md:translate-x-0"
         leave-to-class="translate-y-full md:translate-y-0 md:translate-x-full">
-        <div v-if="isFilterOpen" id="sale-filters"
+        <div v-if="isFilterOpen" id="flowers-filters"
             class="fixed inset-0 z-[51] overflow-hidden pointer-events-none p-4 flex items-end justify-center md:items-stretch md:justify-end">
             <div
                 class="pointer-events-auto h-3/4 max-h-[80vh] w-full max-w-md bg-white flex flex-col justify-between pb-6 shadow-xl md:h-full md:max-h-none rounded-2xl">
-                <div class="">
+                <div>
                     <div class="flex h-20 w-full px-10 items-center justify-between border-b border-slate-500">
                         <h1 class="font-bold text-2xl tracking-wider">
                             FILTERS

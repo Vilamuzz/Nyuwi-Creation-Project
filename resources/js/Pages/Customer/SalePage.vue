@@ -38,7 +38,7 @@ selectedCategory.value = props.filters.category || "";
 const fetchShopData = () => {
     error.value = null;
     router.get(
-        route("shop"),
+        route("sale"),
         {
             search: search.value,
             sortField: sortField.value,
@@ -149,7 +149,7 @@ const formatPrice = (price) => {
 
                     <!-- Products grid - Added class for targeting -->
                     <div v-else class="flex flex-col items-center space-y-8 my-14 products-grid">
-                        <div class="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+                        <div v-if="products.length > 0" class="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
                             <Product v-for="(item, index) in products" :key="index" :id="item.id" :slug="item.slug"
                                 :name="item.name" :price="formatPrice(item.price)"
                                 :category="getCategoryName(item.category_id)" :image="item.image ||
@@ -160,8 +160,14 @@ const formatPrice = (price) => {
                                 :colors="item.colors" :sizes="item.sizes" />
                         </div>
 
+                        <!-- Empty state -->
+                        <div v-else class="text-center py-16 text-gray-500">
+                            <p class="text-lg font-medium">No sale items found</p>
+                            <p class="text-sm mt-1">Check back soon for new sale items!</p>
+                        </div>
+
                         <!-- Pagination -->
-                        <div v-if="meta.last_page > 1" class="flex gap-2">
+                        <div v-if="products.length > 0 && meta.last_page > 1" class="flex gap-2">
                             <button v-for="page in meta.last_page" :key="page" @click="changePage(page)" :class="[
                                 'py-2 px-4 rounded-md border',
                                 page === meta.current_page

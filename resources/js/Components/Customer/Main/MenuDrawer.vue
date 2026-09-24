@@ -10,11 +10,11 @@ const props = defineProps({
 const emit = defineEmits(["close"]);
 
 const navItems = [
-    { label: "New & Featured", href: "/sale" },
+    { label: "New & Featured", href: "/new-featured" },
     { label: "Boquets", href: "/boquets" },
-    { label: "Flowers", href: "/sale" },
-    { label: "Accessories", href: "/sale" },
-    { label: "Bags", href: "/sale" },
+    { label: "Flowers", href: "/flowers" },
+    { label: "Accessories", href: "/accessories" },
+    { label: "Bags", href: "/bags" },
     { label: "Sale", href: "/sale" },
     { label: "Sign In/Create Account", href: "/login" },
 ];

@@ -45,11 +45,15 @@ class ProfileController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $user = $request->user();
+
+        if ($user && $user->role === 'admin') {
+            return back()->with('error', 'Akun admin tidak dapat dihapus.');
+        }
+
         $request->validate([
             'password' => ['required', 'current_password'],
         ]);
-
-        $user = $request->user();
 
         Auth::logout();
 
@@ -61,3 +65,4 @@ class ProfileController extends Controller
         return Redirect::to('/');
     }
 }
+

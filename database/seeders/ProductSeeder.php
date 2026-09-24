@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Product;
+use App\Models\Category;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 
@@ -180,10 +181,77 @@ class ProductSeeder extends Seeder
                 'created_at' => '2024-12-23 19:35:07',
                 'updated_at' => '2024-12-23 19:35:07'
             ],
+            [
+                'id' => 13,
+                'name' => 'Bunga Mawar Rajut',
+                'slug' => 'bunga-mawar-rajut',
+                'category_id' => 4,
+                'stock' => 12,
+                'price' => '25000.00',
+                'description' => 'Tangkai bunga mawar rajut buatan tangan yang indah dan tahan lama.',
+                'images' => ['1735007406.jpg'],
+                'sizes' => ['Standard'],
+                'colors' => ['Red', 'Pink', 'White'],
+                'created_at' => '2024-12-23 19:36:00',
+                'updated_at' => '2024-12-23 19:36:00'
+            ],
+            [
+                'id' => 14,
+                'name' => 'Bunga Matahari Rajut',
+                'slug' => 'bunga-matahari-rajut',
+                'category_id' => 4,
+                'stock' => 10,
+                'price' => '30000.00',
+                'description' => 'Tangkai bunga matahari rajut cerah untuk hiasan meja dan hadiah.',
+                'images' => ['1735006868.jpg'],
+                'sizes' => ['Standard'],
+                'colors' => ['Yellow', 'Orange'],
+                'created_at' => '2024-12-23 19:37:00',
+                'updated_at' => '2024-12-23 19:37:00'
+            ],
+            [
+                'id' => 15,
+                'name' => 'Tas Rajut Bahu',
+                'slug' => 'tas-rajut-bahu',
+                'category_id' => 5,
+                'stock' => 8,
+                'price' => '85000.00',
+                'description' => 'Tas bahu rajut handmade dengan motif aesthetic dan bahan katun premium.',
+                'images' => ['1735006004.jpg'],
+                'sizes' => ['Medium'],
+                'colors' => ['Cream', 'Brown', 'Sage Green'],
+                'created_at' => '2024-12-23 19:38:00',
+                'updated_at' => '2024-12-23 19:38:00'
+            ],
+            [
+                'id' => 16,
+                'name' => 'Tas Jinjing Mini',
+                'slug' => 'tas-jinjing-mini',
+                'category_id' => 5,
+                'stock' => 6,
+                'price' => '65000.00',
+                'description' => 'Tas jinjing rajut ukuran compact praktis untuk membawa barang harian.',
+                'images' => ['1735005876.jpg'],
+                'sizes' => ['Small'],
+                'colors' => ['Khaki', 'Lilac', 'Black'],
+                'created_at' => '2024-12-23 19:39:00',
+                'updated_at' => '2024-12-23 19:39:00'
+            ],
+        ];
+
+        $categoryMap = [
+            1 => Category::where('name', 'Aksesoris')->first()?->id ?? 1,
+            2 => Category::where('name', 'Buket')->first()?->id ?? 2,
+            3 => Category::where('name', 'Dekorasi')->first()?->id ?? 3,
+            4 => Category::where('name', 'Bunga')->first()?->id ?? 4,
+            5 => Category::where('name', 'Tas')->first()?->id ?? 5,
         ];
 
         foreach ($products as $product) {
-            Product::create($product);
+            if (isset($categoryMap[$product['category_id']])) {
+                $product['category_id'] = $categoryMap[$product['category_id']];
+            }
+            Product::firstOrCreate(['slug' => $product['slug']], $product);
         }
     }
 }

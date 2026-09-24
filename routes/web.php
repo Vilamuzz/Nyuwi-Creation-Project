@@ -13,38 +13,43 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileStoreController;
 
 // Public Routes
-Route::middleware(['customer'])->group(function () {
-    Route::get('/', [ProductController::class, 'landingPage'])->name('home');
-    Route::get('/sale', [ProductController::class, 'salePage'])->name('sale');
-    Route::get('/boquets', [ProductController::class, 'boquetsPage'])->name('boquets');
 
-    Route::get('/product/{slug}', [ProductController::class, 'product'])->name('product');
+Route::get('/', [ProductController::class, 'landingPage'])->name('home');
+Route::get('/new-featured', [ProductController::class, 'newFeaturedPage'])->name('new-featured');
+Route::get('/boquets', [ProductController::class, 'boquetsPage'])->name('boquets');
+Route::get('/flowers', [ProductController::class, 'flowersPage'])->name('flowers');
+Route::get('/accessories', [ProductController::class, 'accessoriesPage'])->name('accessories');
+Route::get('/bags', [ProductController::class, 'bagsPage'])->name('bags');
+Route::get('/sale', [ProductController::class, 'salePage'])->name('sale');
 
-    // Region data (used by address forms)
-    Route::controller(RegionController::class)->prefix('regions')->name('regions.')->group(function () {
-        Route::get('/provinces', 'provinces')->name('provinces');
-        Route::get('/regencies/{provinceId}', 'regencies')->name('regencies');
-        Route::get('/districts/{regencyId}', 'districts')->name('districts');
-        Route::get('/villages/{districtId}', 'villages')->name('villages');
-        Route::get('/city/{cityName}', 'cityByName')->name('city');
-        Route::get('/search', 'search')->name('search');
-    });
+Route::get('/product/{slug}', [ProductController::class, 'product'])->name('product');
+Route::get('/api/products/search', [ProductController::class, 'apiSearch'])->name('products.api-search');
 
-    // Shipping calculation
-    Route::post('/shipping/calculate', [ShippingController::class, 'calculate'])->name('shipping.calculate');
-
-    // Cart Management (available to guests via session-backed cart)
-    Route::controller(CartController::class)->prefix('cart')->name('cart.')->group(function () {
-        Route::get('/', 'showCart')->name('show');
-        Route::post('/', 'store')->name('store');
-        Route::put('/{id}', 'update')->name('update');
-        Route::delete('/{id}', 'destroy')->name('destroy');
-    });
-
-    // Checkout (available to guests and customers)
-    Route::get('/checkout', [CartController::class, 'showCheckout'])->middleware('check.cart')->name('checkout');
-    Route::post('/customer/orders/checkout', [OrderController::class, 'store'])->name('customer.orders.store');
+// Region data (used by address forms)
+Route::controller(RegionController::class)->prefix('regions')->name('regions.')->group(function () {
+    Route::get('/provinces', 'provinces')->name('provinces');
+    Route::get('/regencies/{provinceId}', 'regencies')->name('regencies');
+    Route::get('/districts/{regencyId}', 'districts')->name('districts');
+    Route::get('/villages/{districtId}', 'villages')->name('villages');
+    Route::get('/city/{cityName}', 'cityByName')->name('city');
+    Route::get('/search', 'search')->name('search');
 });
+
+// Shipping calculation
+Route::post('/shipping/calculate', [ShippingController::class, 'calculate'])->name('shipping.calculate');
+
+// Cart Management (available to guests via session-backed cart)
+Route::controller(CartController::class)->prefix('cart')->name('cart.')->group(function () {
+    Route::get('/', 'showCart')->name('show');
+    Route::post('/', 'store')->name('store');
+    Route::put('/{id}', 'update')->name('update');
+    Route::delete('/{id}', 'destroy')->name('destroy');
+});
+
+// Checkout (available to guests and customers)
+Route::get('/checkout', [CartController::class, 'showCheckout'])->middleware('check.cart')->name('checkout');
+Route::post('/customer/orders/checkout', [OrderController::class, 'store'])->name('customer.orders.store');
+
 
 // Authenticated Customer Routes
 Route::middleware(['auth', 'customer'])->group(function () {
@@ -89,8 +94,8 @@ Route::middleware(['auth', 'admin'])->group(function () {
 
     // Profile Store Setting
     Route::controller(ProfileStoreController::class)->prefix('profile-store')->name('profile-store.')->group(function () {
-        Route::get('/{name}', 'edit')->name('edit');
-        Route::put('/update/{name}', 'update')->name('update');
+        Route::get('/', 'index')->name('index');
+        Route::put('/', 'update')->name('update');
     });
 
     // Profile Management
