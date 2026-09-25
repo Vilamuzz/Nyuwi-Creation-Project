@@ -12,8 +12,8 @@ class DashboardController extends Controller
     public function index()
     {
         // Store Key Performance Indicators
-        $totalRevenue = (int) Order::whereNotIn('status', ['cancelled', 'waiting'])->sum('total_price');
-        $pendingOrdersCount = Order::whereIn('status', ['waiting', 'checking', 'processing'])->count();
+        $totalRevenue = (int) Order::where('payment_status', 'paid')->sum('total_price');
+        $pendingOrdersCount = Order::where('status', 'processing')->count();
         $totalProductsCount = Product::count();
         $lowStockCount = Product::where('stock', '<', 10)->count();
 
@@ -27,6 +27,7 @@ class DashboardController extends Controller
                     'name' => $order->name,
                     'total_price' => $order->total_price,
                     'status' => $order->status,
+                    'payment_status' => $order->payment_status,
                     'payment_method' => $order->payment_method,
                     'created_at' => $order->created_at?->toISOString() ?? now()->toISOString(),
                 ];
@@ -35,7 +36,7 @@ class DashboardController extends Controller
         // Get top selling products
         $topSelling = Product::withCount(['orderItems as total_sold' => function ($query) {
             $query->whereHas('order', function ($q) {
-                $q->whereNotIn('status', ['cancelled', 'waiting', 'checking']);
+                $q->where('payment_status', 'paid')->where('status', '!=', 'cancelled');
             });
         }])
             ->orderByDesc('total_sold')

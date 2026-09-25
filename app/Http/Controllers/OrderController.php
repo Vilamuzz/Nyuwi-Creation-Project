@@ -19,6 +19,8 @@ use Inertia\Inertia;
 use App\Models\ProductReview;
 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Services\MidtransService;
+use App\Services\Shipping\ShippingManager;
 
 class OrderController extends Controller
 {
@@ -45,15 +47,6 @@ class OrderController extends Controller
         $validated = $request->validated();
 
         $order = Order::findOrFail($id);
-
-        // Prevent accepting digital wallet orders without payment proof
-        if (
-            ($validated['status'] ?? null) === 'processing' &&
-            $order->payment_method === 'digital_wallet' &&
-            $order->status === 'waiting'
-        ) {
-            return back()->with('error', 'Cannot accept order without payment proof verification');
-        }
 
         // Don't allow cancellation if order is shipping
         if (($validated['status'] ?? null) === 'cancelled' && $order->status === 'shiping') {
@@ -102,8 +95,10 @@ class OrderController extends Controller
     {
         $validated = $request->validated();
 
+        $placedOrderId = null;
+
         try {
-            DB::transaction(function () use ($request, $validated) {
+            DB::transaction(function () use ($request, $validated, &$placedOrderId) {
                 $user = Auth::user();
                 $cartService = new CartService();
 
@@ -144,8 +139,11 @@ class OrderController extends Controller
                     'payment_method' => $validated['payment_method'],
                     'shipping_method' => $validated['shipping_method'],
                     'note' => $validated['note'] ?? null,
-                    'status' => 'waiting'
+                    'payment_status' => 'pending',
+                    'status' => 'processing',
                 ]);
+
+                $placedOrderId = $order->id;
 
                 // Create order items and clear cart
                 foreach ($cartItems as $cartItem) {
@@ -169,7 +167,10 @@ class OrderController extends Controller
                 }
             });
 
-            return redirect()->route('cart.show')->with('success', 'Order placed successfully!');
+            return redirect()->route('cart.show')->with([
+                'success' => 'Order placed successfully!',
+                'placedOrderId' => $placedOrderId,
+            ]);
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to place order: ' . $e->getMessage());
         }
@@ -239,56 +240,61 @@ class OrderController extends Controller
         ]);
     }
 
-    public function tracking(string $trackingNumber)
+    public function tracking(string $trackingNumber, ShippingManager $shippingManager)
     {
         $order = Order::where('tracking_number', $trackingNumber)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        if ($order->shipping_method === 'GoSend') {
+        if (strcasecmp($order->shipping_method, 'GoSend') === 0) {
             return back()->withErrors(['tracking' => 'GoSend orders do not have tracking information.']);
         }
 
-        $trackingResponse = Http::get('https://api.binderbyte.com/v1/track', [
-            'api_key' => config('services.binderbyte.api_key'),
-            'courier' => strtolower($order->shipping_method),
-            'awb' => $trackingNumber,
-        ]);
+        $trackingData = $shippingManager->track($order->shipping_method, $trackingNumber);
 
-        return back()->with('trackingData', $trackingResponse->json());
+        return back()->with('trackingData', $trackingData);
     }
 
-    public function adminTracking(string $trackingNumber)
+    public function adminTracking(string $trackingNumber, ShippingManager $shippingManager)
     {
         $order = Order::where('tracking_number', $trackingNumber)->firstOrFail();
 
-        $trackingResponse = Http::get('https://api.binderbyte.com/v1/track', [
-            'api_key' => config('services.binderbyte.api_key'),
-            'courier' => strtolower($order->shipping_method),
-            'awb' => $trackingNumber,
-        ]);
+        $trackingData = $shippingManager->track($order->shipping_method, $trackingNumber);
 
-        return back()->with('trackingData', $trackingResponse->json());
+        return back()->with('trackingData', $trackingData);
     }
 
     public function uploadPaymentProof(PaymentProofRequest $request)
     {
-        $validated = $request->validated();
-        $order = Order::where('id', $validated['order_id'])
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
+        return back()->with('error', 'Unggah bukti pembayaran manual sudah tidak didukung.');
+    }
 
-        if ($request->hasFile('payment_proof')) {
-            $proof = $request->file('payment_proof');
-            $proofName = time() . '.' . $proof->getClientOriginalExtension();
-            $proof->storeAs('payment_proofs', $proofName, 'public');
+    public function paymentToken($id, MidtransService $midtransService)
+    {
+        $order = Order::with('orderItems.product')->findOrFail($id);
 
-            $order->update([
-                'payment_proof' => $proofName,
-                'status' => 'checking'
-            ]);
+        if ($order->user_id && $order->user_id !== Auth::id()) {
+            abort(403, 'Unauthorized access to order');
         }
 
-        return back()->with('success', 'Bukti pembayaran berhasil diunggah');
+        if ($order->payment_status !== 'pending') {
+            return response()->json([
+                'message' => 'Order is not in pending payment status.',
+                'payment_status' => $order->payment_status,
+            ], 400);
+        }
+
+        try {
+            $snapData = $midtransService->createSnapToken($order);
+
+            return response()->json([
+                'snap_token' => $snapData['token'],
+                'redirect_url' => $snapData['redirect_url'],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to generate payment token: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

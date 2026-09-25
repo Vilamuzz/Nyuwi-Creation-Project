@@ -22,7 +22,7 @@ class OrderStatusUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', 'in:pending,processing,shiping,completed,cancelled'],
+            'status' => ['required', 'in:processing,shiping,completed,cancelled'],
             'tracking_number' => ['nullable', 'string', 'max:255'],
         ];
     }

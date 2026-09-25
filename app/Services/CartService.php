@@ -36,10 +36,16 @@ class CartService
      */
     public function summarize(array $items): array
     {
+        $totalWeight = (int) collect($items)->sum(function ($item) {
+            $weight = $item['product']->weight ?? 0;
+            return (int) $weight * (int) ($item['quantity'] ?? 1);
+        });
+
         return [
             'subtotal' => collect($items)->sum(fn ($item) => (float) $item['price'] * $item['quantity']),
             'totalItems' => collect($items)->sum('quantity'),
             'itemCount' => count($items),
+            'totalWeight' => $totalWeight > 0 ? $totalWeight : 1000,
         ];
     }
 

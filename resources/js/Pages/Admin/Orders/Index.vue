@@ -167,12 +167,40 @@ const getPaymentMethodDisplay = (method) => {
     };
 };
 
-// Payment proof full URL
-const getPaymentProofUrl = (proof) => {
-    if (!proof) return null;
-    return proof.startsWith("http") || proof.startsWith("/")
-        ? proof
-        : `/storage/payment_proofs/${proof}`;
+// Payment status badge
+const getPaymentStatusBadge = (status) => {
+    switch (status) {
+        case "pending":
+            return {
+                label: "Menunggu Pembayaran",
+                badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+            };
+        case "paid":
+            return {
+                label: "Lunas",
+                badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+            };
+        case "failed":
+            return {
+                label: "Gagal",
+                badgeClass: "bg-rose-50 text-rose-800 border-rose-200",
+            };
+        case "expired":
+            return {
+                label: "Kadaluarsa",
+                badgeClass: "bg-stone-50 text-stone-700 border-stone-200",
+            };
+        case "refunded":
+            return {
+                label: "Dikembalikan",
+                badgeClass: "bg-blue-50 text-blue-800 border-blue-200",
+            };
+        default:
+            return {
+                label: status || "Pending",
+                badgeClass: "bg-stone-50 text-stone-700 border-stone-200",
+            };
+    }
 };
 
 // Top KPI metrics
@@ -180,7 +208,7 @@ const stats = computed(() => {
     const list = props.orders || [];
     const total = list.length;
     const needsAction = list.filter((o) =>
-        ["waiting", "checking"].includes(o.status)
+        o.payment_status === "pending" || o.status === "processing"
     ).length;
     const inProgress = list.filter((o) =>
         ["processing", "shiping"].includes(o.status)
@@ -627,16 +655,12 @@ const closePreviewModal = () => {
                                             {{ getPaymentMethodDisplay(order.payment_method).label }}
                                         </span>
 
-                                        <div v-if="order.payment_method === 'digital_wallet'" class="text-[11px]">
-                                            <span v-if="order.payment_proof"
-                                                class="text-emerald-700 font-medium inline-flex items-center gap-1">
-                                                <CheckCircle2 class="w-3 h-3 text-emerald-600" />
-                                                Bukti Diunggah
-                                            </span>
-                                            <span v-else
-                                                class="text-amber-700 font-medium inline-flex items-center gap-1">
-                                                <Clock class="w-3 h-3 text-amber-600" />
-                                                Belum Ada Bukti
+                                        <div v-if="order.payment_status" class="text-[11px]">
+                                            <span :class="[
+                                                'inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold border',
+                                                getPaymentStatusBadge(order.payment_status).badgeClass
+                                            ]">
+                                                {{ getPaymentStatusBadge(order.payment_status).label }}
                                             </span>
                                         </div>
                                     </div>
@@ -903,29 +927,20 @@ const closePreviewModal = () => {
                         </div>
                     </div>
 
-                    <!-- Payment Proof Preview (if digital wallet) -->
-                    <div v-if="previewOrder.payment_method === 'digital_wallet'"
-                        class="p-3 rounded-xl border border-stone-200/80 space-y-2">
+                    <!-- Payment Status Preview -->
+                    <div class="p-3 rounded-xl border border-stone-200/80 space-y-2">
                         <h4 class="font-bold text-stone-800 flex items-center justify-between">
                             <span class="flex items-center gap-1.5">
-                                <FileText class="w-3.5 h-3.5 text-stone-500" />
-                                Bukti Pembayaran
+                                <CreditCard class="w-3.5 h-3.5 text-stone-500" />
+                                Status Pembayaran
                             </span>
-                            <span v-if="previewOrder.payment_proof" class="text-[10px] text-emerald-600 font-semibold">
-                                Tersedia
-                            </span>
-                            <span v-else class="text-[10px] text-amber-600 font-semibold">
-                                Belum Diunggah
+                            <span v-if="previewOrder.payment_status"
+                                :class="['text-xs font-semibold px-2 py-0.5 rounded border', getPaymentStatusBadge(previewOrder.payment_status).badgeClass]">
+                                {{ getPaymentStatusBadge(previewOrder.payment_status).label }}
                             </span>
                         </h4>
-
-                        <div v-if="previewOrder.payment_proof"
-                            class="relative rounded-lg overflow-hidden border border-stone-200 bg-stone-100 max-h-48 flex items-center justify-center">
-                            <img :src="getPaymentProofUrl(previewOrder.payment_proof)" alt="Bukti Pembayaran"
-                                class="w-full h-auto max-h-48 object-contain" />
-                        </div>
-                        <p v-else class="text-stone-400 italic">
-                            Pelanggan belum mengunggah struk transfer / bukti bayar.
+                        <p class="text-xs text-stone-600">
+                            Metode: <span class="font-medium text-stone-800">{{ getPaymentMethodDisplay(previewOrder.payment_method).label }}</span>
                         </p>
                     </div>
 

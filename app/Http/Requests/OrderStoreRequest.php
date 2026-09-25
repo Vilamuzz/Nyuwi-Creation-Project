@@ -33,7 +33,7 @@ class OrderStoreRequest extends FormRequest
             'phone' => ['required', 'string', 'max:15'],
             'email' => ['nullable', 'string', 'email', 'max:255', Rule::requiredIf(!Auth::check())],
             'payment_method' => ['required', 'in:digital_wallet,qris'],
-            'shipping_method' => ['required', 'in:JNE,GoSend'],
+            'shipping_method' => ['required', 'string', 'max:100'],
             'shipping_cost' => ['required', 'numeric', 'min:0'],
             'note' => ['nullable', 'string', 'max:1000'],
         ];

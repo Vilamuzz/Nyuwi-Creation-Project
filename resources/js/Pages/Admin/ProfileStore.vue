@@ -25,12 +25,23 @@ import {
     Building2,
     MessageCircle,
     Maximize2,
+    Truck,
 } from "lucide-vue-next";
 
 const props = defineProps({
     profile: {
         type: Object,
         default: () => null,
+    },
+    supportedCouriers: {
+        type: Object,
+        default: () => ({
+            jne: "JNE Express",
+            pos: "POS Indonesia",
+            tiki: "TIKI",
+            sicepat: "SiCepat Ekspres",
+            jnt: "J&T Express",
+        }),
     },
 });
 
@@ -42,6 +53,8 @@ const form = useForm({
     name: props.profile?.name || "",
     address: props.profile?.address || "",
     city: props.profile?.city || "",
+    shipping_origin_city_id: props.profile?.shipping_origin_city_id || "",
+    shipping_couriers: props.profile?.shipping_couriers || ["jne", "pos", "tiki"],
     phone: props.profile?.phone || "",
     instagram: props.profile?.instagram || "",
     facebook: props.profile?.facebook || "",
@@ -64,6 +77,8 @@ watch(
             form.name = newProfile.name || "";
             form.address = newProfile.address || "";
             form.city = newProfile.city || "";
+            form.shipping_origin_city_id = newProfile.shipping_origin_city_id || "";
+            form.shipping_couriers = newProfile.shipping_couriers || ["jne", "pos", "tiki"];
             form.phone = newProfile.phone || "";
             form.instagram = newProfile.instagram || "";
             form.facebook = newProfile.facebook || "";
@@ -74,6 +89,22 @@ watch(
     },
     { deep: true }
 );
+
+const toggleCourier = (courierKey) => {
+    if (!Array.isArray(form.shipping_couriers)) {
+        form.shipping_couriers = ["jne", "pos", "tiki"];
+    }
+    const index = form.shipping_couriers.indexOf(courierKey);
+    if (index > -1) {
+        if (form.shipping_couriers.length > 1) {
+            form.shipping_couriers.splice(index, 1);
+        } else {
+            showNotification("Minimal satu kurir pengiriman harus aktif.", "warning");
+        }
+    } else {
+        form.shipping_couriers.push(courierKey);
+    }
+};
 
 const toastMessage = ref("");
 const toastType = ref("info");
@@ -139,6 +170,8 @@ const cancelEditing = () => {
         form.name = props.profile.name || "";
         form.address = props.profile.address || "";
         form.city = props.profile.city || "";
+        form.shipping_origin_city_id = props.profile.shipping_origin_city_id || "";
+        form.shipping_couriers = props.profile.shipping_couriers || ["jne", "pos", "tiki"];
         form.phone = props.profile.phone || "";
         form.instagram = props.profile.instagram || "";
         form.facebook = props.profile.facebook || "";
@@ -401,6 +434,40 @@ const submit = () => {
                             </div>
                         </div>
                     </div>
+
+                    <!-- Shipping Providers Card -->
+                    <div
+                        class="bg-white p-6 rounded-2xl border border-stone-200/80 shadow-sm flex flex-col justify-between md:col-span-2">
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2.5">
+                                    <div
+                                        class="w-9 h-9 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center">
+                                        <Truck class="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 class="text-base font-bold text-stone-900">Ekspedisi Pengiriman Toko</h3>
+                                        <p class="text-xs text-stone-500">Pilihan kurir pengiriman aktif untuk kalkulasi ongkos kirim pelanggan</p>
+                                    </div>
+                                </div>
+                                <span
+                                    class="px-2.5 py-1 text-xs font-semibold bg-orange-100 text-orange-800 rounded-full">
+                                    {{ (profile.shipping_couriers || ['jne', 'pos', 'tiki']).length }} Kurir Aktif
+                                </span>
+                            </div>
+
+                            <div class="flex flex-wrap gap-2.5 mt-2">
+                                <span v-for="c in (profile.shipping_couriers || ['jne', 'pos', 'tiki'])" :key="c"
+                                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-stone-100 text-stone-800 border border-stone-200">
+                                    <Check class="w-3.5 h-3.5 text-emerald-600" />
+                                    {{ supportedCouriers[c] || c }}
+                                </span>
+                            </div>
+                            <p v-if="profile.shipping_origin_city_id" class="text-xs text-stone-400 mt-3">
+                                ID Kota Asal Ekspedisi: <span class="font-mono text-stone-700 font-semibold">{{ profile.shipping_origin_city_id }}</span>
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -492,6 +559,67 @@ const submit = () => {
                                 placeholder="Jalan, No. Rumah, Kecamatan, Kode Pos"></textarea>
                             <p v-if="form.errors.address" class="text-xs text-red-500 mt-1 font-medium">{{
                                 form.errors.address }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Shipping & Couriers -->
+                <div class="bg-white p-6 sm:p-8 rounded-3xl border border-stone-200/80 shadow-sm space-y-5">
+                    <div class="flex items-center gap-3 border-b border-stone-100 pb-4">
+                        <div
+                            class="w-10 h-10 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+                            <Truck class="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-stone-900">Ekspedisi & Pengiriman</h2>
+                            <p class="text-xs text-stone-500">Pilih kurir ekspedisi yang dapat digunakan oleh pelanggan saat checkout.</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 pt-2">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
+                                    ID / Kode Kota Asal Ekspedisi (Opsional)
+                                </label>
+                                <div class="relative">
+                                    <MapPin class="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
+                                    <input v-model="form.shipping_origin_city_id" type="text"
+                                        class="w-full pl-10 pr-4 py-3 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-colors"
+                                        placeholder="Contoh: 444 (Surabaya)" />
+                                </div>
+                                <p class="text-[11px] text-stone-400 mt-1">
+                                    Jika dikosongkan, sistem akan otomatis mencocokkan nama kota asal di atas.
+                                </p>
+                                <p v-if="form.errors.shipping_origin_city_id" class="text-xs text-red-500 mt-1 font-medium">
+                                    {{ form.errors.shipping_origin_city_id }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">
+                                Kurir Ekspedisi yang Diaktifkan <span class="text-red-500">*</span>
+                            </label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                <div v-for="(courierName, courierCode) in supportedCouriers" :key="courierCode"
+                                    @click="toggleCourier(courierCode)"
+                                    class="flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all select-none"
+                                    :class="form.shipping_couriers.includes(courierCode)
+                                        ? 'border-orange-500 bg-orange-50/40 text-orange-950 font-semibold shadow-xs'
+                                        : 'border-stone-200 hover:border-stone-300 text-stone-600 bg-stone-50/50'">
+                                    <input type="checkbox"
+                                        :checked="form.shipping_couriers.includes(courierCode)"
+                                        class="checkbox checkbox-sm checkbox-warning rounded pointer-events-none" />
+                                    <div class="flex-1">
+                                        <span class="text-sm block">{{ courierName }}</span>
+                                        <span class="text-[10px] text-stone-400 uppercase tracking-wider">{{ courierCode }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <p v-if="form.errors.shipping_couriers" class="text-xs text-red-500 mt-1 font-medium">
+                                {{ form.errors.shipping_couriers }}
                             </p>
                         </div>
                     </div>

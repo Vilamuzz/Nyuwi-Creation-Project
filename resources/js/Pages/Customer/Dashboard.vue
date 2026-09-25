@@ -1,383 +1,354 @@
 <script setup>
-import { Head, useForm, Link, router } from "@inertiajs/vue3";
+import { Head, Link, usePage } from "@inertiajs/vue3";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
-import { ref, computed, watch } from "vue";
-import Hero from "@/Components/Customer/Main/Hero.vue";
-import UpdateProfileInformationForm from "@/Pages/Admin/Profile/Partials/UpdateProfileInformationForm.vue";
-import UpdatePasswordForm from "@/Pages/Admin/Profile/Partials/UpdatePasswordForm.vue";
-import DeleteUserForm from "@/Pages/Admin/Profile/Partials/DeleteUserForm.vue";
+import { ref, computed, nextTick } from "vue";
 import OrderHistoryTab from "@/Components/Customer/Main/OrderHistoryTab.vue";
-
 import ReviewsTab from "@/Components/Customer/Main/ReviewsTab.vue";
 import SettingsTab from "@/Components/Customer/Main/SettingsTab.vue";
+import ToastNotification from "@/Components/Customer/Sub-main/ToastNotification.vue";
+import {
+    ShoppingBag,
+    Star,
+    Settings,
+    CreditCard,
+    Truck,
+    CheckCircle,
+    User as UserIcon,
+    Calendar,
+    ChevronRight,
+    LogOut
+} from "lucide-vue-next";
 
 const props = defineProps({
-    orders: Array,
-    reviews: Array, // Tambahkan props reviews
-
+    orders: {
+        type: Array,
+        default: () => [],
+    },
+    reviews: {
+        type: Array,
+        default: () => [],
+    },
     mustVerifyEmail: {
         type: Boolean,
+        default: false,
     },
     status: {
         type: String,
+        default: "",
     },
 });
 
-// Create refs from props
-const orders = ref(props.orders);
-const userReviews = ref(props.reviews); // Gunakan data reviews dari props
+const page = usePage();
+const user = computed(() => page.props.auth.user);
 
 const selectedAction = ref("history");
-const showOrderModal = ref(false);
-const selectedOrder = ref(null);
-const trackingInfo = ref(null);
-const trackingError = ref(null);
-const showTrackingInfo = ref(false);
-const expandedOrders = ref(new Set());
-const isLoadingTracking = ref(false); // Tambahkan state untuk loading
+const orderHistoryRef = ref(null);
 
-const reviewForm = useForm({
-    order_id: null,
-    reviews: [], // Will contain {product_id, rating} objects
+// Flash message toast
+const toastMessage = ref("");
+const toastType = ref("info");
+const showToast = ref(false);
+
+if (page.props.flash?.success) {
+    toastMessage.value = page.props.flash.success;
+    toastType.value = "success";
+    showToast.value = true;
+} else if (page.props.flash?.error) {
+    toastMessage.value = page.props.flash.error;
+    toastType.value = "error";
+    showToast.value = true;
+}
+
+// User initials
+const userInitials = computed(() => {
+    if (!user.value?.name) return "U";
+    return user.value.name
+        .split(" ")
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase();
 });
 
-// Add new form for payment proof
-const paymentProofForm = useForm({
-    order_id: null,
-    payment_proof: null,
+// Member join date
+const joinDate = computed(() => {
+    if (!user.value?.created_at) return "-";
+    return new Date(user.value.created_at).toLocaleDateString("id-ID", {
+        month: "long",
+        year: "numeric",
+    });
 });
 
-// Add new state for payment proof modal
-const showPaymentProofModal = ref(false);
-const selectedPaymentOrder = ref(null);
+// Quick Metrics
+const stats = computed(() => {
+    const list = props.orders || [];
+    return {
+        totalOrders: list.length,
+        pendingPayment: list.filter((o) => o.payment_status === "pending").length,
+        inDelivery: list.filter((o) => ["processing", "shiping"].includes(o.status)).length,
+        reviewsCount: props.reviews?.length || 0,
+    };
+});
 
-const openOrderModal = (order) => {
-    selectedOrder.value = order;
-    showOrderModal.value = true;
-    trackingInfo.value = null;
-    trackingError.value = null;
-    showTrackingInfo.value = false;
-
-    // Initialize empty reviews array for each product in order
-    reviewForm.reviews = selectedOrder.value.order_items.map((item) => ({
-        product_id: item.product_id,
-        rating: 0,
-    }));
-
-    // Immediately fetch tracking info if available
-    if (order.tracking_number && order.shipping_method) {
-        isLoadingTracking.value = true;
-        router.get(route("customer.orders.tracking", order.tracking_number), {}, {
-            only: ['trackingData'],
-            preserveState: true,
-            preserveScroll: true,
-            onSuccess: (page) => {
-                const data = page.props.trackingData;
-                if (data) {
-                    if (data.status === 200) {
-                        trackingInfo.value = data.data;
-                        showTrackingInfo.value = true;
-                    } else {
-                        trackingError.value = data.message || "Failed to fetch tracking information";
-                    }
-                }
-                isLoadingTracking.value = false;
-            },
-            onError: () => {
-                trackingError.value = "Failed to fetch tracking information";
-                isLoadingTracking.value = false;
-            },
-        });
-    }
-};
-
-const closeOrderModal = () => {
-    showOrderModal.value = false;
-    selectedOrder.value = null;
-};
-
-const actions = [
-    { id: "history", label: "Riwayat Belanja" },
-
-    { id: "reviews", label: "Ulasan Belanja" },
-    { id: "settings", label: "Pengaturan" }, // Add settings option
+const navActions = [
+    {
+        id: "history",
+        label: "Riwayat Belanja",
+        description: "Status dan riwayat pesanan Anda",
+        icon: ShoppingBag,
+        badge: computed(() => props.orders?.length || 0),
+    },
+    {
+        id: "reviews",
+        label: "Ulasan Belanja",
+        description: "Penilaian produk yang Anda beli",
+        icon: Star,
+        badge: computed(() => props.reviews?.length || 0),
+    },
+    {
+        id: "settings",
+        label: "Pengaturan Akun",
+        description: "Kelola profil dan keamanan kata sandi",
+        icon: Settings,
+        badge: null,
+    },
 ];
 
-const formatPrice = (price) => {
-    return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-    }).format(price);
-};
-
-const getStatusClass = (status) => {
-    return {
-        "px-2 py-1 text-xs font-semibold rounded-full": true,
-        "bg-yellow-100 text-yellow-800": status === "waiting",
-        "bg-purple-100 text-purple-800": status === "checking",
-        "bg-purple-100 text-cyan-800": status === "shiping",
-        "bg-orange-100 text-orange-800": status === "pending",
-        "bg-blue-100 text-blue-800": status === "processing",
-        "bg-green-100 text-green-800": status === "completed",
-        "bg-red-100 text-red-800": status === "cancelled",
-    };
-};
-
-const toggleOrder = (orderId) => {
-    if (expandedOrders.value.has(orderId)) {
-        expandedOrders.value.delete(orderId);
-    } else {
-        expandedOrders.value.add(orderId);
-    }
-};
-
-// Modifikasi computed property isDelivered
-const isDelivered = computed(() => {
-    if (!selectedOrder.value) return false;
-
-    // Jika menggunakan GoSend dan status shiping, langsung bisa review
-    if (
-        selectedOrder.value.shipping_method === "GoSend" &&
-        selectedOrder.value.status === "shiping"
-    ) {
-        return true;
-    }
-
-    // Untuk kurir lain, cek status tracking
-    return trackingInfo.value?.summary?.status?.toLowerCase() === "delivered";
-});
-
-// Track if all products are reviewed
-const allProductsReviewed = computed(() => {
-    if (!selectedOrder.value || !reviewForm.reviews.length) return false;
-    return selectedOrder.value.order_items.every((item) =>
-        reviewForm.reviews.some(
-            (review) =>
-                review.product_id === item.product_id && review.rating > 0
-        )
-    );
-});
-
-// Handle rating selection
-const setRating = (productId, rating) => {
-    if (!selectedOrder.value) return; // Guard clause
-
-    const existingReview = reviewForm.reviews.find(
-        (r) => r.product_id === productId
-    );
-    if (existingReview) {
-        existingReview.rating = rating;
-    }
-};
-
-// Submit reviews and complete order
-const completeOrder = () => {
-    if (!allProductsReviewed.value) {
-        alert("Please rate all products before completing the order");
-        return;
-    }
-
-    reviewForm.order_id = selectedOrder.value.id; // Fix: Remove .value after reviewForm
-
-    reviewForm.post("/orders/complete", {
-        // Use direct URL path instead of route name
-        preserveScroll: true,
-        onSuccess: () => {
-            closeOrderModal();
-            // Optionally refresh the page or update the order status locally
-            window.location.reload();
-        },
+// Open order review directly from review tab
+const handleReviewOrder = (order) => {
+    selectedAction.value = "history";
+    nextTick(() => {
+        orderHistoryRef.value?.openOrderModal(order);
     });
 };
-
-// Add new data for reviews section
-const reviewedOrders = computed(() => {
-    return orders.value?.filter((order) => order.status === "completed");
-});
-
-// Add function to open review modal
-const showReviewModal = ref(false);
-const selectedReviewOrder = ref(null);
-
-const openReviewModal = (order) => {
-    selectedReviewOrder.value = order;
-    // Filter reviews for this specific order
-    const orderReviews = userReviews.value.filter(
-        (review) => review.order_id === order.id
-    );
-    showReviewModal.value = true;
-};
-
-const closeReviewModal = () => {
-    showReviewModal.value = false;
-    selectedReviewOrder.value = null;
-};
-
-// Add methods for payment proof handling
-const openPaymentProofModal = (order) => {
-    selectedPaymentOrder.value = order;
-    showPaymentProofModal.value = true;
-};
-
-const closePaymentProofModal = () => {
-    showPaymentProofModal.value = false;
-    selectedPaymentOrder.value = null;
-    paymentProofForm.reset();
-};
-
-const handlePaymentProofUpload = (e) => {
-    paymentProofForm.payment_proof = e.target.files[0];
-};
-
-const submitPaymentProof = () => {
-    paymentProofForm.order_id = selectedPaymentOrder.value.id;
-    paymentProofForm.post(route("customer.orders.proof"), {
-        preserveScroll: true,
-        onSuccess: () => {
-            closePaymentProofModal();
-            // Optionally refresh orders
-            window.location.reload();
-        },
-    });
-};
-
 </script>
 
 <template>
-    <Head title="Profile" />
+    <Head title="Dashboard Pelanggan" />
 
-    <CustomersLayout
-        ><Hero title="Profile" breadcrumb="Home > Profile" />
-        <section class="mx-16 flex flex-row my-8 gap-x-8">
-            <!-- Sidebar -->
-            <div class="w-1/4">
-                <div class="border rounded-md p-8 shadow-md">
-                    <h1 class="text-xl font-bold mb-4">Profile</h1>
-                    <h1 class="mb-2">{{ $page.props.auth.user.name }}</h1>
-                    <h1 class="mb-4">{{ $page.props.auth.user.email }}</h1>
+    <CustomersLayout>
+        <!-- Toast Notification -->
+        <ToastNotification
+            :show="showToast"
+            :message="toastMessage"
+            :type="toastType"
+            @close="showToast = false"
+        />
 
-                    <h1 class="font-semibold mb-3">Aksi</h1>
-                    <div class="space-y-2">
-                        <button
-                            v-for="action in actions"
-                            :key="action.id"
-                            @click="selectedAction = action.id"
-                            class="block w-full text-left px-3 py-2 rounded-md transition-colors"
-                            :class="{
-                                'bg-orange-500 text-white':
-                                    selectedAction === action.id,
-                                'hover:bg-orange-100':
-                                    selectedAction !== action.id,
-                            }"
-                        >
-                            {{ action.label }}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Content -->
-            <div class="w-3/4 border rounded-md p-8">
-                <!-- Use tab components -->
-                <OrderHistoryTab
-                    v-if="selectedAction === 'history'"
-                    :orders="orders"
-                    @view-order="openOrderModal"
-                    @upload-payment="openPaymentProofModal"
-                />
-
-
-                <ReviewsTab
-                    v-else-if="selectedAction === 'reviews'"
-                    :orders="reviewedOrders"
-                    :reviews="userReviews"
-                    @view-reviews="openReviewModal"
-                />
-
-                <SettingsTab
-                    v-else-if="selectedAction === 'settings'"
-                    :must-verify-email="mustVerifyEmail"
-                    :status="status"
-                />
-            </div>
-        </section>
-    </CustomersLayout>
-
-    <!-- Payment Proof Modal -->
-    <div
-        v-if="showPaymentProofModal"
-        class="fixed inset-0 z-50 overflow-y-auto"
-    >
-        <div
-            class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-        ></div>
-        <div class="flex min-h-full items-center justify-center p-4">
-            <div class="relative bg-white rounded-lg max-w-md w-full shadow-xl">
-                <!-- Modal Header -->
-                <div class="px-6 py-4 border-b">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-xl font-semibold">
-                            Upload Bukti Pembayaran
-                        </h3>
-                        <button
-                            @click="closePaymentProofModal"
-                            class="text-gray-400 hover:text-gray-500"
-                        >
-                            ×
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Modal Content -->
-                <form @submit.prevent="submitPaymentProof" class="p-6">
-                    <div class="space-y-4">
-                        <div>
-                            <label
-                                class="block text-sm font-medium text-gray-700"
-                            >
-                                Order #{{ selectedPaymentOrder?.id }}
-                            </label>
-                            <div class="mt-2">
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    @input="handlePaymentProofUpload"
-                                    class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
-                                    required
-                                />
+        <main class="min-h-screen bg-stone-50/60 pb-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+                <!-- User Profile Banner -->
+                <div class="bg-gradient-to-br from-amber-50/80 via-orange-50/60 to-rose-50/40 rounded-3xl p-6 sm:p-8 border border-orange-100 shadow-xs mb-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                        <div class="flex items-center gap-4 sm:gap-6">
+                            <!-- Avatar with Initials -->
+                            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-orange-500 text-white font-bold text-xl sm:text-2xl flex items-center justify-center shadow-lg shadow-orange-500/25 shrink-0">
+                                {{ userInitials }}
                             </div>
-                            <div
-                                v-if="paymentProofForm.errors.payment_proof"
-                                class="text-red-500 text-sm mt-1"
-                            >
-                                {{ paymentProofForm.errors.payment_proof }}
+
+                            <div class="space-y-1 min-w-0">
+                                <div class="flex items-center gap-2.5 flex-wrap">
+                                    <h1 class="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+                                        {{ user?.name || "Pelanggan" }}
+                                    </h1>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-800 border border-orange-200">
+                                        <CheckCircle :size="12" /> Member
+                                    </span>
+                                </div>
+                                <p class="text-xs sm:text-sm text-gray-600 truncate">
+                                    {{ user?.email }}
+                                </p>
+                                <div class="flex items-center gap-1.5 text-xs text-gray-500 pt-1">
+                                    <Calendar :size="13" class="text-orange-500" />
+                                    <span>Bergabung sejak {{ joinDate }}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mt-6 flex justify-end space-x-3">
+                        <!-- Quick action links -->
+                        <div class="flex items-center gap-2 self-start sm:self-auto">
+                            <Link
+                                :href="route('logout')"
+                                method="post"
+                                as="button"
+                                class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-rose-600 bg-white hover:bg-rose-50 border border-rose-100 rounded-xl transition shadow-xs"
+                            >
+                                <LogOut :size="14" />
+                                <span>Keluar</span>
+                            </Link>
+                        </div>
+                    </div>
+
+                    <!-- Quick KPI Cards Grid -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-orange-100/80">
+                        <!-- Total Orders -->
+                        <div
+                            @click="selectedAction = 'history'"
+                            class="bg-white/80 backdrop-blur-xs rounded-2xl p-4 border border-orange-100/60 shadow-xs cursor-pointer hover:bg-white hover:shadow-sm transition"
+                        >
+                            <div class="flex items-center justify-between text-gray-500 mb-2">
+                                <span class="text-xs font-medium">Total Pesanan</span>
+                                <div class="p-2 bg-orange-50 text-orange-600 rounded-xl">
+                                    <ShoppingBag :size="16" />
+                                </div>
+                            </div>
+                            <span class="text-xl sm:text-2xl font-bold text-gray-900">{{ stats.totalOrders }}</span>
+                        </div>
+
+                        <!-- Pending Payment -->
+                        <div
+                            @click="selectedAction = 'history'"
+                            class="bg-white/80 backdrop-blur-xs rounded-2xl p-4 border border-orange-100/60 shadow-xs cursor-pointer hover:bg-white hover:shadow-sm transition"
+                        >
+                            <div class="flex items-center justify-between text-gray-500 mb-2">
+                                <span class="text-xs font-medium">Belum Dibayar</span>
+                                <div class="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                                    <CreditCard :size="16" />
+                                </div>
+                            </div>
+                            <span class="text-xl sm:text-2xl font-bold text-amber-600">{{ stats.pendingPayment }}</span>
+                        </div>
+
+                        <!-- Active in Progress / Shipping -->
+                        <div
+                            @click="selectedAction = 'history'"
+                            class="bg-white/80 backdrop-blur-xs rounded-2xl p-4 border border-orange-100/60 shadow-xs cursor-pointer hover:bg-white hover:shadow-sm transition"
+                        >
+                            <div class="flex items-center justify-between text-gray-500 mb-2">
+                                <span class="text-xs font-medium">Dalam Pengiriman</span>
+                                <div class="p-2 bg-purple-50 text-purple-600 rounded-xl">
+                                    <Truck :size="16" />
+                                </div>
+                            </div>
+                            <span class="text-xl sm:text-2xl font-bold text-purple-600">{{ stats.inDelivery }}</span>
+                        </div>
+
+                        <!-- Reviews Given -->
+                        <div
+                            @click="selectedAction = 'reviews'"
+                            class="bg-white/80 backdrop-blur-xs rounded-2xl p-4 border border-orange-100/60 shadow-xs cursor-pointer hover:bg-white hover:shadow-sm transition"
+                        >
+                            <div class="flex items-center justify-between text-gray-500 mb-2">
+                                <span class="text-xs font-medium">Ulasan Diberikan</span>
+                                <div class="p-2 bg-yellow-50 text-yellow-600 rounded-xl">
+                                    <Star :size="16" />
+                                </div>
+                            </div>
+                            <span class="text-xl sm:text-2xl font-bold text-gray-900">{{ stats.reviewsCount }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Layout (Sidebar + Tab Content) -->
+                <div class="flex flex-col lg:flex-row gap-8 items-start">
+                    <!-- Navigation (Mobile Pills & Desktop Sidebar) -->
+                    <div class="w-full lg:w-72 shrink-0">
+                        <!-- Desktop Sidebar Menu -->
+                        <div class="hidden lg:block bg-white rounded-3xl border border-gray-100 p-3 shadow-xs space-y-1 sticky top-24">
                             <button
+                                v-for="action in navActions"
+                                :key="action.id"
                                 type="button"
-                                @click="closePaymentProofModal"
-                                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                                @click="selectedAction = action.id"
+                                class="w-full text-left p-3.5 rounded-2xl transition-all duration-150 flex items-center justify-between group"
+                                :class="[
+                                    selectedAction === action.id
+                                        ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                                        : 'text-gray-700 hover:bg-orange-50/70',
+                                ]"
                             >
-                                Cancel
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="p-2 rounded-xl transition"
+                                        :class="[
+                                            selectedAction === action.id
+                                                ? 'bg-white/20 text-white'
+                                                : 'bg-gray-100 text-gray-600 group-hover:bg-orange-100 group-hover:text-orange-600',
+                                        ]"
+                                    >
+                                        <component :is="action.icon" :size="18" />
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold">{{ action.label }}</p>
+                                        <p
+                                            class="text-[11px] truncate max-w-[130px]"
+                                            :class="selectedAction === action.id ? 'text-white/80' : 'text-gray-400'"
+                                        >
+                                            {{ action.description }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-1.5">
+                                    <span
+                                        v-if="action.badge?.value !== undefined && action.badge !== null"
+                                        class="px-2 py-0.5 text-xs font-bold rounded-full"
+                                        :class="[
+                                            selectedAction === action.id
+                                                ? 'bg-white/25 text-white'
+                                                : 'bg-gray-100 text-gray-600',
+                                        ]"
+                                    >
+                                        {{ action.badge.value }}
+                                    </span>
+                                    <ChevronRight
+                                        :size="16"
+                                        :class="selectedAction === action.id ? 'text-white' : 'text-gray-400 group-hover:text-gray-600'"
+                                    />
+                                </div>
                             </button>
+                        </div>
+
+                        <!-- Mobile Horizontal Scroll Tabs -->
+                        <div class="lg:hidden flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none w-full">
                             <button
-                                type="submit"
-                                class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
-                                :disabled="paymentProofForm.processing"
+                                v-for="action in navActions"
+                                :key="action.id"
+                                type="button"
+                                @click="selectedAction = action.id"
+                                class="px-4 py-2.5 rounded-2xl text-xs font-semibold whitespace-nowrap transition flex items-center gap-2 shrink-0 border"
+                                :class="[
+                                    selectedAction === action.id
+                                        ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
+                                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50',
+                                ]"
                             >
-                                {{
-                                    paymentProofForm.processing
-                                        ? "Uploading..."
-                                        : "Upload"
-                                }}
+                                <component :is="action.icon" :size="15" />
+                                <span>{{ action.label }}</span>
+                                <span
+                                    v-if="action.badge?.value !== undefined && action.badge !== null"
+                                    class="px-1.5 py-0.2 rounded-full text-[10px]"
+                                    :class="selectedAction === action.id ? 'bg-white/25 text-white' : 'bg-gray-100 text-gray-700'"
+                                >
+                                    {{ action.badge.value }}
+                                </span>
                             </button>
                         </div>
                     </div>
-                </form>
+
+                    <!-- Main Tab Content Area -->
+                    <div class="flex-1 w-full min-w-0">
+                        <OrderHistoryTab
+                            v-if="selectedAction === 'history'"
+                            ref="orderHistoryRef"
+                            :orders="orders"
+                        />
+
+                        <ReviewsTab
+                            v-else-if="selectedAction === 'reviews'"
+                            :orders="orders"
+                            :reviews="reviews"
+                            @review-order="handleReviewOrder"
+                        />
+
+                        <SettingsTab
+                            v-else-if="selectedAction === 'settings'"
+                            :must-verify-email="mustVerifyEmail"
+                            :status="status"
+                        />
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
+        </main>
+    </CustomersLayout>
 </template>

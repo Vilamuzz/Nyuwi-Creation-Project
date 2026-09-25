@@ -142,10 +142,9 @@ watch(
 
 const currentStep = ref("information"); // 'information' | 'shipping' | 'payment'
 
-const shippingOptions = [
-    { id: "jne", name: "JNE Regular (2-3 Hari)", service: "JNE", cost: 15000 },
-    { id: "gosend", name: "GoSend Instant", service: "GoSend", cost: 30000 },
-];
+const shippingOptions = ref([]);
+const isCalculatingShipping = ref(false);
+const shippingError = ref(null);
 
 const paymentOptions = [
     { id: "qris", name: "QRIS", description: "Scan QRIS (GoPay, OVO, ShopeePay, DANA, Mobile Banking)" },
@@ -153,8 +152,69 @@ const paymentOptions = [
 ];
 
 const selectShippingOption = (option) => {
-    form.shipping_method = option.service;
+    form.shipping_method = option.methodLabel || option.service;
     form.shipping_cost = option.cost;
+};
+
+const calculateShippingRates = async () => {
+    if (!form.city) return;
+
+    isCalculatingShipping.value = true;
+    shippingError.value = null;
+
+    try {
+        const weight = props.summary?.totalWeight || 1000;
+        const response = await fetch(route("shipping.calculate"), {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "",
+            },
+            body: JSON.stringify({
+                destination: form.city,
+                weight: weight,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status === "success" && Array.isArray(data.rates)) {
+            shippingOptions.value = data.rates.map((rate, index) => ({
+                id: `${rate.courier}_${rate.service}_${index}`,
+                name: rate.name,
+                courier: rate.courier,
+                service: rate.service,
+                methodLabel: `${rate.courier.toUpperCase()} - ${rate.service}`,
+                description: rate.description,
+                cost: rate.cost,
+                etd: rate.etd,
+            }));
+
+            if (shippingOptions.value.length > 0) {
+                const existing = shippingOptions.value.find(
+                    (opt) => opt.methodLabel === form.shipping_method || opt.service === form.shipping_method
+                );
+                if (existing) {
+                    selectShippingOption(existing);
+                } else {
+                    selectShippingOption(shippingOptions.value[0]);
+                }
+            } else {
+                form.shipping_method = "";
+                form.shipping_cost = 0;
+                shippingError.value = "Tidak ada layanan kurir yang tersedia untuk wilayah tujuan ini.";
+            }
+        } else {
+            shippingError.value = data.message || "Gagal memuat opsi pengiriman.";
+        }
+    } catch (err) {
+        console.error("Error calculating shipping:", err);
+        shippingError.value = "Terjadi gangguan saat menghitung ongkos kirim. Silakan coba lagi.";
+    } finally {
+        isCalculatingShipping.value = false;
+    }
 };
 
 const toast = ref({
@@ -175,19 +235,19 @@ const hideToast = () => {
     toast.value.show = false;
 };
 
-const goToStep = (step) => {
+const goToStep = async (step) => {
     if (step === "shipping") {
         if (!form.name || !form.address || !form.province || !form.city || !form.district || !form.village || !form.phone) {
             triggerToast("Silakan lengkapi semua data alamat pengiriman terlebih dahulu.", "warning");
             return;
         }
-        if (!form.shipping_method && shippingOptions.length > 0) {
-            selectShippingOption(shippingOptions[0]);
-        }
+        currentStep.value = "shipping";
+        await calculateShippingRates();
+        return;
     }
     if (step === "payment") {
-        if (!form.shipping_method) {
-            triggerToast("Silakan pilih metode pengiriman terlebih dahulu.", "warning");
+        if (!form.shipping_method || form.shipping_cost < 0) {
+            triggerToast("Silakan pilih opsi pengiriman terlebih dahulu.", "warning");
             return;
         }
         if (!form.payment_method && paymentOptions.length > 0) {
@@ -402,23 +462,58 @@ onMounted(() => {
 
                         <!-- Shipping Method Selection -->
                         <div class="space-y-3">
-                            <h2 class="text-xl font-bold text-gray-900">Metode Pengiriman</h2>
-                            <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <h2 class="text-xl font-bold text-gray-900">Metode Pengiriman</h2>
+                            </div>
+
+                            <!-- Loading State -->
+                            <div v-if="isCalculatingShipping"
+                                class="p-8 text-center bg-gray-50 border border-gray-200 rounded-2xl space-y-3">
+                                <div class="loading loading-spinner text-orange-500 loading-md"></div>
+                                <p class="text-sm font-medium text-gray-600">Menghitung tarif ongkos kirim ke {{
+                                    form.city }}...</p>
+                            </div>
+
+                            <!-- Error State -->
+                            <div v-else-if="shippingError"
+                                class="p-5 bg-amber-50 border border-amber-200 rounded-2xl space-y-2">
+                                <p class="text-sm font-medium text-amber-800">{{ shippingError }}</p>
+                                <button type="button" @click="calculateShippingRates"
+                                    class="text-xs font-semibold text-orange-600 hover:text-orange-700 underline cursor-pointer">
+                                    Coba kalkulasi ulang
+                                </button>
+                            </div>
+
+                            <!-- Dynamic Options List -->
+                            <div v-else-if="shippingOptions.length > 0" class="space-y-2">
                                 <label v-for="option in shippingOptions" :key="option.id"
                                     @click="selectShippingOption(option)"
                                     class="flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-all"
-                                    :class="form.shipping_cost === option.cost && form.shipping_method === option.service ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500' : 'border-gray-200 hover:border-gray-300'">
+                                    :class="(form.shipping_cost === option.cost && (form.shipping_method === option.methodLabel || form.shipping_method === option.service)) ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500' : 'border-gray-200 hover:border-gray-300'">
                                     <div class="flex items-center gap-3">
                                         <input type="radio" name="shipping_option"
-                                            :checked="form.shipping_cost === option.cost && form.shipping_method === option.service"
+                                            :checked="form.shipping_cost === option.cost && (form.shipping_method === option.methodLabel || form.shipping_method === option.service)"
                                             class="text-orange-500 focus:ring-orange-500" />
                                         <div>
                                             <p class="font-semibold text-gray-900">{{ option.name }}</p>
-                                            <p class="text-xs text-gray-500">Kurir {{ option.service }}</p>
+                                            <p class="text-xs text-gray-500">
+                                                Estimasi: <span class="font-medium text-gray-700">{{ option.etd ||
+                                                    '1-3hari' }}</span>
+                                            </p>
                                         </div>
                                     </div>
                                     <span class="font-bold text-gray-900">{{ formatPrice(option.cost) }}</span>
                                 </label>
+                            </div>
+
+                            <div v-else
+                                class="p-6 text-center bg-gray-50 border border-dashed border-gray-300 rounded-2xl">
+                                <p class="text-sm text-gray-500">Tidak ada opsi pengiriman yang tersedia untuk wilayah
+                                    ini.</p>
+                                <button type="button" @click="calculateShippingRates"
+                                    class="mt-2 text-xs font-semibold text-orange-600 hover:underline cursor-pointer">
+                                    Kalkulasi Ulang
+                                </button>
                             </div>
                         </div>
 

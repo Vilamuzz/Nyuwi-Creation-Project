@@ -20,7 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => EnsureAdmin::class,
+            'customer' => \App\Http\Middleware\EnsureCustomer::class,
             'check.cart' => EnsureCartNotEmpty::class,
+        ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/midtrans',
         ]);
 
         //

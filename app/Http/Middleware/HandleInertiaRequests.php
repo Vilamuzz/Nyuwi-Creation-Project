@@ -38,7 +38,8 @@ class HandleInertiaRequests extends Middleware
                 'user' => $request->user(),
             ],
             'flash' => [
-                'message' => fn() => $request->session()->get('message')
+                'message' => fn() => $request->session()->get('message'),
+                'placedOrderId' => fn() => $request->session()->get('placedOrderId'),
             ],
             'regionData' => fn() => $request->session()->get('regionData'),
             'shippingResult' => fn() => $request->session()->get('shippingResult'),
@@ -50,6 +51,10 @@ class HandleInertiaRequests extends Middleware
                 'storeQris' => $profileStore?->qris,
             ],
             'cart' => fn () => $this->cartPayload($request),
+            'midtrans' => [
+                'clientKey' => config('services.midtrans.client_key'),
+                'snapJsUrl' => config('services.midtrans.snap_js_url'),
+            ],
         ]);
     }
 

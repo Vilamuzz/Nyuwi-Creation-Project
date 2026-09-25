@@ -13,8 +13,7 @@ const showTrackingInfo = ref(false);
 const trackingInfo = ref(null);
 const trackingError = ref(null);
 
-// Add new state for payment proof modal
-const showPaymentProofModal = ref(false);
+
 
 const form = useForm({
     status: "processing",
@@ -93,25 +92,7 @@ const formatPrice = (price) => {
     }).format(price);
 };
 
-// Add method to open/close payment proof modal
-const openPaymentProofModal = () => {
-    showPaymentProofModal.value = true;
-};
 
-const closePaymentProofModal = () => {
-    showPaymentProofModal.value = false;
-};
-
-// Add method to approve payment and update status
-const approvePayment = () => {
-    form.status = "processing";
-    form.put(route("admin.orders.update", props.order.id), {
-        preserveScroll: true,
-        onSuccess: () => {
-            closePaymentProofModal();
-        },
-    });
-};
 
 const showEditTrackingModal = ref(false);
 const editTrackingForm = useForm({
@@ -207,19 +188,13 @@ const cancelOrder = () => {
                                 </p>
                             </div>
                             <div>
-                                <p>
-                                    <span class="font-semibold">Status:</span>
+                                <p class="mb-2">
+                                    <span class="font-semibold">Status Pengiriman:</span>
                                     <span
                                         :class="{
-                                            'px-2 py-1 text-xs font-semibold rounded-full': true,
-                                            'bg-yellow-100 text-yellow-800':
-                                                order.status === 'waiting',
+                                            'px-2 py-1 text-xs font-semibold rounded-full ml-1': true,
                                             'bg-purple-100 text-purple-800':
-                                                order.status === 'checking',
-                                            'bg-purple-100 text-cyan-800':
                                                 order.status === 'shiping',
-                                            'bg-orange-100 text-orange-800':
-                                                order.status === 'pending',
                                             'bg-blue-100 text-blue-800':
                                                 order.status === 'processing',
                                             'bg-green-100 text-green-800':
@@ -229,6 +204,26 @@ const cancelOrder = () => {
                                         }"
                                     >
                                         {{ order.status }}
+                                    </span>
+                                </p>
+                                <p>
+                                    <span class="font-semibold">Status Pembayaran:</span>
+                                    <span
+                                        :class="{
+                                            'px-2 py-1 text-xs font-semibold rounded-full ml-1': true,
+                                            'bg-amber-100 text-amber-800':
+                                                order.payment_status === 'pending',
+                                            'bg-emerald-100 text-emerald-800':
+                                                order.payment_status === 'paid',
+                                            'bg-rose-100 text-rose-800':
+                                                order.payment_status === 'failed',
+                                            'bg-stone-100 text-stone-700':
+                                                order.payment_status === 'expired',
+                                            'bg-blue-100 text-blue-800':
+                                                order.payment_status === 'refunded',
+                                        }"
+                                    >
+                                        {{ order.payment_status }}
                                     </span>
                                 </p>
                                 <p>
@@ -468,9 +463,7 @@ const cancelOrder = () => {
                             :hidden="
                                 order.status === 'shiping' ||
                                 order.status === 'completed' ||
-                                order.status === 'cancelled' ||
-                                (order.payment_method === 'digital_wallet' &&
-                                    order.status === 'waiting')
+                                order.status === 'cancelled'
                             "
                             class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
                         >
@@ -625,101 +618,32 @@ const cancelOrder = () => {
                         </div>
                     </div>
 
-                    <!-- Add button to view payment proof -->
-                    <div class="mt-4">
+                    <!-- Payment Status Information -->
+                    <div class="mt-4 p-4 rounded-lg bg-stone-50 border border-stone-200">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="font-semibold">Payment Proof:</p>
-                                <p
-                                    v-if="order.payment_proof"
-                                    class="text-sm text-gray-600"
-                                >
-                                    Payment proof uploaded
-                                </p>
-                                <p v-else class="text-sm text-red-500">
-                                    Waiting for payment proof
+                                <p class="font-semibold text-sm text-stone-800">Status Pembayaran Gateway</p>
+                                <p class="text-sm text-stone-600">
+                                    Metode: <span class="font-medium capitalize">{{ order.payment_method }}</span>
                                 </p>
                             </div>
-                            <button
-                                v-if="order.payment_proof"
-                                @click="openPaymentProofModal"
-                                class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            <span
+                                :class="{
+                                    'px-2.5 py-1 text-xs font-semibold rounded-full border': true,
+                                    'bg-amber-100 text-amber-800 border-amber-200':
+                                        order.payment_status === 'pending',
+                                    'bg-emerald-100 text-emerald-800 border-emerald-200':
+                                        order.payment_status === 'paid',
+                                    'bg-rose-100 text-rose-800 border-rose-200':
+                                        order.payment_status === 'failed',
+                                    'bg-stone-100 text-stone-700 border-stone-200':
+                                        order.payment_status === 'expired',
+                                    'bg-blue-100 text-blue-800 border-blue-200':
+                                        order.payment_status === 'refunded',
+                                }"
                             >
-                                View Payment Proof
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Payment Proof Modal -->
-                    <div
-                        v-if="showPaymentProofModal"
-                        class="fixed inset-0 z-50 overflow-y-auto"
-                    >
-                        <div
-                            class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-                        ></div>
-                        <div
-                            class="flex min-h-full items-center justify-center p-4"
-                        >
-                            <div
-                                class="relative bg-white rounded-lg max-w-xl w-full shadow-xl"
-                            >
-                                <!-- Modal Header -->
-                                <div class="px-6 py-4 border-b">
-                                    <div
-                                        class="flex justify-between items-center"
-                                    >
-                                        <h3 class="text-xl font-semibold">
-                                            Payment Proof
-                                        </h3>
-                                        <button
-                                            @click="closePaymentProofModal"
-                                            class="text-gray-400 hover:text-gray-500"
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Modal Content -->
-                                <div class="p-6">
-                                    <div class="space-y-4">
-                                        <div
-                                            class="aspect-w-16 aspect-h-9 flex justify-center"
-                                        >
-                                            <img
-                                                :src="`/storage/payment_proofs/${order.payment_proof}`"
-                                                :alt="
-                                                    'Payment proof for order #' +
-                                                    order.id
-                                                "
-                                                class="object-contain w-auto h-96"
-                                            />
-                                        </div>
-
-                                        <!-- Action buttons for admin -->
-                                        <div
-                                            class="flex justify-end space-x-3 mt-4"
-                                        >
-                                            <button
-                                                @click="closePaymentProofModal"
-                                                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                                            >
-                                                Close
-                                            </button>
-                                            <button
-                                                v-if="
-                                                    order.status === 'waiting'
-                                                "
-                                                @click="approvePayment"
-                                                class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
-                                            >
-                                                Approve Payment
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                                {{ order.payment_status }}
+                            </span>
                         </div>
                     </div>
                 </div>

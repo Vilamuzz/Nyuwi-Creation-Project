@@ -60,6 +60,7 @@ class AdminDashboardTest extends TestCase
             'email' => 'customer@test.com',
             'total_price' => 150000,
             'payment_method' => 'digital_wallet',
+            'payment_status' => 'paid',
             'status' => 'processing',
         ]);
 

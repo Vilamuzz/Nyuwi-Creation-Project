@@ -1,5 +1,77 @@
 # Changelog
 
+## [2026-09-25] — BinderByte Shipping Driver & Unified Package Tracking Integration
+
+- **BinderByte Shipping Driver:**
+  - Implemented `BinderByteShippingDriver` supporting cost calculation (`/v1/cost`), airway bill tracking (`/v1/track`), city fallback resolution, and supported couriers.
+  - Added `track(string $courier, string $trackingNumber)` to `ShippingCalculatorInterface`, implemented across `BinderByteShippingDriver`, `MockShippingDriver`, and `ShippingDriver`.
+  - Registered `createBinderbyteDriver()` and `track()` proxy in `ShippingManager`, setting `binderbyte` as the default shipping driver.
+  - Configured `config/shipping.php`, `config/services.php`, and `.env.example` with `SHIPPING_DRIVER=binderbyte` and `BINDERBYTE_API_KEY`.
+- **Unified Order Tracking:**
+  - Updated `OrderController::tracking` and `OrderController::adminTracking` to delegate package tracking to `ShippingManager::track()` with automatic courier name normalization (e.g. `'JNE - REG'` normalized to `'jne'`).
+- **Testing & Verification:**
+  - Added test cases in `tests/Feature/ShippingCalculationTest.php` for BinderByte cost calculation, package tracking, and order tracking flow (all 9 tests passing).
+  - Verified integration tests and compiled frontend assets (`npm run build`).
+
+### Files changed
+- `app/Services/Shipping/Contracts/ShippingCalculatorInterface.php`
+- `app/Services/Shipping/Drivers/BinderByteShippingDriver.php` *(New)*
+- `app/Services/Shipping/Drivers/MockShippingDriver.php`
+- `app/Services/Shipping/Drivers/ShippingDriver.php`
+- `app/Services/Shipping/ShippingManager.php`
+- `app/Http/Controllers/OrderController.php`
+- `config/shipping.php`
+- `config/services.php`
+- `.env.example`
+- `tests/Feature/ShippingCalculationTest.php`
+- `docs/CHANGELOG.md`
+
+## [2026-09-25] — Modular Shipping Cost Calculation & Store Courier Settings
+
+- **Modular Shipping Calculation Architecture:**
+  - Created provider-agnostic `ShippingCalculatorInterface` defining `calculate()`, `getSupportedCouriers()`, and `getCities()`.
+  - Implemented `RajaOngkirShippingDriver` supporting starter/pro RajaOngkir endpoints (`/cost`, `/city`), city resolution, and standardized rate output format (`courier`, `service`, `name`, `description`, `cost`, `etd`).
+  - Implemented `MockShippingDriver` for offline local development and deterministic automated test execution.
+  - Implemented `ShippingManager` extending Laravel's `Manager` pattern to resolve configured driver dynamically (`env('SHIPPING_DRIVER', 'rajaongkir')`).
+  - Added `config/shipping.php` and updated `config/services.php` & `.env.example`.
+- **Store Courier Settings (Admin):**
+  - Created migration `2026_09_25_000001_add_shipping_settings_to_profile_stores_table.php` adding `shipping_origin_city_id` and `shipping_couriers` to `profile_stores`.
+  - Updated `ProfileStore` model with fillable attributes, JSON casting, and `getEnabledCouriers()` helper method.
+  - Updated `StoreProfileUpdateRequest` and `ProfileStoreController` to persist courier configurations and provide supported couriers to the frontend.
+  - Updated `resources/js/Pages/Admin/ProfileStore.vue` with an interactive "Ekspedisi & Pengiriman" section allowing admins to toggle active couriers (JNE, POS, TIKI, SiCepat, J&T) and origin city, displayed in both View and Edit modes.
+- **Dynamic Customer Checkout (Customer):**
+  - Updated `CartService::summarize()` to calculate `totalWeight` from products in cart.
+  - Updated `resources/js/Pages/Customer/Checkout.vue` to dynamically calculate real-time shipping costs via `/shipping/calculate` based on the store's enabled couriers and customer's destination city, with loading and error states.
+  - Relaxed `OrderStoreRequest` validation for `shipping_method` from hardcoded `'in:JNE,GoSend'` to `'string|max:100'` to accept any configured courier service.
+- **Testing & Verification:**
+  - Created feature test suite `tests/Feature/ShippingCalculationTest.php` (6 tests passing).
+  - Verified `tests/Feature/ProfileStoreTest.php` (9 tests passing) and `tests/Feature/GuestCheckoutTest.php` (6 tests passing).
+  - Verified frontend asset compilation (`npm run build`).
+
+### Files changed
+- `database/migrations/2026_09_25_000001_add_shipping_settings_to_profile_stores_table.php` *(New)*
+- `config/shipping.php` *(New)*
+- `config/services.php`
+- `.env.example`
+- `app/Services/Shipping/Contracts/ShippingCalculatorInterface.php` *(New)*
+- `app/Services/Shipping/Drivers/RajaOngkirShippingDriver.php` *(New)*
+- `app/Services/Shipping/Drivers/MockShippingDriver.php` *(New)*
+- `app/Services/Shipping/ShippingManager.php` *(New)*
+- `app/Providers/AppServiceProvider.php`
+- `app/Models/ProfileStore.php`
+- `app/Http/Requests/StoreProfileUpdateRequest.php`
+- `app/Http/Controllers/ProfileStoreController.php`
+- `app/Http/Requests/ShippingCalculateRequest.php`
+- `app/Http/Controllers/ShippingController.php`
+- `app/Http/Requests/OrderStoreRequest.php`
+- `app/Services/CartService.php`
+- `routes/web.php`
+- `resources/js/Pages/Admin/ProfileStore.vue`
+- `resources/js/Pages/Customer/Checkout.vue`
+- `tests/Feature/ShippingCalculationTest.php` *(New)*
+- `docs/05_BACKEND_SCHEMA.md`
+- `docs/CHANGELOG.md`
+
 ## [2026-09-24] — Remove "Add New Category" Capability
 
 - Removed the ability to create categories inline while creating or editing a product. Admins can now only pick from existing categories.
@@ -296,3 +368,123 @@
 ### Files changed
 - `README.md`
 - `docs/CHANGELOG.md`
+
+## [2026-09-24] — Split Order Statuses, Add Payment Transactions Table & Drop Payment Proof
+
+- Created migration `2026_09_24_093500_split_orders_status_and_drop_payment_proof.php`:
+  - Added `payment_status` enum (`pending`, `paid`, `failed`, `expired`, `refunded`) with default `pending`.
+  - Migrated existing orders status values into `payment_status` and new fulfillment-only `status`.
+  - Altered `status` enum column to fulfillment-only: `processing`, `shiping`, `completed`, `cancelled` (default: `processing`).
+  - Dropped obsolete `payment_proof` column.
+- Created migration `2026_09_24_093501_create_payment_transactions_table.php`:
+  - Created `payment_transactions` table with `order_id` (foreign key cascading on delete), `gateway`, `gateway_transaction_id`, `payment_channel`, `amount`, `raw_status`, `expired_at`, `paid_at`, `raw_payload`, and timestamps.
+  - Added composite index on `['gateway', 'gateway_transaction_id']` for webhook idempotency and audit lookups.
+- Created `App\Models\PaymentTransaction` Eloquent model with `$fillable`, `casts()` (`decimal:2`, `datetime`, `array`), and `belongsTo(Order::class)`.
+- Updated `App\Models\Order` to include `payment_status`, remove `payment_proof`, and define `hasMany(PaymentTransaction::class)`.
+- Updated `OrderStatusUpdateRequest` to validate fulfillment statuses (`processing,shiping,completed,cancelled`).
+- Updated `OrderController`:
+  - In `store()`: sets `'payment_status' => 'pending'` and `'status' => 'processing'`.
+  - In `update()`: removed obsolete checks on payment proof and digital wallet status waiting.
+  - In `uploadPaymentProof()`: safe return indicating manual proof uploads are discontinued.
+- Updated `DashboardController`:
+  - Updated KPI total revenue calculation to query `payment_status = 'paid'`.
+  - Updated `pendingOrdersCount` and `topSelling` subqueries to align with separated payment and fulfillment statuses.
+- Updated UI components to display both payment and fulfillment statuses:
+  - `Admin/Orders/Index.vue`: Added `getPaymentStatusBadge`, updated table row and preview drawer.
+  - `Admin/Orders/Show.vue`: Added payment status details, updated fulfillment badges, removed payment proof modal.
+  - `Admin/Dashboard.vue`: Added `getPaymentStatusBadge` and updated recent orders status column.
+  - `Customer/Dashboard.vue`: Removed payment proof modal and upload form.
+  - `Customer/Main/OrderHistoryTab.vue`: Added `getPaymentStatusClass`, rendered both statuses, removed manual upload button.
+  - `Customer/Main/Navbar.vue`: Checked `order.payment_status === 'pending'` for pending order alerts.
+- Added `EnsureCustomer` middleware and registered alias `customer` in `bootstrap/app.php`.
+- Created feature test `tests/Feature/PaymentTransactionTest.php` and updated `GuestCheckoutTest.php` & `AdminDashboardTest.php`.
+- Updated backend documentation in `docs/05_BACKEND_SCHEMA.md` with schema tables, ER diagram, relationships, and indexes.
+
+### Files changed
+- `database/migrations/2026_09_24_093500_split_orders_status_and_drop_payment_proof.php`
+- `database/migrations/2026_09_24_093501_create_payment_transactions_table.php`
+- `app/Models/PaymentTransaction.php`
+- `app/Models/Order.php`
+- `app/Http/Requests/OrderStatusUpdateRequest.php`
+- `app/Http/Controllers/OrderController.php`
+- `app/Http/Controllers/DashboardController.php`
+- `app/Http/Middleware/EnsureCustomer.php`
+- `bootstrap/app.php`
+- `resources/js/Pages/Admin/Dashboard.vue`
+- `resources/js/Pages/Admin/Orders/Index.vue`
+- `resources/js/Pages/Admin/Orders/Show.vue`
+- `resources/js/Pages/Customer/Dashboard.vue`
+- `resources/js/Components/Customer/Main/OrderHistoryTab.vue`
+- `resources/js/Components/Customer/Main/Navbar.vue`
+- `tests/Feature/PaymentTransactionTest.php`
+- `tests/Feature/GuestCheckoutTest.php`
+- `tests/Feature/AdminDashboardTest.php`
+- `docs/05_BACKEND_SCHEMA.md`
+- `docs/CHANGELOG.md`
+
+## [2026-09-25] — Integrate Midtrans Payment Gateway (Snap API & Webhooks)
+
+- Configured Midtrans credentials and URLs in `config/services.php` and placeholders in `.env.example`.
+- Created `App\Services\MidtransService` encapsulating Midtrans Snap token generation and SHA-512 notification signature verification using native Laravel HTTP client (`Http::withBasicAuth()`), with automatic line item shipping cost balancing.
+- Created `App\Http\Controllers\MidtransWebhookController` to handle incoming Midtrans notifications:
+  - Validates SHA-512 signature against order and server key.
+  - Guarantees idempotency via `payment_transactions` lookup (`order_id`, `gateway`, `gateway_transaction_id`, `raw_status`).
+  - Maps Midtrans status codes (`capture`, `settlement`, `pending`, `expire`, `cancel`, `deny`, `refund`) directly to `orders.payment_status` within an atomic database transaction.
+- Added `paymentToken` endpoint to `OrderController` and updated `store` to flash `placedOrderId`.
+- Excluded `/webhooks/midtrans` from CSRF verification in `bootstrap/app.php`.
+- Registered webhook and payment token routes in `routes/web.php`.
+- Shared Midtrans client key and Snap JS URL via `HandleInertiaRequests` middleware.
+- Created client-side utility `resources/js/Utils/midtrans.js` for dynamic Snap SDK loading and modal execution (`triggerSnapPayment`).
+- Updated `OrderHistoryTab.vue` to add "Bayar Sekarang" action for pending orders.
+- Updated `Cart.vue` to auto-trigger Midtrans payment popup when redirected from checkout with `placedOrderId`.
+- Created feature test suite `tests/Feature/MidtransIntegrationTest.php` covering token generation, webhook signature validation, idempotency, and status updates (all 7 tests passing).
+
+### Files changed
+- `config/services.php`
+- `.env.example`
+- `app/Services/MidtransService.php`
+- `app/Http/Controllers/MidtransWebhookController.php`
+- `app/Http/Controllers/OrderController.php`
+- `bootstrap/app.php`
+- `routes/web.php`
+- `app/Http/Middleware/HandleInertiaRequests.php`
+- `resources/js/Utils/midtrans.js`
+- `resources/js/Components/Customer/Main/OrderHistoryTab.vue`
+- `resources/js/Pages/Customer/Cart.vue`
+- `tests/Feature/MidtransIntegrationTest.php`
+- `docs/CHANGELOG.md`
+
+## [2026-09-25] - Customer Dashboard UX Enhancement
+
+### Added & Changed
+- **Customer Dashboard Redesign (`resources/js/Pages/Customer/Dashboard.vue`):**
+  - Revamped into a fully responsive mobile-first customer hub with Autumn theme aesthetic (`orange-500` accents, soft warm background gradient, rounded-3xl cards).
+  - Added customer profile banner with user avatar initials, greeting, member badge, email, and join date.
+  - Added quick KPI stat summary cards (Total Pesanan, Belum Dibayar, Dalam Pengiriman, Ulasan Diberikan) with interactive navigation shortcuts.
+  - Replaced rigid desktop-only sidebar with a sticky desktop sidebar and a horizontal scrollable tab bar on mobile/tablet screens.
+  - Added toast notification feedback integration.
+- **Order History Upgrade (`resources/js/Components/Customer/Main/OrderHistoryTab.vue`):**
+  - Added status filter pills (Semua, Menunggu Pembayaran, Diproses, Dikirim, Selesai, Dibatalkan) with live badge counts.
+  - Added order search bar supporting search by Order ID and product title.
+  - Redesigned order cards with product thumbnail preview, variant tags (size/color), item count, expandable product lists, and clear status badges.
+  - Integrated direct Midtrans payment CTA ("Bayar Sekarang") for pending orders.
+  - Upgraded Order Details modal with comprehensive order information, delivery address card, courier tracking status timeline, and inline star rating for completed deliveries.
+  - Added warm empty state with shopping bag illustration and CTA to product catalog.
+- **Reviews Center (`resources/js/Components/Customer/Main/ReviewsTab.vue`):**
+  - Replaced broken stub with a dedicated review management center with two subtabs: "Ulasan Saya" (displaying submitted reviews with product image, star ratings, date, and product link) and "Menunggu Diulas" (completed orders eligible for rating).
+  - Connected review actions to automatically open the rating modal in Order History.
+  - Added empty states for both review views.
+- **Account Settings Implementation (`resources/js/Components/Customer/Main/SettingsTab.vue`):**
+  - Replaced duplicate review code with complete Customer Account Settings.
+  - Implemented Profile Information form (Name, Email, email verification status notice) and Password Update form (Current, New, Confirm) with validation error feedback.
+- **Feature Tests (`tests/Feature/CustomerDashboardTest.php`):**
+  - Added test coverage for guest redirection, customer dashboard access, and order/review rendering.
+
+### Files changed
+- `resources/js/Pages/Customer/Dashboard.vue`
+- `resources/js/Components/Customer/Main/OrderHistoryTab.vue`
+- `resources/js/Components/Customer/Main/ReviewsTab.vue`
+- `resources/js/Components/Customer/Main/SettingsTab.vue`
+- `tests/Feature/CustomerDashboardTest.php`
+- `docs/CHANGELOG.md`
+

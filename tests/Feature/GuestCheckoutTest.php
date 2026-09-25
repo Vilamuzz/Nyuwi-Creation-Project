@@ -100,7 +100,8 @@ class GuestCheckoutTest extends TestCase
 
         $this->assertNotNull($order);
         $this->assertEquals('guest@example.com', $order->email);
-        $this->assertEquals('waiting', $order->status);
+        $this->assertEquals('pending', $order->payment_status);
+        $this->assertEquals('processing', $order->status);
         $this->assertEquals(115000, $order->total_price);
 
         $this->assertDatabaseHas('order_items', [

@@ -1,9 +1,11 @@
 <script setup>
-import { Head, Link, useForm } from "@inertiajs/vue3";
+import { Head, Link, useForm, usePage, router } from "@inertiajs/vue3";
 import { computed, ref, onMounted } from "vue";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Hero from "@/Components/Customer/Main/Hero.vue";
 import PaymentInformationModal from "@/Components/Customer/Sub-main/PaymentInformationModal.vue";
+import { triggerSnapPayment } from "@/Utils/midtrans";
+import axios from "axios";
 const props = defineProps({
     cartItems: { type: Array, default: () => [] },
     summary: { type: Object, default: () => ({}) },
@@ -54,7 +56,9 @@ const paymentInfo = {
     accountName: "Nyuwi Creation",
 };
 
-onMounted(() => {
+const page = usePage();
+
+onMounted(async () => {
     // Check localStorage for payment info
     const showPaymentInfo = localStorage.getItem("showPaymentInfo");
     const paymentMethod = localStorage.getItem("paymentMethod");
@@ -65,6 +69,29 @@ onMounted(() => {
         localStorage.removeItem("showPaymentInfo");
         localStorage.removeItem("paymentAmount");
         localStorage.removeItem("paymentMethod");
+    }
+
+    // Auto-launch Midtrans Snap if order was just placed
+    const placedOrderId = page.props.flash?.placedOrderId;
+    if (placedOrderId) {
+        try {
+            const res = await axios.get(route("orders.payment-token", placedOrderId));
+            const snapToken = res.data.snap_token;
+            const midtrans = page.props.midtrans || {};
+
+            triggerSnapPayment({
+                snapToken,
+                snapJsUrl: midtrans.snapJsUrl,
+                clientKey: midtrans.clientKey,
+                onSuccess: () => {
+                    if (page.props.auth?.user) {
+                        router.visit(route("customer.profile"));
+                    }
+                },
+            });
+        } catch (err) {
+            console.error("Gagal membuka popup pembayaran:", err);
+        }
     }
 });
 

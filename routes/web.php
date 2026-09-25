@@ -11,6 +11,7 @@ use App\Http\Controllers\ShippingController;
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileStoreController;
+use App\Http\Controllers\MidtransWebhookController;
 
 // Public Routes
 
@@ -35,8 +36,10 @@ Route::controller(RegionController::class)->prefix('regions')->name('regions.')-
     Route::get('/search', 'search')->name('search');
 });
 
-// Shipping calculation
+// Shipping calculation & helpers
 Route::post('/shipping/calculate', [ShippingController::class, 'calculate'])->name('shipping.calculate');
+Route::get('/shipping/cities', [ShippingController::class, 'cities'])->name('shipping.cities');
+Route::get('/shipping/couriers', [ShippingController::class, 'couriers'])->name('shipping.couriers');
 
 // Cart Management (available to guests via session-backed cart)
 Route::controller(CartController::class)->prefix('cart')->name('cart.')->group(function () {
@@ -49,6 +52,10 @@ Route::controller(CartController::class)->prefix('cart')->name('cart.')->group(f
 // Checkout (available to guests and customers)
 Route::get('/checkout', [CartController::class, 'showCheckout'])->middleware('check.cart')->name('checkout');
 Route::post('/customer/orders/checkout', [OrderController::class, 'store'])->name('customer.orders.store');
+Route::get('/orders/{id}/payment-token', [OrderController::class, 'paymentToken'])->name('orders.payment-token');
+
+// Midtrans Webhook Notification
+Route::post('/webhooks/midtrans', [MidtransWebhookController::class, 'handle'])->name('webhooks.midtrans');
 
 
 // Authenticated Customer Routes
@@ -62,6 +69,7 @@ Route::middleware(['auth', 'customer'])->group(function () {
         Route::post('/complete', 'complete')->name('complete');
         Route::post('/upload-proof', 'uploadPaymentProof')->name('proof');
         Route::get('/tracking/{trackingNumber}', 'tracking')->name('tracking');
+        Route::get('/{id}/payment-token', 'paymentToken')->name('payment-token');
         Route::get('/{id}', 'userOrderDetail')->name('show');
     });
 

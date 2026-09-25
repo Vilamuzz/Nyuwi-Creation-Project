@@ -118,6 +118,41 @@ const getStatusBadge = (status) => {
     }
 };
 
+const getPaymentStatusBadge = (status) => {
+    switch (status) {
+        case "pending":
+            return {
+                label: "Belum Bayar",
+                class: "bg-amber-100 text-amber-800 border-amber-200",
+            };
+        case "paid":
+            return {
+                label: "Sudah Bayar",
+                class: "bg-emerald-100 text-emerald-800 border-emerald-200",
+            };
+        case "failed":
+            return {
+                label: "Gagal",
+                class: "bg-rose-100 text-rose-800 border-rose-200",
+            };
+        case "expired":
+            return {
+                label: "Kadaluarsa",
+                class: "bg-stone-100 text-stone-700 border-stone-200",
+            };
+        case "refunded":
+            return {
+                label: "Dikembalikan",
+                class: "bg-blue-100 text-blue-800 border-blue-200",
+            };
+        default:
+            return {
+                label: status || "Pending",
+                class: "bg-stone-100 text-stone-700 border-stone-200",
+            };
+    }
+};
+
 const handleImageError = (event) => {
     event.target.style.display = "none";
     if (event.target.nextElementSibling) {
@@ -363,14 +398,25 @@ const handleImageError = (event) => {
                                     {{ formatPrice(order.total_price) }}
                                 </td>
                                 <td class="py-3.5 px-6">
-                                    <span
-                                        :class="[
-                                            'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border',
-                                            getStatusBadge(order.status).class,
-                                        ]"
-                                    >
-                                        {{ getStatusBadge(order.status).label }}
-                                    </span>
+                                    <div class="flex flex-col gap-1 items-start">
+                                        <span
+                                            v-if="order.payment_status"
+                                            :class="[
+                                                'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border',
+                                                getPaymentStatusBadge(order.payment_status).class,
+                                            ]"
+                                        >
+                                            {{ getPaymentStatusBadge(order.payment_status).label }}
+                                        </span>
+                                        <span
+                                            :class="[
+                                                'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border',
+                                                getStatusBadge(order.status).class,
+                                            ]"
+                                        >
+                                            {{ getStatusBadge(order.status).label }}
+                                        </span>
+                                    </div>
                                 </td>
                                 <td class="py-3.5 px-6 text-right">
                                     <Link

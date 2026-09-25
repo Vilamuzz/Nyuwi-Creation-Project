@@ -81,7 +81,7 @@
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
 | `id` | bigint | PK, auto-increment | |
-| `user_id` | bigint | FK → `users.id`, ON DELETE CASCADE | |
+| `user_id` | bigint | nullable, FK → `users.id`, ON DELETE CASCADE | |
 | `name` | string | | Customer name snapshot |
 | `address` | string | | Shipping address |
 | `village` | string | | Village name |
@@ -89,29 +89,56 @@
 | `city` | string | | City/regency name |
 | `province` | string | | Province name |
 | `phone` | string | | Customer phone |
+| `email` | string | nullable | Customer email |
 | `total_price` | decimal(15,2) | | Order total |
 | `payment_method` | enum(`digital_wallet`, `qris`) | default: `qris` | |
-| `payment_proof` | string | nullable | Uploaded image path |
+| `payment_status` | enum(`pending`, `paid`, `failed`, `expired`, `refunded`) | default: `pending` | Webhook / payment gateway status |
 | `note` | text | nullable | Customer notes |
-| `status` | enum | default: `waiting` | See status enum below |
+| `status` | enum(`processing`, `shiping`, `completed`, `cancelled`) | default: `processing` | Fulfillment status only |
 | `shipping_method` | string | nullable | |
 | `tracking_number` | string | nullable | |
 | `created_at` | timestamp | | |
 | `updated_at` | timestamp | | |
 
-**Order status enum values:**
+**Order payment status enum values:**
+| Payment Status | Meaning |
+|----------------|---------|
+| `pending` | Payment pending / awaiting customer transaction |
+| `paid` | Payment successfully settled |
+| `failed` | Payment transaction failed |
+| `expired` | Payment transaction expired without payment |
+| `refunded` | Order payment has been refunded |
+
+**Order fulfillment status enum values:**
 | Status | Meaning |
 |--------|---------|
-| `waiting` | Awaiting payment proof upload |
-| `checking` | Payment proof under admin review |
-| `pending` | Payment confirmed, awaiting processing |
-| `processing` | Being prepared for shipment |
-| `shiping` | Shipped (note: typo in migration — `shiping`, not `shipping`) |
+| `processing` | Order confirmed, being prepared for shipment |
+| `shiping` | Shipped (note: typo preserved from original schema — `shiping`) |
 | `completed` | Delivered / fulfilled |
 | `cancelled` | Order cancelled |
 
 **Eloquent model:** `App\Models\Order`
-- `$fillable`: `user_id`, `name`, `address`, `city`, `district`, `village`, `province`, `phone`, `total_price`, `payment_method`, `payment_proof`, `note`, `status`, `shipping_method`, `tracking_number`
+- `$fillable`: `user_id`, `name`, `address`, `city`, `district`, `village`, `province`, `phone`, `email`, `total_price`, `payment_method`, `payment_status`, `note`, `status`, `shipping_method`, `tracking_number`
+
+### `payment_transactions`
+| Column | Type | Constraints | Notes |
+|--------|------|-------------|-------|
+| `id` | bigint | PK, auto-increment | |
+| `order_id` | bigint | FK → `orders.id`, ON DELETE CASCADE | |
+| `gateway` | string | | Gateway name (e.g., `midtrans`, `xendit`) |
+| `gateway_transaction_id` | string | nullable, indexed | Gateway transaction ID for webhook idempotency |
+| `payment_channel` | string | nullable | Channel used (e.g., `qris`, `bca_va`, `gopay`) |
+| `amount` | decimal(15,2) | | Transaction amount |
+| `raw_status` | string | nullable | Raw status string from gateway |
+| `expired_at` | timestamp | nullable | Expiration datetime |
+| `paid_at` | timestamp | nullable | Settlement/paid datetime |
+| `raw_payload` | json | nullable | Full webhook/API response payload |
+| `created_at` | timestamp | | |
+| `updated_at` | timestamp | | |
+
+**Eloquent model:** `App\Models\PaymentTransaction`
+- `$fillable`: `order_id`, `gateway`, `gateway_transaction_id`, `payment_channel`, `amount`, `raw_status`, `expired_at`, `paid_at`, `raw_payload`
+- `casts()`: `amount → decimal:2`, `expired_at → datetime`, `paid_at → datetime`, `raw_payload → array`
 
 ### `order_items`
 | Column | Type | Constraints | Notes |
@@ -157,6 +184,8 @@
 | `logo` | string | | Logo image path |
 | `address` | string | | Store address |
 | `city` | string | | Store city |
+| `shipping_origin_city_id` | string | nullable | Shipping origin city ID (e.g., RajaOngkir city code) |
+| `shipping_couriers` | json | nullable | Enabled couriers for store checkout (e.g. `["jne", "pos", "tiki"]`) |
 | `phone` | string | | Store contact phone |
 | `qris` | string | | QR code image path for payment |
 | `instagram` | string | nullable | Instagram handle |
@@ -166,7 +195,8 @@
 | `updated_at` | timestamp | | |
 
 **Eloquent model:** `App\Models\ProfileStore`
-- `$fillable`: `name`, `logo`, `address`, `city`, `phone`, `qris`, `instagram`, `facebook`, `tiktok`
+- `$fillable`: `name`, `logo`, `address`, `city`, `shipping_origin_city_id`, `shipping_couriers`, `phone`, `qris`, `instagram`, `facebook`, `tiktok`
+- `casts()`: `shipping_couriers → array`
 
 ---
 
@@ -271,6 +301,7 @@ erDiagram
 
     orders ||--o{ order_items : "contains"
     orders ||--o{ product_reviews : "verified by"
+    orders ||--o{ payment_transactions : "has"
 
     provinces ||--o{ regencies : "contains"
     regencies ||--o{ districts : "contains"
@@ -323,13 +354,27 @@ erDiagram
         string city
         string province
         string phone
+        string email
         decimal total_price
         enum payment_method
-        string payment_proof
+        enum payment_status
         text note
         enum status
         string shipping_method
         string tracking_number
+    }
+
+    payment_transactions {
+        bigint id PK
+        bigint order_id FK
+        string gateway
+        string gateway_transaction_id
+        string payment_channel
+        decimal amount
+        string raw_status
+        timestamp expired_at
+        timestamp paid_at
+        json raw_payload
     }
 
     order_items {
@@ -383,6 +428,8 @@ erDiagram
 | `Cart` | `user()` | `User` | belongsTo |
 | `Cart` | `product()` | `Product` | belongsTo |
 | `Order` | `orderItems()` | `OrderItem` | hasMany |
+| `Order` | `paymentTransactions()` | `PaymentTransaction` | hasMany |
+| `PaymentTransaction` | `order()` | `Order` | belongsTo |
 | `OrderItem` | `order()` | `Order` | belongsTo |
 | `OrderItem` | `product()` | `Product` | belongsTo |
 | `ProductReview` | `user()` | `User` | belongsTo |
@@ -419,6 +466,7 @@ All foreign keys in `carts`, `orders`, `order_items`, and `product_reviews` use 
 | `regencies` | `id` | index (not declared primary) |
 | `districts` | `id` | index (not declared primary) |
 | `villages` | `id` | index (not declared primary) |
+| `payment_transactions` | `gateway`, `gateway_transaction_id` | index |
 
 ---
 

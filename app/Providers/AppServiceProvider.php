@@ -12,7 +12,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(\App\Services\Shipping\ShippingManager::class, function ($app) {
+            return new \App\Services\Shipping\ShippingManager($app);
+        });
+
+        $this->app->bind(
+            \App\Services\Shipping\Contracts\ShippingCalculatorInterface::class,
+            \App\Services\Shipping\ShippingManager::class
+        );
     }
 
     /**

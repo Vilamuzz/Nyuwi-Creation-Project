@@ -22,11 +22,10 @@ class ShippingCalculateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'courier' => ['required', 'string', 'max:50'],
-            'origin' => ['required', 'string', 'max:255'],
             'destination' => ['required', 'string', 'max:255'],
             'weight' => ['required', 'numeric', 'min:1'],
-            'volume' => ['nullable', 'string', 'max:50'],
+            'origin' => ['nullable', 'string', 'max:255'],
+            'courier' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

@@ -14,8 +14,17 @@ class ProfileStoreController extends Controller
     {
         $profile = ProfileStore::first();
 
+        $supportedCouriers = [
+            'jne' => 'JNE Express',
+            'pos' => 'POS Indonesia',
+            'tiki' => 'TIKI',
+            'sicepat' => 'SiCepat Ekspres',
+            'jnt' => 'J&T Express',
+        ];
+
         return Inertia::render('Admin/ProfileStore', [
             'profile' => $profile,
+            'supportedCouriers' => $supportedCouriers,
         ]);
     }
 
@@ -29,6 +38,8 @@ class ProfileStoreController extends Controller
             'name' => $validatedData['name'],
             'address' => $validatedData['address'],
             'city' => $validatedData['city'],
+            'shipping_origin_city_id' => $validatedData['shipping_origin_city_id'] ?? null,
+            'shipping_couriers' => $validatedData['shipping_couriers'] ?? ['jne', 'pos', 'tiki'],
             'phone' => $validatedData['phone'],
             'instagram' => $validatedData['instagram'] ?? null,
             'facebook' => $validatedData['facebook'] ?? null,
