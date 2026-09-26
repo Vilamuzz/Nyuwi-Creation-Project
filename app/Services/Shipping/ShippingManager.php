@@ -3,7 +3,7 @@
 namespace App\Services\Shipping;
 
 use App\Services\Shipping\Contracts\ShippingCalculatorInterface;
-use App\Services\Shipping\Drivers\ShippingDriver;
+use App\Services\Shipping\Drivers\BinderByteShippingDriver;
 use App\Services\Shipping\Drivers\MockShippingDriver;
 use Illuminate\Support\Manager;
 
@@ -23,7 +23,7 @@ class ShippingManager extends Manager implements ShippingCalculatorInterface
     protected function createBinderbyteDriver(): ShippingCalculatorInterface
     {
         $config = $this->config->get('shipping.drivers.binderbyte', []);
-        return new ShippingDriver($config);
+        return new BinderByteShippingDriver($config);
     }
 
     /**
@@ -32,7 +32,7 @@ class ShippingManager extends Manager implements ShippingCalculatorInterface
     protected function createRajaongkirDriver(): ShippingCalculatorInterface
     {
         $config = $this->config->get('shipping.drivers.rajaongkir', []);
-        return new ShippingDriver($config);
+        return new BinderByteShippingDriver($config);
     }
 
     /**

@@ -6,7 +6,7 @@ use App\Models\Order;
 use App\Models\ProfileStore;
 use App\Models\User;
 use App\Services\Shipping\Contracts\ShippingCalculatorInterface;
-use App\Services\Shipping\Drivers\ShippingDriver;
+use App\Services\Shipping\Drivers\BinderByteShippingDriver;
 use App\Services\Shipping\Drivers\MockShippingDriver;
 use App\Services\Shipping\ShippingManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -34,7 +34,7 @@ class ShippingCalculationTest extends TestCase
         Config::set('shipping.default', 'rajaongkir');
         Config::set('shipping.drivers.rajaongkir.api_key', 'test-key');
         $manager = new ShippingManager(app());
-        $this->assertInstanceOf(ShippingDriver::class, $manager->driver());
+        $this->assertInstanceOf(BinderByteShippingDriver::class, $manager->driver());
     }
 
     public function test_mock_driver_calculates_rates_and_filters_by_courier(): void

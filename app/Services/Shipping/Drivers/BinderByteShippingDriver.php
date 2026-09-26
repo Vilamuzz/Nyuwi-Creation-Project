@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class ShippingDriver implements ShippingCalculatorInterface
+class BinderByteShippingDriver implements ShippingCalculatorInterface
 {
     protected ?string $apiKey;
     protected string $baseUrl;
