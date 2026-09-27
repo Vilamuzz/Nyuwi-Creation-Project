@@ -16,9 +16,12 @@ class ProfileStoreSeeder extends Seeder
         ProfileStore::firstOrCreate(
             ['name' => 'Nyuwi Creation'],
             [
-                'logo' => 'logo/nyuwi-creation-logo.png',
+                'logo' => 'logo/logo.svg',
                 'address' => 'Jl. Mawar No. 123, Kecamatan Peterongan',
                 'city' => 'Jombang',
+                'shipping_origin_city_id' => '3517',
+                'shipping_origin_district_id' => '3517120',
+                'shipping_couriers' => ['jne', 'pos', 'tiki'],
                 'phone' => '081234567890',
                 'qris' => 'barcode.jpg',
                 'instagram' => 'nyuwi_creation',

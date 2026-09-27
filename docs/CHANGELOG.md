@@ -1,5 +1,50 @@
 # Changelog
 
+## [2026-09-28] — Region Dropdowns & Mandatory Origin City and Subdistrict IDs
+
+- **Region Dropdown Cascades & Easier Input:**
+  - Updated `ProfileStoreController@index` to pre-load `provinces`, current store's province ID, and matching `regencies` and `districts` from IndoRegion models.
+  - Enhanced `RegionController` (`provinces`, `regencies`, `districts`, `villages`) to support JSON responses when called via AJAX/fetch.
+  - Updated `resources/js/Pages/Admin/ProfileStore.vue` with interactive, cascading dropdowns for Provinsi, Kota/Kabupaten, and Kecamatan, displaying official region names along with their database IDs.
+  - Automatically synchronizes `form.city` and `form.shipping_origin_city_id` when a Kota/Kabupaten is selected, and loads districts for selecting `form.shipping_origin_district_id`.
+- **Validation & Seeding:**
+  - Made `shipping_origin_city_id` and `shipping_origin_district_id` mandatory (`required`) in `StoreProfileUpdateRequest`.
+  - Updated `ProfileStoreSeeder` with valid default city and district IDs for Jombang & Peterongan (`3517` and `3517120`).
+- **Testing & Verification:**
+  - Updated `tests/Feature/ProfileStoreTest.php` with assertions verifying that omitting origin city or district ID produces validation errors (all 9 tests passing).
+  - Verified `tests/Feature/ShippingCalculationTest.php` (all 11 tests passing).
+  - Built production assets cleanly with `npm run build`.
+
+### Files changed
+- `database/migrations/2026_09_28_000001_add_shipping_origin_district_id_to_profile_stores_table.php` *(New)*
+- `database/seeders/ProfileStoreSeeder.php`
+- `app/Models/ProfileStore.php`
+- `app/Http/Requests/StoreProfileUpdateRequest.php`
+- `app/Http/Controllers/RegionController.php`
+- `app/Http/Controllers/ProfileStoreController.php`
+- `app/Http/Controllers/ShippingController.php`
+- `resources/js/Pages/Admin/ProfileStore.vue`
+- `tests/Feature/ProfileStoreTest.php`
+- `tests/Feature/ShippingCalculationTest.php`
+- `docs/CHANGELOG.md`
+
+## [2026-09-27] — Fix RajaOngkir HTTP Post Arguments & Komerce RajaOngkir Integration
+
+- **RajaOngkir Shipping Driver Fix & Komerce Support:**
+  - Fixed `Http::post()` argument count error in `RajaOngkirShippingDriver::calculate()` by removing the 3rd argument and setting headers using `Http::withHeaders(['key' => $this->apiKey])`.
+  - Added support for Komerce RajaOngkir API (`https://rajaongkir.komerce.id/api/v1`) with automatic endpoint detection (`POST /calculate/domestic-cost` for Komerce vs `POST /cost` for legacy).
+  - Formatted request payload with `asForm()` and weight in grams.
+  - Implemented response parser supporting both Komerce (`data` list) and legacy (`data.costs` or `rajaongkir.results.costs`) JSON structures.
+  - Improved API key resolution in `RajaOngkirShippingDriver::__construct()` to check `$config['key']`, `$config['api_key']`, and respective fallback configs (`shipping.drivers.rajaongkir.key`, `services.rajaongkir.key`, `services.rajaongkir.api_key`).
+  - Added test case `test_rajaongkir_driver_formats_komerce_api_response` in `tests/Feature/ShippingCalculationTest.php` (all 10 tests passing).
+  - Verified with real Komerce API test call and compiled frontend assets (`npm run build`).
+
+### Files changed
+- `config/services.php`
+- `app/Services/Shipping/Drivers/RajaOngkirShippingDriver.php`
+- `tests/Feature/ShippingCalculationTest.php`
+- `docs/CHANGELOG.md`
+
 ## [2026-09-25] — BinderByte Shipping Driver & Unified Package Tracking Integration
 
 - **BinderByte Shipping Driver:**

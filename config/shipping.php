@@ -27,9 +27,9 @@ return [
         ],
 
         'rajaongkir' => [
-            'api_key' => env('RAJAONGKIR_API_KEY'),
+            'key' => env('RAJAONGKIR_API_KEY'),
             'account_type' => env('RAJAONGKIR_ACCOUNT_TYPE', 'starter'),
-            'base_url' => env('RAJAONGKIR_BASE_URL', 'https://api.rajaongkir.com/starter'),
+            'base_url' => env('RAJAONGKIR_BASE_URL', 'https://rajaongkir.komerce.id/api/v1'),
             'timeout' => (int) env('SHIPPING_TIMEOUT', 10),
         ],
 

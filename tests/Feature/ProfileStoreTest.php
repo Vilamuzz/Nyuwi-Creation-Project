@@ -85,6 +85,8 @@ class ProfileStoreTest extends TestCase
                 'name' => 'Toko Baru',
                 'address' => 'Jl. Baru No. 2',
                 'city' => 'Jakarta',
+                'shipping_origin_city_id' => '152',
+                'shipping_origin_district_id' => '2105',
                 'phone' => '081555666777',
                 'instagram' => 'tokobaru',
                 'facebook' => 'tokobaru',
@@ -97,6 +99,8 @@ class ProfileStoreTest extends TestCase
         $this->assertSame('Toko Baru', $profile->name);
         $this->assertSame('Jl. Baru No. 2', $profile->address);
         $this->assertSame('Jakarta', $profile->city);
+        $this->assertSame('152', $profile->shipping_origin_city_id);
+        $this->assertSame('2105', $profile->shipping_origin_district_id);
         $this->assertSame('081555666777', $profile->phone);
         $this->assertSame('tokobaru', $profile->instagram);
         $this->assertSame('tokobaru', $profile->facebook);
@@ -111,6 +115,8 @@ class ProfileStoreTest extends TestCase
             'logo' => 'logo/validate.png',
             'address' => 'Jl. Validate No. 1',
             'city' => 'Semarang',
+            'shipping_origin_city_id' => '444',
+            'shipping_origin_district_id' => '5742',
             'phone' => '081999888777',
             'qris' => 'qris/validate.png',
         ]);
@@ -121,9 +127,18 @@ class ProfileStoreTest extends TestCase
                 'address' => '',
                 'city' => '',
                 'phone' => '',
+                'shipping_origin_city_id' => '',
+                'shipping_origin_district_id' => '',
             ]);
 
-        $response->assertSessionHasErrors(['name', 'address', 'city', 'phone']);
+        $response->assertSessionHasErrors([
+            'name',
+            'address',
+            'city',
+            'phone',
+            'shipping_origin_city_id',
+            'shipping_origin_district_id',
+        ]);
     }
 
     public function test_update_profile_store_allows_nullable_social_fields(): void
@@ -134,6 +149,8 @@ class ProfileStoreTest extends TestCase
             'logo' => 'logo/social.png',
             'address' => 'Jl. Social No. 1',
             'city' => 'Yogyakarta',
+            'shipping_origin_city_id' => '501',
+            'shipping_origin_district_id' => '6912',
             'phone' => '081222333444',
             'qris' => 'qris/social.png',
             'instagram' => 'tokosocial',
@@ -146,6 +163,8 @@ class ProfileStoreTest extends TestCase
                 'name' => 'Toko Social',
                 'address' => 'Jl. Social No. 1',
                 'city' => 'Yogyakarta',
+                'shipping_origin_city_id' => '501',
+                'shipping_origin_district_id' => '6912',
                 'phone' => '081222333444',
                 'instagram' => '',
                 'facebook' => '',
@@ -171,6 +190,8 @@ class ProfileStoreTest extends TestCase
                 'name' => 'Toko Inisial',
                 'address' => 'Jl. Toko No. 10',
                 'city' => 'Surabaya',
+                'shipping_origin_city_id' => '444',
+                'shipping_origin_district_id' => '5742',
                 'phone' => '081234567890',
             ]);
 
@@ -180,6 +201,8 @@ class ProfileStoreTest extends TestCase
         $created = ProfileStore::first();
         $this->assertSame('Toko Inisial', $created->name);
         $this->assertSame('Surabaya', $created->city);
+        $this->assertSame('444', $created->shipping_origin_city_id);
+        $this->assertSame('5742', $created->shipping_origin_district_id);
     }
 
     public function test_update_profile_store_invalidates_cache(): void
@@ -190,6 +213,8 @@ class ProfileStoreTest extends TestCase
             'logo' => 'logo/cache.png',
             'address' => 'Jl. Cache',
             'city' => 'Surabaya',
+            'shipping_origin_city_id' => '444',
+            'shipping_origin_district_id' => '5742',
             'phone' => '081234567890',
             'qris' => 'qris/cache.png',
         ]);
@@ -202,6 +227,8 @@ class ProfileStoreTest extends TestCase
                 'name' => 'Toko Cache Baru',
                 'address' => 'Jl. Cache Baru',
                 'city' => 'Surabaya',
+                'shipping_origin_city_id' => '444',
+                'shipping_origin_district_id' => '5742',
                 'phone' => '081234567890',
             ]);
 

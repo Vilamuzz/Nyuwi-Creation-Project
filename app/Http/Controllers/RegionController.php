@@ -7,28 +7,50 @@ use App\Models\District;
 use App\Models\Province;
 use App\Models\Regency;
 use App\Models\Village;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class RegionController extends Controller
 {
-    public function provinces()
+    private function isPlainJsonRequest(Request $request): bool
     {
-        return back()->with('regionData', Province::all());
+        return !$request->header('X-Inertia') && ($request->wantsJson() || $request->ajax());
     }
 
-    public function regencies($provinceId)
+    public function provinces(Request $request)
     {
-        return back()->with('regionData', Province::findOrFail($provinceId)->regencies);
+        $data = Province::orderBy('name')->get();
+        if ($this->isPlainJsonRequest($request)) {
+            return response()->json($data);
+        }
+        return back()->with('regionData', $data);
     }
 
-    public function districts($regencyId)
+    public function regencies(Request $request, $provinceId)
     {
-        return back()->with('regionData', Regency::findOrFail($regencyId)->districts);
+        $data = Province::findOrFail($provinceId)->regencies()->orderBy('name')->get();
+        if ($this->isPlainJsonRequest($request)) {
+            return response()->json($data);
+        }
+        return back()->with('regionData', $data);
     }
 
-    public function villages($districtId)
+    public function districts(Request $request, $regencyId)
     {
-        return back()->with('regionData', District::findOrFail($districtId)->villages);
+        $data = Regency::findOrFail($regencyId)->districts()->orderBy('name')->get();
+        if ($this->isPlainJsonRequest($request)) {
+            return response()->json($data);
+        }
+        return back()->with('regionData', $data);
+    }
+
+    public function villages(Request $request, $districtId)
+    {
+        $data = District::findOrFail($districtId)->villages()->orderBy('name')->get();
+        if ($this->isPlainJsonRequest($request)) {
+            return response()->json($data);
+        }
+        return back()->with('regionData', $data);
     }
 
     public function cityByName(string $cityName)

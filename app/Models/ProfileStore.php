@@ -12,6 +12,7 @@ class ProfileStore extends Model
         'address',
         'city',
         'shipping_origin_city_id',
+        'shipping_origin_district_id',
         'shipping_couriers',
         'phone',
         'qris',
@@ -19,6 +20,14 @@ class ProfileStore extends Model
         'facebook',
         'tiktok',
     ];
+
+    /**
+     * Store subdistrict / district relationship (IndoRegion).
+     */
+    public function shippingOriginDistrict()
+    {
+        return $this->belongsTo(District::class, 'shipping_origin_district_id');
+    }
 
     /**
      * Get the attributes that should be cast.

@@ -4,6 +4,7 @@ namespace App\Services\Shipping;
 
 use App\Services\Shipping\Contracts\ShippingCalculatorInterface;
 use App\Services\Shipping\Drivers\BinderByteShippingDriver;
+use App\Services\Shipping\Drivers\RajaOngkirShippingDriver;
 use App\Services\Shipping\Drivers\MockShippingDriver;
 use Illuminate\Support\Manager;
 
@@ -32,7 +33,7 @@ class ShippingManager extends Manager implements ShippingCalculatorInterface
     protected function createRajaongkirDriver(): ShippingCalculatorInterface
     {
         $config = $this->config->get('shipping.drivers.rajaongkir', []);
-        return new BinderByteShippingDriver($config);
+        return new RajaOngkirShippingDriver($config);
     }
 
     /**

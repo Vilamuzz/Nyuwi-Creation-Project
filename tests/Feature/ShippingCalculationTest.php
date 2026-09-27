@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Shipping\Contracts\ShippingCalculatorInterface;
 use App\Services\Shipping\Drivers\BinderByteShippingDriver;
 use App\Services\Shipping\Drivers\MockShippingDriver;
+use App\Services\Shipping\Drivers\RajaOngkirShippingDriver;
 use App\Services\Shipping\ShippingManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
@@ -29,12 +30,12 @@ class ShippingCalculationTest extends TestCase
         Config::set('shipping.default', 'binderbyte');
         Config::set('shipping.drivers.binderbyte.api_key', 'test-binderbyte-key');
         $manager = new ShippingManager(app());
-        $this->assertInstanceOf(ShippingDriver::class, $manager->driver());
+        $this->assertInstanceOf(BinderByteShippingDriver::class, $manager->driver());
 
         Config::set('shipping.default', 'rajaongkir');
         Config::set('shipping.drivers.rajaongkir.api_key', 'test-key');
         $manager = new ShippingManager(app());
-        $this->assertInstanceOf(BinderByteShippingDriver::class, $manager->driver());
+        $this->assertInstanceOf(RajaOngkirShippingDriver::class, $manager->driver());
     }
 
     public function test_mock_driver_calculates_rates_and_filters_by_courier(): void
@@ -65,56 +66,21 @@ class ShippingCalculationTest extends TestCase
         Config::set('services.rajaongkir.api_key', 'mock-rajaongkir-key');
 
         Http::fake([
-            'https://api.rajaongkir.com/starter/city' => Http::response([
-                'rajaongkir' => [
-                    'status' => ['code' => 200, 'description' => 'OK'],
-                    'results' => [
-                        [
-                            'city_id' => '444',
-                            'province_id' => '11',
-                            'province' => 'Jawa Timur',
-                            'type' => 'Kota',
-                            'city_name' => 'Surabaya',
-                            'postal_code' => '60119',
-                        ],
-                        [
-                            'city_id' => '152',
-                            'province_id' => '6',
-                            'province' => 'DKI Jakarta',
-                            'type' => 'Kota',
-                            'city_name' => 'Jakarta Pusat',
-                            'postal_code' => '10110',
-                        ],
-                    ],
-                ],
-            ], 200),
             'https://api.rajaongkir.com/starter/cost' => Http::response([
-                'rajaongkir' => [
-                    'status' => ['code' => 200, 'description' => 'OK'],
-                    'results' => [
+                'data' => [
+                    'costs' => [
                         [
-                            'code' => 'jne',
-                            'name' => 'Jalur Nugraha Ekakurir (JNE)',
-                            'costs' => [
-                                [
-                                    'service' => 'REG',
-                                    'description' => 'Layanan Reguler',
-                                    'cost' => [
-                                        [
-                                            'value' => 22000,
-                                            'etd' => '2-3',
-                                            'note' => '',
-                                        ],
-                                    ],
-                                ],
-                            ],
+                            'service' => 'REG',
+                            'description' => 'Layanan Reguler',
+                            'cost' => 22000,
+                            'etd' => '2-3',
                         ],
                     ],
                 ],
             ], 200),
         ]);
 
-        $driver = new ShippingDriver([
+        $driver = new RajaOngkirShippingDriver([
             'api_key' => 'mock-rajaongkir-key',
             'base_url' => 'https://api.rajaongkir.com/starter',
         ]);
@@ -126,6 +92,44 @@ class ShippingCalculationTest extends TestCase
         $this->assertEquals('REG', $rates[0]['service']);
         $this->assertEquals(22000, $rates[0]['cost']);
         $this->assertEquals('2-3 hari', $rates[0]['etd']);
+    }
+
+    public function test_rajaongkir_driver_formats_komerce_api_response(): void
+    {
+        Config::set('services.rajaongkir.key', 'mock-komerce-key');
+
+        Http::fake([
+            'https://rajaongkir.komerce.id/api/v1/calculate/domestic-cost' => Http::response([
+                'meta' => [
+                    'message' => 'Success Calculate Domestic Shipping cost',
+                    'code' => 200,
+                    'status' => 'success',
+                ],
+                'data' => [
+                    [
+                        'name' => 'Jalur Nugraha Ekakurir (JNE)',
+                        'code' => 'jne',
+                        'service' => 'REG',
+                        'description' => 'Layanan Reguler',
+                        'cost' => 20000,
+                        'etd' => '2-3 day',
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $driver = new RajaOngkirShippingDriver([
+            'key' => 'mock-komerce-key',
+            'base_url' => 'https://rajaongkir.komerce.id/api/v1',
+        ]);
+
+        $rates = $driver->calculate('501', '114', 1000, ['jne']);
+
+        $this->assertCount(1, $rates);
+        $this->assertEquals('jne', $rates[0]['courier']);
+        $this->assertEquals('REG', $rates[0]['service']);
+        $this->assertEquals(20000, $rates[0]['cost']);
+        $this->assertEquals('2-3 day', $rates[0]['etd']);
     }
 
     public function test_shipping_controller_validates_required_fields(): void
@@ -171,6 +175,35 @@ class ShippingCalculationTest extends TestCase
         }
     }
 
+    public function test_shipping_controller_prioritizes_shipping_origin_district_id(): void
+    {
+        Config::set('shipping.default', 'mock');
+
+        ProfileStore::create([
+            'name' => 'Nyuwi Store',
+            'logo' => '',
+            'address' => 'Jl. Mawar No. 10',
+            'city' => 'Surabaya',
+            'shipping_origin_city_id' => '444',
+            'shipping_origin_district_id' => '5742',
+            'shipping_couriers' => ['jne'],
+            'phone' => '08123456789',
+            'qris' => '',
+        ]);
+
+        $response = $this->postJson(route('shipping.calculate'), [
+            'destination' => 'Bandung',
+            'weight' => 1000,
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'origin' => '5742',
+                'destination' => 'Bandung',
+            ]);
+    }
+
     public function test_shipping_cities_and_couriers_endpoints_return_data(): void
     {
         Config::set('shipping.default', 'mock');
@@ -203,7 +236,7 @@ class ShippingCalculationTest extends TestCase
             ], 200),
         ]);
 
-        $driver = new ShippingDriver([
+        $driver = new BinderByteShippingDriver([
             'api_key' => 'mock-binderbyte-key',
             'base_url' => 'https://api.binderbyte.com/v1',
         ]);
@@ -233,7 +266,7 @@ class ShippingCalculationTest extends TestCase
             ], 200),
         ]);
 
-        $driver = new ShippingDriver([
+        $driver = new BinderByteShippingDriver([
             'api_key' => 'mock-binderbyte-key',
             'base_url' => 'https://api.binderbyte.com/v1',
         ]);

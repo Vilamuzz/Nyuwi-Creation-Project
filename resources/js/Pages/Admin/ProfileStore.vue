@@ -26,6 +26,8 @@ import {
     MessageCircle,
     Maximize2,
     Truck,
+    ChevronDown,
+    Loader2,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -43,6 +45,22 @@ const props = defineProps({
             jnt: "J&T Express",
         }),
     },
+    provinces: {
+        type: Array,
+        default: () => [],
+    },
+    currentProvinceId: {
+        type: [String, Number],
+        default: null,
+    },
+    initialRegencies: {
+        type: Array,
+        default: () => [],
+    },
+    initialDistricts: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const isEditing = ref(!props.profile);
@@ -54,6 +72,7 @@ const form = useForm({
     address: props.profile?.address || "",
     city: props.profile?.city || "",
     shipping_origin_city_id: props.profile?.shipping_origin_city_id || "",
+    shipping_origin_district_id: props.profile?.shipping_origin_district_id || "",
     shipping_couriers: props.profile?.shipping_couriers || ["jne", "pos", "tiki"],
     phone: props.profile?.phone || "",
     instagram: props.profile?.instagram || "",
@@ -70,6 +89,70 @@ const qrisPreview = ref(
     props.profile?.qris ? `/storage/${props.profile.qris}` : null
 );
 
+const selectedProvince = ref(props.currentProvinceId ? String(props.currentProvinceId) : "");
+const regenciesList = ref(props.initialRegencies ? [...props.initialRegencies] : []);
+const districtsList = ref(props.initialDistricts ? [...props.initialDistricts] : []);
+const isLoadingRegencies = ref(false);
+const isLoadingDistricts = ref(false);
+
+const onProvinceChange = async () => {
+    form.shipping_origin_city_id = "";
+    form.shipping_origin_district_id = "";
+    form.city = "";
+    districtsList.value = [];
+    regenciesList.value = [];
+
+    if (!selectedProvince.value) return;
+
+    isLoadingRegencies.value = true;
+    try {
+        const response = await fetch(route("regions.regencies", selectedProvince.value), {
+            headers: {
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+        if (response.ok) {
+            regenciesList.value = await response.json();
+        }
+    } catch (err) {
+        console.error("Gagal mengambil data kota/kabupaten:", err);
+    } finally {
+        isLoadingRegencies.value = false;
+    }
+};
+
+const onRegencyChange = async () => {
+    form.shipping_origin_district_id = "";
+    districtsList.value = [];
+
+    const foundRegency = regenciesList.value.find(
+        (r) => String(r.id) === String(form.shipping_origin_city_id)
+    );
+    if (foundRegency) {
+        form.city = foundRegency.name;
+    }
+
+    if (!form.shipping_origin_city_id) return;
+
+    isLoadingDistricts.value = true;
+    try {
+        const response = await fetch(route("regions.districts", form.shipping_origin_city_id), {
+            headers: {
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+        if (response.ok) {
+            districtsList.value = await response.json();
+        }
+    } catch (err) {
+        console.error("Gagal mengambil data kecamatan:", err);
+    } finally {
+        isLoadingDistricts.value = false;
+    }
+};
+
 watch(
     () => props.profile,
     (newProfile) => {
@@ -78,6 +161,7 @@ watch(
             form.address = newProfile.address || "";
             form.city = newProfile.city || "";
             form.shipping_origin_city_id = newProfile.shipping_origin_city_id || "";
+            form.shipping_origin_district_id = newProfile.shipping_origin_district_id || "";
             form.shipping_couriers = newProfile.shipping_couriers || ["jne", "pos", "tiki"];
             form.phone = newProfile.phone || "";
             form.instagram = newProfile.instagram || "";
@@ -85,6 +169,9 @@ watch(
             form.tiktok = newProfile.tiktok || "";
             logoPreview.value = newProfile.logo ? `/storage/${newProfile.logo}` : null;
             qrisPreview.value = newProfile.qris ? `/storage/${newProfile.qris}` : null;
+            selectedProvince.value = props.currentProvinceId ? String(props.currentProvinceId) : "";
+            regenciesList.value = props.initialRegencies ? [...props.initialRegencies] : [];
+            districtsList.value = props.initialDistricts ? [...props.initialDistricts] : [];
         }
     },
     { deep: true }
@@ -171,6 +258,7 @@ const cancelEditing = () => {
         form.address = props.profile.address || "";
         form.city = props.profile.city || "";
         form.shipping_origin_city_id = props.profile.shipping_origin_city_id || "";
+        form.shipping_origin_district_id = props.profile.shipping_origin_district_id || "";
         form.shipping_couriers = props.profile.shipping_couriers || ["jne", "pos", "tiki"];
         form.phone = props.profile.phone || "";
         form.instagram = props.profile.instagram || "";
@@ -178,6 +266,9 @@ const cancelEditing = () => {
         form.tiktok = props.profile.tiktok || "";
         logoPreview.value = props.profile.logo ? `/storage/${props.profile.logo}` : null;
         qrisPreview.value = props.profile.qris ? `/storage/${props.profile.qris}` : null;
+        selectedProvince.value = props.currentProvinceId ? String(props.currentProvinceId) : "";
+        regenciesList.value = props.initialRegencies ? [...props.initialRegencies] : [];
+        districtsList.value = props.initialDistricts ? [...props.initialDistricts] : [];
         isEditing.value = false;
     }
 };
@@ -463,9 +554,16 @@ const submit = () => {
                                     {{ supportedCouriers[c] || c }}
                                 </span>
                             </div>
-                            <p v-if="profile.shipping_origin_city_id" class="text-xs text-stone-400 mt-3">
-                                ID Kota Asal Ekspedisi: <span class="font-mono text-stone-700 font-semibold">{{ profile.shipping_origin_city_id }}</span>
-                            </p>
+                            <div v-if="profile.shipping_origin_city_id || profile.shipping_origin_district_id" class="text-xs text-stone-500 mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 border-t border-stone-100">
+                                <span v-if="profile.shipping_origin_city_id" class="flex items-center gap-1.5">
+                                    <span class="text-stone-400">ID Kota:</span>
+                                    <span class="font-mono text-stone-800 font-semibold bg-stone-100 px-2 py-0.5 rounded-md text-[11px]">{{ profile.shipping_origin_city_id }}</span>
+                                </span>
+                                <span v-if="profile.shipping_origin_district_id" class="flex items-center gap-1.5">
+                                    <span class="text-stone-400">ID Kecamatan:</span>
+                                    <span class="font-mono text-stone-800 font-semibold bg-stone-100 px-2 py-0.5 rounded-md text-[11px]">{{ profile.shipping_origin_district_id }}</span>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -578,22 +676,87 @@ const submit = () => {
                     </div>
 
                     <div class="space-y-4 pt-2">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <!-- Provinsi -->
                             <div>
                                 <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
-                                    ID / Kode Kota Asal Ekspedisi (Opsional)
+                                    Provinsi Asal <span class="text-red-500">*</span>
                                 </label>
                                 <div class="relative">
-                                    <MapPin class="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
-                                    <input v-model="form.shipping_origin_city_id" type="text"
-                                        class="w-full pl-10 pr-4 py-3 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-colors"
-                                        placeholder="Contoh: 444 (Surabaya)" />
+                                    <MapPin class="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                                    <select v-model="selectedProvince" @change="onProvinceChange"
+                                        class="w-full pl-10 pr-9 py-3 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-colors appearance-none cursor-pointer">
+                                        <option value="">-- Pilih Provinsi Asal --</option>
+                                        <option v-for="prov in provinces" :key="prov.id" :value="String(prov.id)">
+                                            {{ prov.name }}
+                                        </option>
+                                    </select>
+                                    <div class="absolute right-3.5 top-3.5 pointer-events-none text-stone-400">
+                                        <ChevronDown class="w-4 h-4" />
+                                    </div>
                                 </div>
                                 <p class="text-[11px] text-stone-400 mt-1">
-                                    Jika dikosongkan, sistem akan otomatis mencocokkan nama kota asal di atas.
+                                    Pilih provinsi untuk memuat daftar kota.
+                                </p>
+                            </div>
+
+                            <!-- Kota / Kabupaten (ID Kota) -->
+                            <div>
+                                <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
+                                    Kota / Kabupaten Asal <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <MapPin class="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                                    <select v-model="form.shipping_origin_city_id" @change="onRegencyChange"
+                                        :disabled="!selectedProvince || isLoadingRegencies"
+                                        class="w-full pl-10 pr-9 py-3 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-colors appearance-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+                                        <option value="">
+                                            {{ isLoadingRegencies ? 'Memuat Kota/Kabupaten...' : (!selectedProvince ? '-- Pilih Provinsi Dulu --' : '-- Pilih Kota / Kabupaten --') }}
+                                        </option>
+                                        <option v-for="reg in regenciesList" :key="reg.id" :value="String(reg.id)">
+                                            {{ reg.name }} (ID: {{ reg.id }})
+                                        </option>
+                                    </select>
+                                    <div class="absolute right-3.5 top-3.5 pointer-events-none text-stone-400">
+                                        <Loader2 v-if="isLoadingRegencies" class="w-4 h-4 animate-spin text-orange-500" />
+                                        <ChevronDown v-else class="w-4 h-4" />
+                                    </div>
+                                </div>
+                                <p class="text-[11px] text-stone-400 mt-1">
+                                    ID Kota Ekspedisi yang digunakan sistem.
                                 </p>
                                 <p v-if="form.errors.shipping_origin_city_id" class="text-xs text-red-500 mt-1 font-medium">
                                     {{ form.errors.shipping_origin_city_id }}
+                                </p>
+                            </div>
+
+                            <!-- Kecamatan (ID Kecamatan) -->
+                            <div>
+                                <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
+                                    Kecamatan Asal <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <MapPin class="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                                    <select v-model="form.shipping_origin_district_id"
+                                        :disabled="!form.shipping_origin_city_id || isLoadingDistricts"
+                                        class="w-full pl-10 pr-9 py-3 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-colors appearance-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+                                        <option value="">
+                                            {{ isLoadingDistricts ? 'Memuat Kecamatan...' : (!form.shipping_origin_city_id ? '-- Pilih Kota Dulu --' : '-- Pilih Kecamatan --') }}
+                                        </option>
+                                        <option v-for="dist in districtsList" :key="dist.id" :value="String(dist.id)">
+                                            {{ dist.name }} (ID: {{ dist.id }})
+                                        </option>
+                                    </select>
+                                    <div class="absolute right-3.5 top-3.5 pointer-events-none text-stone-400">
+                                        <Loader2 v-if="isLoadingDistricts" class="w-4 h-4 animate-spin text-orange-500" />
+                                        <ChevronDown v-else class="w-4 h-4" />
+                                    </div>
+                                </div>
+                                <p class="text-[11px] text-stone-400 mt-1">
+                                    ID Kecamatan Asal untuk kurir tingkat kecamatan.
+                                </p>
+                                <p v-if="form.errors.shipping_origin_district_id" class="text-xs text-red-500 mt-1 font-medium">
+                                    {{ form.errors.shipping_origin_district_id }}
                                 </p>
                             </div>
                         </div>

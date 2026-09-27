@@ -157,12 +157,21 @@ const selectShippingOption = (option) => {
 };
 
 const calculateShippingRates = async () => {
-    if (!form.city) return;
+    if (!form.city && !form.district) return;
 
     isCalculatingShipping.value = true;
     shippingError.value = null;
 
     try {
+        const selectedDistrictObj = regions.value.districts.find(
+            (d) => d.name === form.district || String(d.id) === String(form.district)
+        );
+        const selectedCityObj = regions.value.cities.find(
+            (c) => c.name === form.city || String(c.id) === String(form.city)
+        );
+
+        const destinationId = selectedDistrictObj?.id || selectedCityObj?.id || form.district || form.city;
+
         const weight = props.summary?.totalWeight || 1000;
         const response = await fetch(route("shipping.calculate"), {
             method: "POST",
@@ -173,7 +182,7 @@ const calculateShippingRates = async () => {
                 "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "",
             },
             body: JSON.stringify({
-                destination: form.city,
+                destination: String(destinationId),
                 weight: weight,
             }),
         });

@@ -19,7 +19,11 @@ class ShippingController extends Controller
         $validated = $request->validated();
         $profile = ProfileStore::first();
 
-        $origin = $validated['origin'] ?? $profile?->shipping_origin_city_id ?? $profile?->city ?? 'Surabaya';
+        $origin = $validated['origin']
+            ?? $profile?->shipping_origin_district_id
+            ?? $profile?->shipping_origin_city_id
+            ?? $profile?->city
+            ?? 'Surabaya';
         $destination = $validated['destination'];
         $weight = (int) $validated['weight'];
 
