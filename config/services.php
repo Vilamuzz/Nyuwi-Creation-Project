@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
@@ -14,48 +13,44 @@ return [
     |
     */
 
-    'postmark' => [
-        'token' => env('POSTMARK_TOKEN'),
+    "postmark" => [
+        "token" => env("POSTMARK_TOKEN"),
     ],
 
-    'ses' => [
-        'key' => env('AWS_ACCESS_KEY_ID'),
-        'secret' => env('AWS_SECRET_ACCESS_KEY'),
-        'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+    "ses" => [
+        "key" => env("AWS_ACCESS_KEY_ID"),
+        "secret" => env("AWS_SECRET_ACCESS_KEY"),
+        "region" => env("AWS_DEFAULT_REGION", "us-east-1"),
     ],
 
-    'resend' => [
-        'key' => env('RESEND_KEY'),
+    "resend" => [
+        "key" => env("RESEND_KEY"),
     ],
 
-    'slack' => [
-        'notifications' => [
-            'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
-            'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
+    "slack" => [
+        "notifications" => [
+            "bot_user_oauth_token" => env("SLACK_BOT_USER_OAUTH_TOKEN"),
+            "channel" => env("SLACK_BOT_USER_DEFAULT_CHANNEL"),
         ],
     ],
 
-    'binderbyte' => [
-        'api_key' => env('BINDERBYTE_API_KEY'),
-        'base_url' => env('BINDERBYTE_BASE_URL', 'https://api.binderbyte.com/v1'),
+    "binderbyte" => [
+        "api_key" => env("BINDERBYTE_API_KEY"),
+        "base_url" => env(
+            "BINDERBYTE_BASE_URL",
+            "https://api.binderbyte.com/v1",
+        ),
     ],
 
-    'midtrans' => [
-        'server_key' => env('MIDTRANS_SERVER_KEY'),
-        'client_key' => env('MIDTRANS_CLIENT_KEY'),
-        'is_production' => (bool) env('MIDTRANS_IS_PRODUCTION', false),
-        'snap_url' => env('MIDTRANS_IS_PRODUCTION', false)
-            ? 'https://app.midtrans.com/snap/v1/transactions'
-            : 'https://app.sandbox.midtrans.com/snap/v1/transactions',
-        'snap_js_url' => env('MIDTRANS_IS_PRODUCTION', false)
-            ? 'https://app.midtrans.com/snap/snap.js'
-            : 'https://app.sandbox.midtrans.com/snap/snap.js',
-    ],
-
-    'rajaongkir' => [
-        'key' => env('RAJAONGKIR_API_KEY'),
-        'account_type' => env('RAJAONGKIR_ACCOUNT_TYPE', 'starter'),
-        'base_url' => env('RAJAONGKIR_BASE_URL', 'https://rajaongkir.komerce.id/api/v1'),
-        'timeout' => (int) env('SHIPPING_TIMEOUT', 10),
+    "midtrans" => [
+        "server_key" => env("MIDTRANS_SERVER_KEY"),
+        "client_key" => env("MIDTRANS_CLIENT_KEY"),
+        "is_production" => (bool) env("MIDTRANS_IS_PRODUCTION", false),
+        "snap_url" => env("MIDTRANS_IS_PRODUCTION", false)
+            ? "https://app.midtrans.com/snap/v1/transactions"
+            : "https://app.sandbox.midtrans.com/snap/v1/transactions",
+        "snap_js_url" => env("MIDTRANS_IS_PRODUCTION", false)
+            ? "https://app.midtrans.com/snap/snap.js"
+            : "https://app.sandbox.midtrans.com/snap/snap.js",
     ],
 ];
