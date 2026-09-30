@@ -5,11 +5,7 @@ namespace Tests\Feature;
 use App\Models\Order;
 use App\Models\ProfileStore;
 use App\Models\User;
-use App\Services\Shipping\Contracts\ShippingCalculatorInterface;
-use App\Services\Shipping\Drivers\BinderByteShippingDriver;
-use App\Services\Shipping\Drivers\MockShippingDriver;
-use App\Services\Shipping\Drivers\RajaOngkirShippingDriver;
-use App\Services\Shipping\ShippingManager;
+use App\Services\ShippingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
@@ -18,119 +14,6 @@ use Tests\TestCase;
 class ShippingCalculationTest extends TestCase
 {
     use RefreshDatabase;
-
-    public function test_shipping_manager_resolves_configured_driver(): void
-    {
-        Config::set('shipping.default', 'mock');
-        $manager = app(ShippingManager::class);
-
-        $this->assertInstanceOf(ShippingCalculatorInterface::class, $manager);
-        $this->assertInstanceOf(MockShippingDriver::class, $manager->driver());
-
-        Config::set('shipping.default', 'binderbyte');
-        Config::set('shipping.drivers.binderbyte.api_key', 'test-binderbyte-key');
-        $manager = new ShippingManager(app());
-        $this->assertInstanceOf(BinderByteShippingDriver::class, $manager->driver());
-
-        Config::set('shipping.default', 'rajaongkir');
-        Config::set('shipping.drivers.rajaongkir.api_key', 'test-key');
-        $manager = new ShippingManager(app());
-        $this->assertInstanceOf(RajaOngkirShippingDriver::class, $manager->driver());
-    }
-
-    public function test_mock_driver_calculates_rates_and_filters_by_courier(): void
-    {
-        $driver = new MockShippingDriver();
-
-        // Calculate for only JNE and POS
-        $rates = $driver->calculate('Surabaya', 'Jakarta', 1500, ['jne', 'pos']);
-
-        $this->assertNotEmpty($rates);
-        $couriers = array_unique(array_column($rates, 'courier'));
-        $this->assertContains('jne', $couriers);
-        $this->assertContains('pos', $couriers);
-        $this->assertNotContains('tiki', $couriers);
-
-        // Rates are standardized
-        $first = $rates[0];
-        $this->assertArrayHasKey('courier', $first);
-        $this->assertArrayHasKey('service', $first);
-        $this->assertArrayHasKey('name', $first);
-        $this->assertArrayHasKey('cost', $first);
-        $this->assertArrayHasKey('etd', $first);
-        $this->assertGreaterThan(0, $first['cost']);
-    }
-
-    public function test_rajaongkir_driver_formats_api_response(): void
-    {
-        Config::set('services.rajaongkir.api_key', 'mock-rajaongkir-key');
-
-        Http::fake([
-            'https://api.rajaongkir.com/starter/cost' => Http::response([
-                'data' => [
-                    'costs' => [
-                        [
-                            'service' => 'REG',
-                            'description' => 'Layanan Reguler',
-                            'cost' => 22000,
-                            'etd' => '2-3',
-                        ],
-                    ],
-                ],
-            ], 200),
-        ]);
-
-        $driver = new RajaOngkirShippingDriver([
-            'api_key' => 'mock-rajaongkir-key',
-            'base_url' => 'https://api.rajaongkir.com/starter',
-        ]);
-
-        $rates = $driver->calculate('Surabaya', 'Jakarta Pusat', 1000, ['jne']);
-
-        $this->assertCount(1, $rates);
-        $this->assertEquals('jne', $rates[0]['courier']);
-        $this->assertEquals('REG', $rates[0]['service']);
-        $this->assertEquals(22000, $rates[0]['cost']);
-        $this->assertEquals('2-3 hari', $rates[0]['etd']);
-    }
-
-    public function test_rajaongkir_driver_formats_komerce_api_response(): void
-    {
-        Config::set('services.rajaongkir.key', 'mock-komerce-key');
-
-        Http::fake([
-            'https://rajaongkir.komerce.id/api/v1/calculate/domestic-cost' => Http::response([
-                'meta' => [
-                    'message' => 'Success Calculate Domestic Shipping cost',
-                    'code' => 200,
-                    'status' => 'success',
-                ],
-                'data' => [
-                    [
-                        'name' => 'Jalur Nugraha Ekakurir (JNE)',
-                        'code' => 'jne',
-                        'service' => 'REG',
-                        'description' => 'Layanan Reguler',
-                        'cost' => 20000,
-                        'etd' => '2-3 day',
-                    ],
-                ],
-            ], 200),
-        ]);
-
-        $driver = new RajaOngkirShippingDriver([
-            'key' => 'mock-komerce-key',
-            'base_url' => 'https://rajaongkir.komerce.id/api/v1',
-        ]);
-
-        $rates = $driver->calculate('501', '114', 1000, ['jne']);
-
-        $this->assertCount(1, $rates);
-        $this->assertEquals('jne', $rates[0]['courier']);
-        $this->assertEquals('REG', $rates[0]['service']);
-        $this->assertEquals(20000, $rates[0]['cost']);
-        $this->assertEquals('2-3 day', $rates[0]['etd']);
-    }
 
     public function test_shipping_controller_validates_required_fields(): void
     {
@@ -142,83 +25,8 @@ class ShippingCalculationTest extends TestCase
 
     public function test_shipping_controller_uses_store_profile_couriers_and_origin(): void
     {
-        Config::set('shipping.default', 'mock');
+        Config::set('services.binderbyte.api_key', 'mock-binderbyte-key');
 
-        // Create store profile with specific allowed couriers (only TIKI)
-        ProfileStore::create([
-            'name' => 'Nyuwi Store',
-            'logo' => '',
-            'address' => 'Jl. Mawar No. 10',
-            'city' => 'Surabaya',
-            'shipping_origin_city_id' => '444',
-            'shipping_couriers' => ['tiki'],
-            'phone' => '08123456789',
-            'qris' => '',
-        ]);
-
-        $response = $this->postJson(route('shipping.calculate'), [
-            'destination' => 'Bandung',
-            'weight' => 1000,
-        ]);
-
-        $response->assertOk()
-            ->assertJson([
-                'status' => 'success',
-                'origin' => '444',
-                'destination' => 'Bandung',
-            ]);
-
-        $rates = $response->json('rates');
-        $this->assertNotEmpty($rates);
-        foreach ($rates as $rate) {
-            $this->assertEquals('tiki', $rate['courier']);
-        }
-    }
-
-    public function test_shipping_controller_prioritizes_shipping_origin_district_id(): void
-    {
-        Config::set('shipping.default', 'mock');
-
-        ProfileStore::create([
-            'name' => 'Nyuwi Store',
-            'logo' => '',
-            'address' => 'Jl. Mawar No. 10',
-            'city' => 'Surabaya',
-            'shipping_origin_city_id' => '444',
-            'shipping_origin_district_id' => '5742',
-            'shipping_couriers' => ['jne'],
-            'phone' => '08123456789',
-            'qris' => '',
-        ]);
-
-        $response = $this->postJson(route('shipping.calculate'), [
-            'destination' => 'Bandung',
-            'weight' => 1000,
-        ]);
-
-        $response->assertOk()
-            ->assertJson([
-                'status' => 'success',
-                'origin' => '5742',
-                'destination' => 'Bandung',
-            ]);
-    }
-
-    public function test_shipping_cities_and_couriers_endpoints_return_data(): void
-    {
-        Config::set('shipping.default', 'mock');
-
-        $citiesResponse = $this->getJson(route('shipping.cities'));
-        $citiesResponse->assertOk()
-            ->assertJsonStructure(['status', 'data']);
-
-        $couriersResponse = $this->getJson(route('shipping.couriers'));
-        $couriersResponse->assertOk()
-            ->assertJsonStructure(['status', 'data']);
-    }
-
-    public function test_binderbyte_driver_formats_cost_and_calculates_rates(): void
-    {
         Http::fake([
             'https://api.binderbyte.com/v1/cost*' => Http::response([
                 'status' => 200,
@@ -236,12 +44,133 @@ class ShippingCalculationTest extends TestCase
             ], 200),
         ]);
 
-        $driver = new BinderByteShippingDriver([
-            'api_key' => 'mock-binderbyte-key',
-            'base_url' => 'https://api.binderbyte.com/v1',
+        // Create store profile with specific allowed couriers (only TIKI)
+        ProfileStore::create([
+            'name' => 'Nyuwi Store',
+            'logo' => '',
+            'address' => 'Jl. Mawar No. 10',
+            'embedded_map' => '',
+            'district_id' => '3517120',
+            'district_name' => 'Peterongan',
+            'shipping_couriers' => ['tiki'],
+            'phone' => '08123456789',
         ]);
 
-        $rates = $driver->calculate('Surabaya', 'Bandung', 1000, ['jne']);
+        $response = $this->postJson(route('shipping.calculate'), [
+            'destination' => 'Bandung',
+            'weight' => 1000,
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'origin' => '3517120',
+                'destination' => 'Bandung',
+            ]);
+
+        $rates = $response->json('rates');
+        $this->assertNotEmpty($rates);
+        foreach ($rates as $rate) {
+            $this->assertEquals('tiki', $rate['courier']);
+        }
+    }
+
+    public function test_shipping_controller_uses_store_profile_district_as_origin(): void
+    {
+        Config::set('services.binderbyte.api_key', 'mock-binderbyte-key');
+
+        Http::fake([
+            'https://api.binderbyte.com/v1/cost*' => Http::response([
+                'status' => 200,
+                'message' => 'Success',
+                'data' => [
+                    'costs' => [
+                        [
+                            'service' => 'REG',
+                            'description' => 'Layanan Reguler',
+                            'cost' => 19000,
+                            'etd' => '2-3 hari',
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        ProfileStore::create([
+            'name' => 'Nyuwi Store',
+            'logo' => '',
+            'address' => 'Jl. Mawar No. 10',
+            'embedded_map' => '',
+            'district_id' => '3517110',
+            'district_name' => 'Diwek',
+            'shipping_couriers' => ['jne'],
+            'phone' => '08123456789',
+        ]);
+
+        $response = $this->postJson(route('shipping.calculate'), [
+            'destination' => 'Bandung',
+            'weight' => 1000,
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'status' => 'success',
+                'origin' => '3517110',
+                'destination' => 'Bandung',
+            ]);
+    }
+
+    public function test_shipping_cities_and_couriers_endpoints_return_data(): void
+    {
+        Config::set('services.binderbyte.api_key', 'mock-binderbyte-key');
+
+        Http::fake([
+            'https://api.binderbyte.com/v1/list_city*' => Http::response([
+                'status' => 200,
+                'message' => 'Success',
+                'data' => [
+                    [
+                        'id' => 1,
+                        'name' => 'Surabaya',
+                        'type' => 'Kota',
+                        'province' => 'Jawa Timur',
+                        'postal_code' => '60181',
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $citiesResponse = $this->getJson(route('shipping.cities'));
+        $citiesResponse->assertOk()
+            ->assertJsonStructure(['status', 'data']);
+
+        $couriersResponse = $this->getJson(route('shipping.couriers'));
+        $couriersResponse->assertOk()
+            ->assertJsonStructure(['status', 'data']);
+    }
+
+    public function test_shipping_service_calculates_rates_via_binderbyte(): void
+    {
+        Config::set('services.binderbyte.api_key', 'mock-binderbyte-key');
+
+        Http::fake([
+            'https://api.binderbyte.com/v1/cost*' => Http::response([
+                'status' => 200,
+                'message' => 'Success',
+                'data' => [
+                    'costs' => [
+                        [
+                            'service' => 'REG',
+                            'description' => 'Layanan Reguler',
+                            'cost' => 19000,
+                            'etd' => '2-3 hari',
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $rates = app(ShippingService::class)->calculate('Surabaya', 'Bandung', 1000, ['jne']);
 
         $this->assertCount(1, $rates);
         $this->assertEquals('jne', $rates[0]['courier']);
@@ -250,8 +179,10 @@ class ShippingCalculationTest extends TestCase
         $this->assertEquals('2-3 hari', $rates[0]['etd']);
     }
 
-    public function test_binderbyte_driver_tracks_package(): void
+    public function test_shipping_service_tracks_package_via_binderbyte(): void
     {
+        Config::set('services.binderbyte.api_key', 'mock-binderbyte-key');
+
         Http::fake([
             'https://api.binderbyte.com/v1/track*' => Http::response([
                 'status' => 200,
@@ -266,35 +197,59 @@ class ShippingCalculationTest extends TestCase
             ], 200),
         ]);
 
-        $driver = new BinderByteShippingDriver([
-            'api_key' => 'mock-binderbyte-key',
-            'base_url' => 'https://api.binderbyte.com/v1',
-        ]);
-
-        $result = $driver->track('JNE - REG', 'JN123456789ID');
+        $result = app(ShippingService::class)->track('JNE - REG', 'JN123456789ID');
 
         $this->assertEquals(200, $result['status']);
         $this->assertEquals('DELIVERED', $result['data']['summary']['status']);
     }
 
-    public function test_order_tracking_uses_shipping_manager(): void
+    public function test_shipping_service_track_requires_api_key(): void
     {
-        Config::set('shipping.default', 'mock');
+        Config::set('services.binderbyte.api_key', null);
+
+        $result = app(ShippingService::class)->track('jne', 'JN123456789ID');
+
+        $this->assertEquals(400, $result['status']);
+        $this->assertNull($result['data']);
+    }
+
+    public function test_order_tracking_uses_shipping_service(): void
+    {
+        Config::set('services.binderbyte.api_key', 'mock-binderbyte-key');
+
+        Http::fake([
+            'https://api.binderbyte.com/v1/track*' => Http::response([
+                'status' => 200,
+                'message' => 'Successfully tracked package',
+                'data' => [
+                    'summary' => [
+                        'courier' => 'JNE',
+                        'waybill_number' => 'TRK123456',
+                        'status' => 'DELIVERED',
+                    ],
+                ],
+            ], 200),
+        ]);
 
         $user = User::factory()->create(['role' => 'pelanggan']);
         $order = Order::create([
             'user_id' => $user->id,
-            'name' => 'Test User',
+            'recipient_name' => 'Test User',
             'address' => 'Jl. Test No. 1',
-            'city' => 'Surabaya',
-            'district' => 'Gubeng',
-            'village' => 'Airlangga',
-            'province' => 'Jawa Timur',
+            'province_id' => '5',
+            'province_name' => 'Jawa Timur',
+            'city_id' => '15',
+            'city_name' => 'Surabaya',
+            'district_id' => '357803',
+            'district_name' => 'Gubeng',
+            'postal_code' => '60181',
             'phone' => '081234567890',
-            'total_price' => 100000,
-            'payment_method' => 'qris',
-            'shipping_method' => 'JNE - REG',
+            'courier' => 'jne',
+            'shipping_service' => 'REG',
+            'weight' => 1000,
             'shipping_cost' => 18000,
+            'subtotal' => 82000,
+            'total_price' => 100000,
             'tracking_number' => 'TRK123456',
         ]);
 
@@ -306,5 +261,6 @@ class ShippingCalculationTest extends TestCase
         $trackingData = session('trackingData');
         $this->assertIsArray($trackingData);
         $this->assertEquals(200, $trackingData['status']);
+        $this->assertEquals('DELIVERED', $trackingData['data']['summary']['status']);
     }
 }

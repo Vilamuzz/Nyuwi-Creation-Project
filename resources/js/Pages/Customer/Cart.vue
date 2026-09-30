@@ -75,7 +75,7 @@ onMounted(async () => {
     const placedOrderId = page.props.flash?.placedOrderId;
     if (placedOrderId) {
         try {
-            const res = await axios.get(route("orders.payment-token", placedOrderId));
+            const res = await axios.post(route("orders.payment", placedOrderId));
             const snapToken = res.data.snap_token;
             const midtrans = page.props.midtrans || {};
 

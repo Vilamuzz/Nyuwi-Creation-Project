@@ -76,7 +76,7 @@ docker compose exec app php artisan migrate
 ```
 
 ### 2. Run Seeders
-Running the main seeder populates categories, sample products, store profile, Indonesian regions (`azishapidin/indoregion`), and default user accounts:
+Running the main seeder populates categories, sample products, store profile, and default user accounts:
 ```sh
 # Local:
 php artisan db:seed

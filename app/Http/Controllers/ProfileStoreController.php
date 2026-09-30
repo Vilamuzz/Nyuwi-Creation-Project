@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Inertia\Inertia;
+use App\Http\Requests\StoreProfileUpdateRequest;
 use App\Models\ProfileStore;
+use App\Services\ShippingService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Requests\StoreProfileUpdateRequest;
-
-use App\Models\District;
-use App\Models\Province;
-use App\Models\Regency;
+use Inertia\Inertia;
 
 class ProfileStoreController extends Controller
 {
+    public function __construct(private ShippingService $shipping) {}
+
     public function index()
     {
         $profile = ProfileStore::first();
@@ -26,51 +25,27 @@ class ProfileStoreController extends Controller
             'jnt' => 'J&T Express',
         ];
 
-        $provinces = Province::orderBy('name')->get(['id', 'name']);
-        $currentProvinceId = null;
-        $initialRegencies = [];
-        $initialDistricts = [];
-
-        $regency = null;
-        if ($profile?->shipping_origin_city_id) {
-            $regency = Regency::find($profile->shipping_origin_city_id);
-        } elseif ($profile?->shipping_origin_district_id) {
-            $district = District::find($profile->shipping_origin_district_id);
-            $regency = $district?->regency;
-        }
-
-        if ($regency) {
-            $currentProvinceId = (string) $regency->province_id;
-            $initialRegencies = Regency::where('province_id', $regency->province_id)
-                ->orderBy('name')
-                ->get(['id', 'name']);
-            $initialDistricts = District::where('regency_id', $regency->id)
-                ->orderBy('name')
-                ->get(['id', 'name']);
-        }
-
+        // RajaOngkir has no reverse lookup, so the admin form resolves the
+        // selected city/district client-side and hydrates the rest on change.
         return Inertia::render('Admin/ProfileStore', [
             'profile' => $profile,
             'supportedCouriers' => $supportedCouriers,
-            'provinces' => $provinces,
-            'currentProvinceId' => $currentProvinceId,
-            'initialRegencies' => $initialRegencies,
-            'initialDistricts' => $initialDistricts,
+            'provinces' => $this->shipping->provinces(),
         ]);
     }
 
     public function update(StoreProfileUpdateRequest $request)
     {
-        $profile = ProfileStore::first() ?? new ProfileStore();
+        $profile = ProfileStore::first() ?? new ProfileStore;
 
         $validatedData = $request->validated();
 
         $updateData = [
             'name' => $validatedData['name'],
             'address' => $validatedData['address'],
-            'city' => $validatedData['city'],
-            'shipping_origin_city_id' => $validatedData['shipping_origin_city_id'] ?? null,
-            'shipping_origin_district_id' => $validatedData['shipping_origin_district_id'] ?? null,
+            'embedded_map' => $validatedData['embedded_map'] ?? null,
+            'district_id' => $validatedData['district_id'] ?? null,
+            'district_name' => $validatedData['district_name'] ?? null,
             'shipping_couriers' => $validatedData['shipping_couriers'] ?? ['jne', 'pos', 'tiki'],
             'phone' => $validatedData['phone'],
             'instagram' => $validatedData['instagram'] ?? null,
@@ -86,17 +61,8 @@ class ProfileStoreController extends Controller
             $updateData['logo'] = $request->file('logo')->store('logo', 'public');
         }
 
-        if ($request->hasFile('qris')) {
-            if ($profile->qris && Storage::disk('public')->exists($profile->qris)) {
-                Storage::disk('public')->delete($profile->qris);
-            }
-
-            $updateData['qris'] = $request->file('qris')->store('qris', 'public');
-        }
-
-        if (!$profile->exists) {
+        if (! $profile->exists) {
             $updateData['logo'] = $updateData['logo'] ?? '';
-            $updateData['qris'] = $updateData['qris'] ?? '';
             $profile->fill($updateData)->save();
         } else {
             $profile->update($updateData);

@@ -211,7 +211,7 @@ const payOrder = async (order) => {
     payingOrderId.value = order.id;
 
     try {
-        const response = await axios.get(route("customer.orders.payment-token", order.id));
+        const response = await axios.post(route("orders.payment", order.id));
         const snapToken = response.data.snap_token;
         const midtrans = page.props.midtrans || {};
 

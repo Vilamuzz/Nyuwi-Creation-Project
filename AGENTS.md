@@ -22,7 +22,6 @@
   - `inertiajs/inertia-laravel` + `@inertiajs/vue3` — SPA-like experience
 
   - `laravel/breeze` — Auth scaffolding
-  - `azishapidin/indoregion` — Indonesian region data
   - `intervention/image` — Image manipulation
   - `daisyui` — UI component library
   - `lucide-vue-next` — Icons

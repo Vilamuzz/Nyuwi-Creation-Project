@@ -2,11 +2,11 @@
 
 namespace App\Http\Middleware;
 
-use Inertia\Middleware;
 use App\Models\ProfileStore;
 use App\Services\CartService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -33,22 +33,20 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $profileStore = Cache::rememberForever('store_profile', fn () => ProfileStore::first());
+
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $request->user(),
             ],
             'flash' => [
-                'message' => fn() => $request->session()->get('message'),
-                'placedOrderId' => fn() => $request->session()->get('placedOrderId'),
+                'message' => fn () => $request->session()->get('message'),
+                'placedOrderId' => fn () => $request->session()->get('placedOrderId'),
             ],
-            'regionData' => fn() => $request->session()->get('regionData'),
-            'shippingResult' => fn() => $request->session()->get('shippingResult'),
-            'trackingData' => fn() => $request->session()->get('trackingData'),
+            'shippingResult' => fn () => $request->session()->get('shippingResult'),
+            'trackingData' => fn () => $request->session()->get('trackingData'),
             'storeName' => $profileStore?->name,
-            'storeCity' => $profileStore?->city,
             'storePaymentMethod' => [
                 'storeDana' => $profileStore?->phone,
-                'storeQris' => $profileStore?->qris,
             ],
             'cart' => fn () => $this->cartPayload($request),
             'midtrans' => [
@@ -60,7 +58,7 @@ class HandleInertiaRequests extends Middleware
 
     private function cartPayload(Request $request): array
     {
-        $cart = new CartService();
+        $cart = new CartService;
         $items = $cart->items($request);
 
         return [

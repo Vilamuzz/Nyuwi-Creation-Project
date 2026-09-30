@@ -9,6 +9,8 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -16,6 +18,43 @@ use Tests\TestCase;
 class GuestCheckoutTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Keep checkout shipping server-side calculations deterministic (no external calls).
+        Config::set('services.binderbyte.api_key', 'mock-binderbyte-key');
+
+        Http::fake([
+            'https://api.binderbyte.com/v1/cost*' => function ($request) {
+                // Couriers without an offering for the destination get no costs.
+                if (str_contains((string) $request->url(), 'courier=sicepat')) {
+                    return Http::response([
+                        'status' => 200,
+                        'message' => 'Success',
+                        'data' => ['costs' => []],
+                    ], 200);
+                }
+
+                // Mirrors the old mock driver: JNE REG = 18000 for the 1 kg tier.
+                return Http::response([
+                    'status' => 200,
+                    'message' => 'Success',
+                    'data' => [
+                        'costs' => [
+                            [
+                                'service' => 'REG',
+                                'description' => 'Layanan Reguler',
+                                'cost' => 18000,
+                                'etd' => '2-3 hari',
+                            ],
+                        ],
+                    ],
+                ], 200);
+            },
+        ]);
+    }
 
     private function makeProduct(string $name): Product
     {
@@ -54,17 +93,19 @@ class GuestCheckoutTest extends TestCase
     private function guestCheckoutPayload(string $email): array
     {
         return [
-            'name' => 'Guest Customer',
+            'recipient_name' => 'Guest Customer',
             'address' => 'Jl. Test No. 1',
-            'city' => 'Bandung',
-            'district' => 'Coblong',
-            'village' => 'Dago',
-            'province' => 'Jawa Barat',
+            'province_id' => '6',
+            'province_name' => 'Jawa Barat',
+            'city_id' => '22',
+            'city_name' => 'Bandung',
+            'district_id' => '220108',
+            'district_name' => 'Coblong',
+            'postal_code' => '40135',
             'phone' => '081234567890',
             'email' => $email,
-            'payment_method' => 'qris',
-            'shipping_method' => 'JNE',
-            'shipping_cost' => 15000,
+            'courier' => 'jne',
+            'shipping_service' => 'REG',
         ];
     }
 
@@ -100,9 +141,17 @@ class GuestCheckoutTest extends TestCase
 
         $this->assertNotNull($order);
         $this->assertEquals('guest@example.com', $order->email);
-        $this->assertEquals('pending', $order->payment_status);
-        $this->assertEquals('processing', $order->status);
-        $this->assertEquals(115000, $order->total_price);
+        $this->assertEquals('unpaid', $order->payment_status);
+        $this->assertEquals('waiting', $order->status);
+        $this->assertEquals('Guest Customer', $order->recipient_name);
+        $this->assertEquals('Coblong', $order->district_name);
+        $this->assertEquals('40135', $order->postal_code);
+        $this->assertEquals(100000, (float) $order->subtotal);
+        // Mock driver: JNE REG = 18000 for a 200g parcel (1kg tier).
+        $this->assertEquals(18000, (float) $order->shipping_cost);
+        $this->assertEquals(118000, (float) $order->total_price);
+        $this->assertEquals(200, $order->weight);
+        $this->assertNotEmpty($order->order_number);
 
         $this->assertDatabaseHas('order_items', [
             'order_id' => $order->id,
@@ -132,6 +181,60 @@ class GuestCheckoutTest extends TestCase
         $this->post('/customer/orders/checkout', $this->guestCheckoutPayload('guest@example.com'))
             ->assertRedirect()
             ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_checkout_ignores_client_supplied_totals_and_computes_them_server_side(): void
+    {
+        $product = $this->makeProduct('Tampered Totals Bouquet');
+        $this->seedGuestCart($product);
+
+        $payload = $this->guestCheckoutPayload('guest@example.com');
+
+        // A tampered client tries to force a zero shipping cost / total.
+        $payload['shipping_cost'] = 0;
+        $payload['total_price'] = 1;
+        $payload['subtotal'] = 1;
+
+        $this->post('/customer/orders/checkout', $payload)
+            ->assertRedirect(route('cart.show'));
+
+        $order = Order::whereNull('user_id')->first();
+
+        $this->assertEquals(100000, (float) $order->subtotal);
+        $this->assertEquals(18000, (float) $order->shipping_cost);
+        $this->assertEquals(118000, (float) $order->total_price);
+    }
+
+    public function test_checkout_fails_when_courier_service_is_not_offered_for_the_destination(): void
+    {
+        $product = $this->makeProduct('Unknown Courier Bouquet');
+        $this->seedGuestCart($product);
+
+        $payload = $this->guestCheckoutPayload('guest@example.com');
+        $payload['courier'] = 'sicepat';
+
+        $this->post('/customer/orders/checkout', $payload)
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_checkout_requires_the_new_region_and_courier_fields(): void
+    {
+        $product = $this->makeProduct('Region Validation Bouquet');
+        $this->seedGuestCart($product);
+
+        $payload = $this->guestCheckoutPayload('guest@example.com');
+
+        foreach (['province_id', 'province_name', 'city_id', 'city_name', 'district_id', 'district_name', 'courier', 'shipping_service'] as $field) {
+            unset($payload[$field]);
+        }
+
+        $this->post('/customer/orders/checkout', $payload)
+            ->assertSessionHasErrors(['province_id', 'province_name', 'city_id', 'city_name', 'district_id', 'district_name', 'courier', 'shipping_service']);
 
         $this->assertDatabaseCount('orders', 0);
     }

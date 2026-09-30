@@ -4,37 +4,32 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ShippingCalculateRequest;
 use App\Models\ProfileStore;
-use App\Services\Shipping\ShippingManager;
+use App\Services\ShippingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class ShippingController extends Controller
 {
-    /**
-     * Calculate shipping rates for checkout.
-     */
-    public function calculate(ShippingCalculateRequest $request, ShippingManager $shippingManager)
+    public function calculate(ShippingCalculateRequest $request, ShippingService $shippingService)
     {
         $validated = $request->validated();
         $profile = ProfileStore::first();
 
         $origin = $validated['origin']
-            ?? $profile?->shipping_origin_district_id
-            ?? $profile?->shipping_origin_city_id
-            ?? $profile?->city
-            ?? 'Surabaya';
+            ?? $profile?->district_id
+            ?? config('services.rajaongkir.origin');
         $destination = $validated['destination'];
         $weight = (int) $validated['weight'];
 
-        if (!empty($validated['courier'])) {
+        if (! empty($validated['courier'])) {
             $couriers = [$validated['courier']];
         } else {
             $couriers = $profile ? $profile->getEnabledCouriers() : ['jne', 'pos', 'tiki'];
         }
 
         try {
-            $rates = $shippingManager->calculate($origin, $destination, $weight, $couriers);
+            $rates = $shippingService->cost($origin, $destination, $weight, $couriers);
 
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
@@ -50,45 +45,19 @@ class ShippingController extends Controller
                 ->with('shippingResult', $rates)
                 ->with('shippingRates', $rates);
         } catch (\Throwable $e) {
-            Log::error('Shipping calculation error: ' . $e->getMessage());
+            Log::error('Shipping calculation error: '.$e->getMessage());
 
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Gagal menghitung ongkos kirim: ' . $e->getMessage(),
+                    'message' => 'Gagal menghitung ongkos kirim: '.$e->getMessage(),
                     'rates' => [],
                 ], 500);
             }
 
             return back()->withErrors([
-                'shipping' => 'Gagal menghitung ongkos kirim: ' . $e->getMessage(),
+                'shipping' => 'Gagal menghitung ongkos kirim: '.$e->getMessage(),
             ]);
         }
-    }
-
-    /**
-     * Get available shipping cities/locations.
-     */
-    public function cities(Request $request, ShippingManager $shippingManager): JsonResponse
-    {
-        $cities = $shippingManager->getCities($request->query('q'));
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $cities,
-        ]);
-    }
-
-    /**
-     * Get supported couriers by the active provider.
-     */
-    public function couriers(ShippingManager $shippingManager): JsonResponse
-    {
-        $couriers = $shippingManager->getSupportedCouriers();
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $couriers,
-        ]);
     }
 }

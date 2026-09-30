@@ -1,17 +1,17 @@
 <?php
 
-use Inertia\Inertia;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LocationController;
+use App\Http\Controllers\MidtransWebhookController;
 use App\Http\Controllers\OrderController;
-use App\Http\Controllers\RegionController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ShippingController;
-
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileStoreController;
-use App\Http\Controllers\MidtransWebhookController;
+use App\Http\Controllers\ShippingController;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 // Public Routes
 
@@ -26,14 +26,11 @@ Route::get('/sale', [ProductController::class, 'salePage'])->name('sale');
 Route::get('/product/{slug}', [ProductController::class, 'product'])->name('product');
 Route::get('/api/products/search', [ProductController::class, 'apiSearch'])->name('products.api-search');
 
-// Region data (used by address forms)
-Route::controller(RegionController::class)->prefix('regions')->name('regions.')->group(function () {
-    Route::get('/provinces', 'provinces')->name('provinces');
-    Route::get('/regencies/{provinceId}', 'regencies')->name('regencies');
-    Route::get('/districts/{regencyId}', 'districts')->name('districts');
-    Route::get('/villages/{districtId}', 'villages')->name('villages');
-    Route::get('/city/{cityName}', 'cityByName')->name('city');
-    Route::get('/search', 'search')->name('search');
+Route::prefix('locations')->group(function () {
+    Route::get('provinces', [LocationController::class, 'provinces']);
+    Route::get('provinces/{id}/cities', [LocationController::class, 'cities']);
+    Route::get('cities/{id}/districts', [LocationController::class, 'districts']);
+    Route::post('shipping-cost', [LocationController::class, 'cost']);
 });
 
 // Shipping calculation & helpers
@@ -52,11 +49,10 @@ Route::controller(CartController::class)->prefix('cart')->name('cart.')->group(f
 // Checkout (available to guests and customers)
 Route::get('/checkout', [CartController::class, 'showCheckout'])->middleware('check.cart')->name('checkout');
 Route::post('/customer/orders/checkout', [OrderController::class, 'store'])->name('customer.orders.store');
-Route::get('/orders/{id}/payment-token', [OrderController::class, 'paymentToken'])->name('orders.payment-token');
+Route::post('/orders/{order}/payment', [PaymentController::class, 'createTransaction'])->name('orders.payment');
 
 // Midtrans Webhook Notification
 Route::post('/webhooks/midtrans', [MidtransWebhookController::class, 'handle'])->name('webhooks.midtrans');
-
 
 // Authenticated Customer Routes
 Route::middleware(['auth', 'customer'])->group(function () {
@@ -67,12 +63,9 @@ Route::middleware(['auth', 'customer'])->group(function () {
     Route::controller(OrderController::class)->prefix('customer/orders')->name('customer.orders.')->group(function () {
         Route::get('/', 'userOrders')->name('index');
         Route::post('/complete', 'complete')->name('complete');
-        Route::post('/upload-proof', 'uploadPaymentProof')->name('proof');
         Route::get('/tracking/{trackingNumber}', 'tracking')->name('tracking');
-        Route::get('/{id}/payment-token', 'paymentToken')->name('payment-token');
         Route::get('/{id}', 'userOrderDetail')->name('show');
     });
-
 
 });
 
@@ -119,4 +112,4 @@ Route::middleware(['auth', 'admin'])->group(function () {
     })->name('data');
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

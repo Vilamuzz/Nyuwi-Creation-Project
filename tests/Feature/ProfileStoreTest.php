@@ -37,9 +37,10 @@ class ProfileStoreTest extends TestCase
             'name' => 'Toko Test',
             'logo' => 'logo/test.png',
             'address' => 'Jl. Test No. 1',
-            'city' => 'Surabaya',
+            'embedded_map' => 'https://maps.example.com/embed',
+            'district_id' => '3517120',
+            'district_name' => 'Peterongan',
             'phone' => '081234567890',
-            'qris' => 'qris/test.png',
             'instagram' => 'tokotest',
             'facebook' => 'tokotest',
             'tiktok' => '@tokotest',
@@ -75,18 +76,18 @@ class ProfileStoreTest extends TestCase
             'name' => 'Toko Lama',
             'logo' => 'logo/lama.png',
             'address' => 'Jl. Lama No. 1',
-            'city' => 'Malang',
+            'district_id' => '3517120',
+            'district_name' => 'Peterongan',
             'phone' => '081112223333',
-            'qris' => 'qris/lama.png',
         ]);
 
         $response = $this->actingAs($admin)
             ->put(route('profile-store.update'), [
                 'name' => 'Toko Baru',
                 'address' => 'Jl. Baru No. 2',
-                'city' => 'Jakarta',
-                'shipping_origin_city_id' => '152',
-                'shipping_origin_district_id' => '2105',
+                'embedded_map' => 'https://maps.example.com/embed/baru',
+                'district_id' => '3517110',
+                'district_name' => 'Diwek',
                 'phone' => '081555666777',
                 'instagram' => 'tokobaru',
                 'facebook' => 'tokobaru',
@@ -98,9 +99,9 @@ class ProfileStoreTest extends TestCase
         $profile->refresh();
         $this->assertSame('Toko Baru', $profile->name);
         $this->assertSame('Jl. Baru No. 2', $profile->address);
-        $this->assertSame('Jakarta', $profile->city);
-        $this->assertSame('152', $profile->shipping_origin_city_id);
-        $this->assertSame('2105', $profile->shipping_origin_district_id);
+        $this->assertSame('https://maps.example.com/embed/baru', $profile->embedded_map);
+        $this->assertSame('3517110', $profile->district_id);
+        $this->assertSame('Diwek', $profile->district_name);
         $this->assertSame('081555666777', $profile->phone);
         $this->assertSame('tokobaru', $profile->instagram);
         $this->assertSame('tokobaru', $profile->facebook);
@@ -114,30 +115,22 @@ class ProfileStoreTest extends TestCase
             'name' => 'Toko Validate',
             'logo' => 'logo/validate.png',
             'address' => 'Jl. Validate No. 1',
-            'city' => 'Semarang',
-            'shipping_origin_city_id' => '444',
-            'shipping_origin_district_id' => '5742',
+            'district_id' => '3517120',
+            'district_name' => 'Peterongan',
             'phone' => '081999888777',
-            'qris' => 'qris/validate.png',
         ]);
 
         $response = $this->actingAs($admin)
             ->put(route('profile-store.update'), [
                 'name' => '',
                 'address' => '',
-                'city' => '',
                 'phone' => '',
-                'shipping_origin_city_id' => '',
-                'shipping_origin_district_id' => '',
             ]);
 
         $response->assertSessionHasErrors([
             'name',
             'address',
-            'city',
             'phone',
-            'shipping_origin_city_id',
-            'shipping_origin_district_id',
         ]);
     }
 
@@ -148,11 +141,9 @@ class ProfileStoreTest extends TestCase
             'name' => 'Toko Social',
             'logo' => 'logo/social.png',
             'address' => 'Jl. Social No. 1',
-            'city' => 'Yogyakarta',
-            'shipping_origin_city_id' => '501',
-            'shipping_origin_district_id' => '6912',
+            'district_id' => '3517120',
+            'district_name' => 'Peterongan',
             'phone' => '081222333444',
-            'qris' => 'qris/social.png',
             'instagram' => 'tokosocial',
             'facebook' => 'tokosocial',
             'tiktok' => '@tokosocial',
@@ -162,9 +153,8 @@ class ProfileStoreTest extends TestCase
             ->put(route('profile-store.update'), [
                 'name' => 'Toko Social',
                 'address' => 'Jl. Social No. 1',
-                'city' => 'Yogyakarta',
-                'shipping_origin_city_id' => '501',
-                'shipping_origin_district_id' => '6912',
+                'district_id' => '3517120',
+                'district_name' => 'Peterongan',
                 'phone' => '081222333444',
                 'instagram' => '',
                 'facebook' => '',
@@ -189,9 +179,8 @@ class ProfileStoreTest extends TestCase
             ->put(route('profile-store.update'), [
                 'name' => 'Toko Inisial',
                 'address' => 'Jl. Toko No. 10',
-                'city' => 'Surabaya',
-                'shipping_origin_city_id' => '444',
-                'shipping_origin_district_id' => '5742',
+                'district_id' => '3517120',
+                'district_name' => 'Peterongan',
                 'phone' => '081234567890',
             ]);
 
@@ -200,9 +189,8 @@ class ProfileStoreTest extends TestCase
 
         $created = ProfileStore::first();
         $this->assertSame('Toko Inisial', $created->name);
-        $this->assertSame('Surabaya', $created->city);
-        $this->assertSame('444', $created->shipping_origin_city_id);
-        $this->assertSame('5742', $created->shipping_origin_district_id);
+        $this->assertSame('3517120', $created->district_id);
+        $this->assertSame('Peterongan', $created->district_name);
     }
 
     public function test_update_profile_store_invalidates_cache(): void
@@ -212,11 +200,9 @@ class ProfileStoreTest extends TestCase
             'name' => 'Toko Cache',
             'logo' => 'logo/cache.png',
             'address' => 'Jl. Cache',
-            'city' => 'Surabaya',
-            'shipping_origin_city_id' => '444',
-            'shipping_origin_district_id' => '5742',
+            'district_id' => '3517120',
+            'district_name' => 'Peterongan',
             'phone' => '081234567890',
-            'qris' => 'qris/cache.png',
         ]);
 
         Cache::put('store_profile', $profile);
@@ -226,9 +212,8 @@ class ProfileStoreTest extends TestCase
             ->put(route('profile-store.update'), [
                 'name' => 'Toko Cache Baru',
                 'address' => 'Jl. Cache Baru',
-                'city' => 'Surabaya',
-                'shipping_origin_city_id' => '444',
-                'shipping_origin_district_id' => '5742',
+                'district_id' => '3517120',
+                'district_name' => 'Peterongan',
                 'phone' => '081234567890',
             ]);
 

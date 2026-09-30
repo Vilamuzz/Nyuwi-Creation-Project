@@ -14,7 +14,6 @@
 ## Phase 2: Database & Migrations ✅ COMPLETE
 - [x] Core e-commerce tables: `users`, `categories`, `products`, `carts`, `orders`, `order_items`, `product_reviews`
 - [x] Store config table: `profile_stores`
-- [x] Indonesian region tables: `provinces`, `regencies`, `districts`, `villages` (IndoRegion package)
 - [x] Laravel framework tables: `sessions`, `password_reset_tokens`, `cache`, `jobs`, `personal_access_tokens` (Sanctum)
 - [x] Foreign keys with cascade/restrict behavior
 - [x] All migrations timestamped and irreversible
@@ -28,11 +27,11 @@
 - [x] Password reset flow
 - [x] Admin accounts created via `php artisan create:admin` or `UserSeeder` (no public registration)
 
-## Phase 4: Indonesian Region Data ✅ COMPLETE
-- [x] `azishapidin/indoregion` package installed
-- [x] Seeders for all 4 region levels (province, regency, district, village)
-- [x] API endpoints: `/api/provinces`, `/api/regencies/{provinceId}`, `/api/districts/{regencyId}`, `/api/villages/{districtId}`, `/api/city/{cityName}`, `/api/search/regions`
-- [x] Region models with IndoRegion traits and relationships
+## Phase 4: Indonesian Region Data — REPLACED BY RAJAONGKIR
+- [x] ~~`azishapidin/indoregion` package installed~~ — removed (package deprecated, unmaintained since 2021)
+- [x] ~~Local `provinces`/`regencies`/`districts`/`villages` tables + seeders~~ — removed
+- [x] Region data (provinces, cities, districts) fetched at runtime from the RajaOngkir API
+- [x] Shipping cost calculation via the RajaOngkir API; shipment tracking via the BinderByte API
 
 ## Phase 5: Public Storefront (Customer) ✅ COMPLETE
 - [x] Landing page (`/`) — hero, categories, featured products, promo section
@@ -133,7 +132,6 @@ php artisan test
 
 # Database
 php artisan migrate:status
-php artisan db:seed --class=IndoRegionSeeder
 
 # Manual smoke test
 php artisan serve --host=0.0.0.0 --port=8000

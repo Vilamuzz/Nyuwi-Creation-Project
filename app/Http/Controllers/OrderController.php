@@ -5,22 +5,19 @@ namespace App\Http\Controllers;
 use App\Http\Requests\OrderCompleteRequest;
 use App\Http\Requests\OrderStatusUpdateRequest;
 use App\Http\Requests\OrderStoreRequest;
-use App\Http\Requests\PaymentProofRequest;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Cart;
+use App\Models\ProfileStore;
 use App\Services\CartService;
 use Inertia\Inertia;
 use App\Models\ProductReview;
-
 use Illuminate\Contracts\Auth\MustVerifyEmail;
-use App\Services\MidtransService;
-use App\Services\Shipping\ShippingManager;
+use App\Services\ShippingService;
 
 class OrderController extends Controller
 {
@@ -48,17 +45,17 @@ class OrderController extends Controller
 
         $order = Order::findOrFail($id);
 
-        // Don't allow cancellation if order is shipping
-        if (($validated['status'] ?? null) === 'cancelled' && $order->status === 'shiping') {
+        // Don't allow cancellation if order is already handed to the courier
+        if (($validated['status'] ?? null) === 'cancelled' && $order->status === 'shipped') {
             return back()->with('error', 'Cannot cancel order that is already being shipped');
         }
 
         DB::transaction(function () use ($validated, $order) {
             if (!empty($validated['tracking_number'])) {
-                // Update order to shipping status
+                // Update order to shipped status
                 $order->update([
                     'tracking_number' => $validated['tracking_number'],
-                    'status' => 'shiping'
+                    'status' => 'shipped'
                 ]);
 
                 // Reduce product stock for each order item
@@ -71,7 +68,7 @@ class OrderController extends Controller
                     }
                 }
             } else if (!empty($validated['status'])) {
-                if ($validated['status'] === 'shiping') {
+                if ($validated['status'] === 'shipped') {
                     // Reduce product stock for each order item
                     foreach ($order->orderItems as $item) {
                         $product = Product::find($item->product_id);
@@ -91,72 +88,104 @@ class OrderController extends Controller
         return redirect()->back()->with('success', 'Order updated successfully');
     }
 
-    public function store(OrderStoreRequest $request)
+    private function calculateShippingCost(ShippingService $shippingService, array $validated, int $weight): float
+    {
+        $profile = ProfileStore::first();
+
+        $origin = $profile?->district_id ?? config('services.rajaongkir.origin');
+
+        $destination = $validated['district_id'] ?: $validated['city_id'];
+
+        $rates = $shippingService->cost(
+            (string) $origin,
+            (string) $destination,
+            $weight,
+            $validated['courier'],
+        );
+
+        foreach ($rates as $rate) {
+            if (
+                strcasecmp((string) $rate['courier'], $validated['courier']) === 0
+                && strcasecmp((string) $rate['service'], $validated['shipping_service']) === 0
+            ) {
+                return (float) $rate['cost'];
+            }
+        }
+
+        throw new \RuntimeException(
+            "Ongkos kirim tidak tersedia untuk {$validated['courier']} - {$validated['shipping_service']}."
+        );
+    }
+
+    public function store(OrderStoreRequest $request, ShippingService $shippingService)
     {
         $validated = $request->validated();
 
         $placedOrderId = null;
 
         try {
-            DB::transaction(function () use ($request, $validated, &$placedOrderId) {
+            DB::transaction(function () use ($request, $validated, $shippingService, &$placedOrderId) {
                 $user = Auth::user();
-                $cartService = new CartService();
+                $cartService = app(CartService::class);
 
-                $cartItems = $user
-                    ? Cart::with('product')->where('user_id', $user->id)->lockForUpdate()->get()
-                    : collect($cartService->items($request));
+                if ($user) {
+                    Cart::where('user_id', $user->id)->lockForUpdate()->get();
+                }
 
-                if ($cartItems->isEmpty()) {
+                $cartItems = $cartService->items($request);
+
+                if ($cartItems === []) {
                     throw new \Exception('Cart is empty');
                 }
 
                 foreach ($cartItems as $cartItem) {
-                    $product = $user ? $cartItem->product : $cartItem['product'];
-                    $quantity = $user ? $cartItem->quantity : $cartItem['quantity'];
+                    $product = $cartItem['product'];
 
-                    if (!$product || $quantity > $product->stock) {
+                    if (! $product || $cartItem['quantity'] > $product->stock) {
                         throw new \RuntimeException("Insufficient stock for {$product?->name}");
                     }
                 }
 
-                // Calculate total price
-                $subtotal = $cartItems->sum(fn ($item) => $user
-                    ? $item->price * $item->quantity
-                    : (float) $item['price'] * $item['quantity']);
-                $totalPrice = $subtotal + $validated['shipping_cost'];
+                $summary = $cartService->summarize($cartItems);
+                $subtotal = $summary['subtotal'];
+                $weight = $summary['totalWeight'];
+                $shippingCost = $this->calculateShippingCost($shippingService, $validated, $weight);
+                $totalPrice = $subtotal + $shippingCost;
 
                 $order = Order::create([
                     'user_id' => $user?->id,
-                    'name' => $validated['name'],
+                    'recipient_name' => $validated['recipient_name'],
                     'address' => $validated['address'],
-                    'city' => $validated['city'],
-                    'district' => $validated['district'],
-                    'village' => $validated['village'],
-                    'province' => $validated['province'],
+                    'province_id' => $validated['province_id'],
+                    'province_name' => $validated['province_name'],
+                    'city_id' => $validated['city_id'],
+                    'city_name' => $validated['city_name'],
+                    'district_id' => $validated['district_id'],
+                    'district_name' => $validated['district_name'],
+                    'postal_code' => $validated['postal_code'] ?? null,
                     'phone' => $validated['phone'],
                     'email' => $validated['email'] ?? $user?->email,
+                    'courier' => $validated['courier'],
+                    'shipping_service' => $validated['shipping_service'],
+                    'weight' => $weight,
+                    'shipping_cost' => $shippingCost,
+                    'subtotal' => $subtotal,
                     'total_price' => $totalPrice,
-                    'payment_method' => $validated['payment_method'],
-                    'shipping_method' => $validated['shipping_method'],
-                    'note' => $validated['note'] ?? null,
-                    'payment_status' => 'pending',
-                    'status' => 'processing',
+                    'payment_status' => 'unpaid',
+                    'status' => 'waiting',
                 ]);
 
                 $placedOrderId = $order->id;
 
-                // Create order items and clear cart
                 foreach ($cartItems as $cartItem) {
                     OrderItem::create([
                         'order_id' => $order->id,
-                        'product_id' => $user ? $cartItem->product_id : $cartItem['product_id'],
-                        'quantity' => $user ? $cartItem->quantity : $cartItem['quantity'],
-                        'price' => $user ? $cartItem->price : $cartItem['price'],
-                        'total_price' => $user
-                            ? $cartItem->price * $cartItem->quantity
-                            : (float) $cartItem['price'] * $cartItem['quantity'],
-                        'size' => $user ? $cartItem->size : $cartItem['size'],
-                        'color' => $user ? $cartItem->color : $cartItem['color']
+                        'product_id' => $cartItem['product_id'],
+                        'quantity' => $cartItem['quantity'],
+                        'price' => $cartItem['price'],
+                        'total_price' => (float) $cartItem['price'] * (int) $cartItem['quantity'],
+                        'size' => $cartItem['size'],
+                        'color' => $cartItem['color'],
                     ]);
                 }
 
@@ -240,61 +269,27 @@ class OrderController extends Controller
         ]);
     }
 
-    public function tracking(string $trackingNumber, ShippingManager $shippingManager)
+    public function tracking(string $trackingNumber, ShippingService $shippingService)
     {
         $order = Order::where('tracking_number', $trackingNumber)
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        if (strcasecmp($order->shipping_method, 'GoSend') === 0) {
+        if (strcasecmp($order->courier, 'gosend') === 0) {
             return back()->withErrors(['tracking' => 'GoSend orders do not have tracking information.']);
         }
 
-        $trackingData = $shippingManager->track($order->shipping_method, $trackingNumber);
+        $trackingData = $shippingService->track($order->courier, $trackingNumber);
 
         return back()->with('trackingData', $trackingData);
     }
 
-    public function adminTracking(string $trackingNumber, ShippingManager $shippingManager)
+    public function adminTracking(string $trackingNumber, ShippingService $shippingService)
     {
         $order = Order::where('tracking_number', $trackingNumber)->firstOrFail();
 
-        $trackingData = $shippingManager->track($order->shipping_method, $trackingNumber);
+        $trackingData = $shippingService->track($order->courier, $trackingNumber);
 
         return back()->with('trackingData', $trackingData);
-    }
-
-    public function uploadPaymentProof(PaymentProofRequest $request)
-    {
-        return back()->with('error', 'Unggah bukti pembayaran manual sudah tidak didukung.');
-    }
-
-    public function paymentToken($id, MidtransService $midtransService)
-    {
-        $order = Order::with('orderItems.product')->findOrFail($id);
-
-        if ($order->user_id && $order->user_id !== Auth::id()) {
-            abort(403, 'Unauthorized access to order');
-        }
-
-        if ($order->payment_status !== 'pending') {
-            return response()->json([
-                'message' => 'Order is not in pending payment status.',
-                'payment_status' => $order->payment_status,
-            ], 400);
-        }
-
-        try {
-            $snapData = $midtransService->createSnapToken($order);
-
-            return response()->json([
-                'snap_token' => $snapData['token'],
-                'redirect_url' => $snapData['redirect_url'],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Failed to generate payment token: ' . $e->getMessage(),
-            ], 500);
-        }
     }
 }

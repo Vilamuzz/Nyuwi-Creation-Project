@@ -6,7 +6,8 @@
 - Single web controller layer — controllers return Inertia responses for page rendering and redirects for mutations
 - Inertia partial reloads handle dynamic data such as cart updates, regions, and shipping
 - Role-based middleware (`admin`, `customer`) for route protection
-- MySQL database with Indonesian region data (azishapidin/indoregion package)
+- Indonesian region data (provinces, cities, districts) is fetched at runtime from the RajaOngkir API rather than stored in local tables
+- Shipping rate calculation uses the **RajaOngkir** API; shipment tracking uses the **BinderByte** API — both called server-side so no API keys are exposed to the browser
 
 ## Stack Decisions (and Why)
 
@@ -47,7 +48,6 @@ Only these may be installed without asking:
 - `laravel/framework` (core)
 - `inertiajs/inertia-laravel` — Inertia server adapter
 - `laravel/breeze` — Auth scaffolding
-- `azishapidin/indoregion` — Indonesian region data
 - `intervention/image` — Image processing
 - `tightenco/ziggy` — Laravel routes in JavaScript
 - `laravel/tinker` — REPL for debugging

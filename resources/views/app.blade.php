@@ -17,6 +17,8 @@
     @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
     @inertiaHead
     <link rel="icon" href="{{ asset('favicon.ico') }}?v={{ time() }}">
+    <script src="{{ config('services.midtrans.is_production') ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
+            data-client-key="{{ config('services.midtrans.client_key') }}"></script>
 </head>
 
 <body class="font-sans antialiased bg-white">

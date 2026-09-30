@@ -24,11 +24,13 @@ class DashboardController extends Controller
             ->map(function ($order) {
                 return [
                     'id' => $order->id,
-                    'name' => $order->name,
+                    'order_number' => $order->order_number,
+                    'name' => $order->recipient_name,
                     'total_price' => $order->total_price,
                     'status' => $order->status,
                     'payment_status' => $order->payment_status,
-                    'payment_method' => $order->payment_method,
+                    'courier' => $order->courier,
+                    'shipping_service' => $order->shipping_service,
                     'created_at' => $order->created_at?->toISOString() ?? now()->toISOString(),
                 ];
             });

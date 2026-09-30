@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\File;
 
 class StoreProfileUpdateRequest extends FormRequest
 {
@@ -17,9 +16,9 @@ class StoreProfileUpdateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'address' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:100'],
-            'shipping_origin_city_id' => ['required', 'string', 'max:50'],
-            'shipping_origin_district_id' => ['required', 'string', 'max:50'],
+            'embedded_map' => ['nullable', 'string', 'max:1000'],
+            'district_id' => ['nullable', 'string', 'max:50'],
+            'district_name' => ['nullable', 'string', 'max:255'],
             'shipping_couriers' => ['nullable', 'array'],
             'shipping_couriers.*' => ['string', 'max:50'],
             'phone' => ['required', 'string', 'max:20'],
@@ -27,7 +26,6 @@ class StoreProfileUpdateRequest extends FormRequest
             'facebook' => ['nullable', 'string', 'max:255'],
             'tiktok' => ['nullable', 'string', 'max:255'],
             'logo' => ['sometimes', 'nullable', 'image', 'mimes:jpeg,png,jpg,svg', 'max:2048'],
-            'qris' => ['sometimes', 'nullable', 'image', 'mimes:jpeg,png,jpg,svg', 'max:2048'],
         ];
     }
 }

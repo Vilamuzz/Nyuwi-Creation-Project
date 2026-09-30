@@ -40,6 +40,13 @@ return [
             "BINDERBYTE_BASE_URL",
             "https://api.binderbyte.com/v1",
         ),
+        "timeout" => (int) env("SHIPPING_TIMEOUT", 10),
+    ],
+
+    "rajaongkir" => [
+        "key" => env("RAJAONGKIR_KEY"),
+        "url" => env("RAJAONGKIR_URL"),
+        "origin" => env("RAJAONGKIR_ORIGIN_DISTRICT_ID"),
     ],
 
     "midtrans" => [

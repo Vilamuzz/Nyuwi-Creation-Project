@@ -1,5 +1,164 @@
 # Changelog
 
+## [2026-09-30] — Document shipping provider architecture
+
+- **Documented the provider split:** shipping rate calculation & region data use the **RajaOngkir** API; shipment tracking uses the **BinderByte** API (both server-side, keys never exposed to the browser).
+- Updated `docs/02_TRD.md` (architecture), `docs/06_IMPLEMENTATION_PLAN.md` (Phase 4 — also fixed the `RAJAONGKAR` typo), and `docs/specs/remove-api-layer.md` (decisions).
+- **Note:** `ShippingService::calculate()` is currently BinderByte-backed from the previous consolidation; the documented target is RajaOngkir for calculation. Code unchanged in this entry.
+
+### Files changed
+- `docs/02_TRD.md`
+- `docs/06_IMPLEMENTATION_PLAN.md`
+- `docs/specs/remove-api-layer.md`
+- `docs/CHANGELOG.md`
+
+## [2026-09-30] — Remove `app/Services/Shipping/`, consolidate into `ShippingService`
+
+- **Removed the driver-based shipping architecture** (`app/Services/Shipping/`): `ShippingManager`, `Contracts/ShippingCalculatorInterface`, `Drivers/BinderByteShippingDriver`, `Drivers/MockShippingDriver` are deleted.
+- **`app/Services/ShippingService.php` is now the single shipping provider** (BinderByte-backed, plus the existing RajaOngkir region lookups):
+  - Ported `calculate()` (BinderByte `/cost`, kg rounding, courier filter, rate normalization), `getSupportedCouriers()`, and `getCities(?string $search)` (BinderByte `/list_city` + cache) from the deleted `BinderByteShippingDriver`.
+  - `track()` (moved here earlier) and private `normalizeCourierCode()` unchanged.
+  - *Interim:* the documented target architecture is calculate via RajaOngkir / tracking via BinderByte (see the TRD update above); `calculate()` stayed BinderByte-backed in this change.
+- **Consumers switched from `ShippingManager` to `ShippingService`:**
+  - `ShippingController::calculate()` → `$shippingService->calculate(...)`; `cities()` → `$shippingService->getCities($q)`; `couriers()` → `$shippingService->getSupportedCouriers()`.
+  - `OrderController::store()` / `calculateShippingCost()` now inject `ShippingService`; the `ShippingManager` import was removed.
+- **`AppServiceProvider`:** removed the `ShippingManager` singleton and `ShippingCalculatorInterface` bindings (no longer needed — `ShippingService` is auto-resolved).
+- **Tests:**
+  - `ShippingCalculationTest` dropped the manager/mock/rajaongkir-driver tests; the BinderByte cost test now targets `ShippingService`; controller tests use `Http::fake` against the BinderByte endpoints and set `services.binderbyte.api_key`; `ProfileStore::create()` calls include `embedded_map` (required by the current schema).
+  - `GuestCheckoutTest` no longer sets `shipping.default = mock` (dead config); it now fakes BinderByte `/cost` with the old mock rates (JNE REG = 18000) and returns empty costs for `sicepat` to preserve the “courier not offered” test.
+
+### Files changed
+- `app/Services/ShippingService.php`
+- `app/Http/Controllers/ShippingController.php`
+- `app/Http/Controllers/OrderController.php`
+- `app/Providers/AppServiceProvider.php`
+- `tests/Feature/ShippingCalculationTest.php`
+- `tests/Feature/GuestCheckoutTest.php`
+- `app/Services/Shipping/` (deleted)
+
+## [2026-09-29] — Replace manual `fetch` with axios in `Customer/Checkout.vue`
+
+- **`resources/js/Pages/Customer/Checkout.vue`:**
+  - Region loading now uses axios and is driven by `watch` instead of manual `fetch` + template handlers: `onMounted(fetchProvinces)` loads provinces, `watch(form.province_id)` loads cities (and clears city/district), and `watch(form.city_id)` loads districts.
+  - `watch(form.district_id)` derives `district_name` and resets the shipping choice; a second watcher on the same source re-calculates rates, so switching destination refetches automatically.
+  - `calculateShippingRates()` now POSTs via axios to `shipping.calculate` using the district id (previously a hand-built `fetch` with manual CSRF/XHR headers and a city fallback).
+  - Removed the now-unused `regionConfig`, `currentType`, and `fetchRegions` helpers, plus the `@update:model-value="fetchRegions(...)"` handlers on the region selects.
+  - `goToStep('shipping')` only fetches when no rates are loaded yet, avoiding a double request now that the watcher fires on district selection.
+- **`resources/js/bootstrap.js`:** configure the axios CSRF token from the `csrf-token` meta tag (standard Laravel pattern) so component code doesn't repeat headers.
+
+### Files changed
+- `resources/js/Pages/Customer/Checkout.vue`
+- `resources/js/bootstrap.js`
+
+## [2026-09-29] — Recalculate shipping cost server-side at order creation
+
+- **Security fix — shipping cost is no longer trusted from the client:**
+  - `OrderController::store()` now recomputes the shipping cost via a new private `calculateShippingCost()` helper using `ShippingManager`, using the store origin (`ProfileStore.district_id`, falling back to `services.rajaongkir.origin`), the cart-derived weight, and the destination district (falling back to city). It matches the client-requested `courier` + `shipping_service` against the freshly fetched rates and stores the authoritative cost.
+  - If the requested courier/service is not offered for the destination, the method throws and the order is rejected (no partial/invalid order).
+  - `OrderStoreRequest` no longer accepts `shipping_cost`, so it cannot be submitted at all. `total_price = subtotal + shipping_cost` is now fully server-derived.
+- **Frontend (`Customer/Checkout.vue`):**
+  - Removed `shipping_cost` from the submitted form; it is now a display-only `shippingCost` ref mirroring the selected rate. Shipping totals and the "Metode Pengiriman" summary still render for the customer, but nothing authoritative is sent to the server.
+- **Tests:**
+  - `GuestCheckoutTest` pins `shipping.default = mock` and asserts the server-computed shipping cost (JNE REG = 18000 at the 1kg tier) and total.
+  - Added a tampering test proving a client-supplied `shipping_cost: 0` / `total_price: 1` is ignored, and a test asserting an unavailable courier/service aborts order creation.
+
+### Files changed
+- `app/Http/Controllers/OrderController.php`
+- `app/Http/Requests/OrderStoreRequest.php`
+- `resources/js/Pages/Customer/Checkout.vue`
+- `tests/Feature/GuestCheckoutTest.php`
+
+## [2026-09-29] — Migrate `Customer/Checkout.vue` to the new order payload
+
+- **Form payload now matches `OrderController::store()` / `OrderStoreRequest`:**
+  - Replaced `name` → `recipient_name`; `province`/`city`/`district` → `province_id`/`province_name`, `city_id`/`city_name`, `district_id`/`district_name`; dropped `village`, `note`, `payment_method`, `shipping_method`; added `postal_code`, `courier`, `shipping_service`.
+  - Region `<FormSelect>`s now bind to the region **id** (`option-value="id"`); the matching `*_name` is derived with `watch` so the order keeps a human-readable snapshot alongside the API id.
+  - Shipping option selection stores `courier` + `shipping_service` (selected-state matching moved into an `isShippingSelected()` helper); the shipping-rate call sends the district id directly.
+  - Payment radio binds to a local `selectedPayment` ref — payment method is no longer submitted (Midtrans Snap handles it after the order is created).
+  - Step guards and the "Kirim ke" / "Metode Pengiriman" summaries updated to the new fields; `postal_code` input added (optional).
+- **Pre-existing build blocker (not introduced here):** `npm run build` fails because `Pages/Customer/Cart.vue` imports `Components/Customer/Sub-main/PaymentInformationModal.vue`, which was deleted in the earlier QRIS-removal change. `Checkout.vue` itself compiles cleanly.
+
+### Files changed
+- `resources/js/Pages/Customer/Checkout.vue`
+
+## [2026-09-29] — Align order backend with the new `orders` schema
+
+- **`OrderController`:**
+  - `store()` now persists the current `orders` columns: `recipient_name`, `province_id`/`province_name`, `city_id`/`city_name`, `district_id`/`district_name`, `postal_code`, `courier`, `shipping_service`, `weight`, `shipping_cost`, `subtotal`, `total_price`. Dropped the removed `name`/`city`/`district`/`village`/`province`/`payment_method`/`shipping_method`/`note` fields. `order_number` is generated by the model.
+  - New orders start at `status = waiting`, `payment_status = unpaid`; `subtotal` and `weight` are derived server-side from the cart (`CartService::summarize()`) rather than trusted from the client; `total_price = subtotal + shipping_cost`.
+  - `store()` unified logged-in and guest paths on `CartService::items()` (cart rows still locked via `lockForUpdate()` for authenticated checkouts), removing the duplicated ternaries.
+  - `update()` uses the corrected status `shipped` (was `shiping`) for tracking + stock deduction, and blocks cancellation once an order is `shipped`.
+  - `tracking()`/`adminTracking()` track via `$order->courier` (replacing `shipping_method`); the GoSend no-tracking guard now matches the courier code `gosend`.
+  - `paymentToken()` accepts `unpaid` or `pending` (new orders start `unpaid`).
+- **Requests:**
+  - `OrderStoreRequest` validates the new region ID/name pairs, `postal_code`, `courier`, `shipping_service`, and `shipping_cost`; no longer accepts `payment_method`, `shipping_method`, or `note`.
+  - `OrderStatusUpdateRequest` status enum updated to `waiting, checking, pending, processing, shipped, completed, cancelled`.
+- **`DashboardController`:** recent-orders mapping reads `recipient_name`, `courier`, `shipping_service`, and `order_number` (was reading removed `name`/`payment_method`).
+- **Tests:**
+  - Updated `GuestCheckoutTest`, `CustomerDashboardTest`, `MidtransIntegrationTest`, `ShippingCalculationTest`, `PaymentTransactionTest`, and `AdminDashboardTest` order fixtures to the new schema.
+  - Added `AdminOrderUpdateTest` covering the shipped/cancel/status-flow behaviour of the admin status endpoint.
+  - Added guest-checkout tests for server-side totals and required region/courier fields.
+- **Known follow-ups (not in this change):**
+  - `MidtransService` still reads removed `$order->name`/`$order->shipping_method` (left as-is per request); will need `recipient_name` and `courier`+`shipping_service`.
+  - `MidtransWebhookController` and `PaymentTransactionTest` write `raw_status`/`raw_payload`, but the `payment_transactions` table/model use `status`/`raw_response` — a pre-existing mismatch.
+  - Frontend pages (`Customer/Checkout.vue`, `Admin/Orders/*`) still send/read the old field names (`name`, `city`, `shipping_method`, `village`); migrated separately.
+
+### Files changed
+- `app/Http/Controllers/OrderController.php`
+- `app/Http/Controllers/DashboardController.php`
+- `app/Http/Requests/OrderStoreRequest.php`
+- `app/Http/Requests/OrderStatusUpdateRequest.php`
+- `tests/Feature/AdminOrderUpdateTest.php`
+- `tests/Feature/GuestCheckoutTest.php`
+- `tests/Feature/CustomerDashboardTest.php`
+- `tests/Feature/MidtransIntegrationTest.php`
+- `tests/Feature/ShippingCalculationTest.php`
+- `tests/Feature/PaymentTransactionTest.php`
+- `tests/Feature/AdminDashboardTest.php`
+
+## [2026-09-29] — Remove indoregion, QRIS, and store-city implementation
+
+- **Dependency removal:**
+  - Removed `azishapidin/indoregion` (deprecated, unmaintained since 2021) and its transitive `parsecsv/php-parsecsv` from `composer.json`/`composer.lock`.
+  - Region data now comes from the RajaOngkir API via `App\Services\ShippingService` (`/locations/*` routes); local `provinces`/`regencies`/`districts`/`villages` tables and models deleted.
+- **Store profile alignment (`profile_stores`):**
+  - Form (`Admin/ProfileStore.vue`), `StoreProfileUpdateRequest`, and `ProfileStoreController` now persist the model's actual fields: `embedded_map`, `district_id`, `district_name`.
+  - Dropped `city`, `qris`, `shipping_origin_city_id`, `shipping_origin_district_id` everywhere (form, request, controller, shared props, views).
+  - Origin for shipping is now `district_id` (falling back to `services.rajaongkir.origin`); both shipping drivers hard-fail instead of falling back to deleted local region tables.
+- **QRIS removal:**
+  - Removed the QRIS payment option from checkout (`Checkout.vue`), the QRIS tab from `PaymentInformationModal.vue`, the QRIS upload zone, and the footer claim.
+  - `OrderStoreRequest` now accepts only `digital_wallet`.
+  - `MidtransService` uses `$order->city_name` (the order's actual field) instead of the nonexistent `$order->city`.
+- **Tests:**
+  - Updated `tests/Feature/ProfileStoreTest.php` and `tests/Feature/ShippingCalculationTest.php` to the new schema (no `city`/`qris`/`shipping_origin_*`).
+  - Updated seeded `payment_method` values from `qris` to `digital_wallet` in feature tests.
+
+### Files changed
+- `composer.json`, `composer.lock`, `bootstrap/cache/*`
+- `app/Http/Controllers/ProfileStoreController.php`
+- `app/Http/Controllers/ShippingController.php`
+- `app/Http/Requests/StoreProfileUpdateRequest.php`
+- `app/Http/Requests/OrderStoreRequest.php`
+- `app/Http/Middleware/HandleInertiaRequests.php`
+- `app/Services/ShippingService.php`
+- `app/Services/Shipping/Drivers/BinderByteShippingDriver.php`
+- `app/Services/Shipping/Drivers/RajaOngkirShippingDriver.php`
+- `app/Services/MidtransService.php`
+- `resources/js/Pages/Admin/ProfileStore.vue`
+- `resources/js/Pages/Customer/Checkout.vue`
+- `resources/js/Components/Customer/Sub-main/PaymentInformationModal.vue`
+- `resources/js/Components/Customer/Main/Footer.vue`
+- `routes/web.php`
+- `app/Models/ProfileStore.php`
+- `tests/Feature/ProfileStoreTest.php`
+- `tests/Feature/ShippingCalculationTest.php`
+- `tests/Feature/GuestCheckoutTest.php`
+- `tests/Feature/CustomerDashboardTest.php`
+- `tests/Feature/MidtransIntegrationTest.php`
+- `tests/Feature/PaymentTransactionTest.php`
+- `docs/AGENTS.md`, `README.md`, `docs/02_TRD.md`, `docs/05_BACKEND_SCHEMA.md`, `docs/06_IMPLEMENTATION_PLAN.md`
+- `docs/CHANGELOG.md`
+
 ## [2026-09-28] — Region Dropdowns & Mandatory Origin City and Subdistrict IDs
 
 - **Region Dropdown Cascades & Easier Input:**

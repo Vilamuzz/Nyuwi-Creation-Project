@@ -15,16 +15,13 @@ import {
     Upload,
     X,
     Save,
-    Eye,
     Check,
     Copy,
     ExternalLink,
-    QrCode,
     Sparkles,
     ShieldCheck,
     Building2,
     MessageCircle,
-    Maximize2,
     Truck,
     ChevronDown,
     Loader2,
@@ -49,56 +46,40 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
-    currentProvinceId: {
-        type: [String, Number],
-        default: null,
-    },
-    initialRegencies: {
-        type: Array,
-        default: () => [],
-    },
-    initialDistricts: {
-        type: Array,
-        default: () => [],
-    },
 });
 
 const isEditing = ref(!props.profile);
-const showQrisModal = ref(false);
 const copiedField = ref(null);
 
 const form = useForm({
     name: props.profile?.name || "",
     address: props.profile?.address || "",
-    city: props.profile?.city || "",
-    shipping_origin_city_id: props.profile?.shipping_origin_city_id || "",
-    shipping_origin_district_id: props.profile?.shipping_origin_district_id || "",
+    embedded_map: props.profile?.embedded_map || "",
+    district_id: props.profile?.district_id || "",
+    district_name: props.profile?.district_name || "",
     shipping_couriers: props.profile?.shipping_couriers || ["jne", "pos", "tiki"],
     phone: props.profile?.phone || "",
     instagram: props.profile?.instagram || "",
     facebook: props.profile?.facebook || "",
     tiktok: props.profile?.tiktok || "",
     logo: null,
-    qris: null,
 });
 
 const logoPreview = ref(
     props.profile?.logo ? `/storage/${props.profile.logo}` : null
 );
-const qrisPreview = ref(
-    props.profile?.qris ? `/storage/${props.profile.qris}` : null
-);
 
-const selectedProvince = ref(props.currentProvinceId ? String(props.currentProvinceId) : "");
-const regenciesList = ref(props.initialRegencies ? [...props.initialRegencies] : []);
-const districtsList = ref(props.initialDistricts ? [...props.initialDistricts] : []);
+const selectedProvince = ref("");
+const selectedCity = ref("");
+const regenciesList = ref([]);
+const districtsList = ref([]);
 const isLoadingRegencies = ref(false);
 const isLoadingDistricts = ref(false);
 
 const onProvinceChange = async () => {
-    form.shipping_origin_city_id = "";
-    form.shipping_origin_district_id = "";
-    form.city = "";
+    form.district_id = "";
+    form.district_name = "";
+    selectedCity.value = "";
     districtsList.value = [];
     regenciesList.value = [];
 
@@ -106,7 +87,7 @@ const onProvinceChange = async () => {
 
     isLoadingRegencies.value = true;
     try {
-        const response = await fetch(route("regions.regencies", selectedProvince.value), {
+        const response = await fetch(`/locations/provinces/${selectedProvince.value}/cities`, {
             headers: {
                 Accept: "application/json",
                 "X-Requested-With": "XMLHttpRequest",
@@ -122,22 +103,16 @@ const onProvinceChange = async () => {
     }
 };
 
-const onRegencyChange = async () => {
-    form.shipping_origin_district_id = "";
+const onCityChange = async () => {
+    form.district_id = "";
+    form.district_name = "";
     districtsList.value = [];
 
-    const foundRegency = regenciesList.value.find(
-        (r) => String(r.id) === String(form.shipping_origin_city_id)
-    );
-    if (foundRegency) {
-        form.city = foundRegency.name;
-    }
-
-    if (!form.shipping_origin_city_id) return;
+    if (!selectedCity.value) return;
 
     isLoadingDistricts.value = true;
     try {
-        const response = await fetch(route("regions.districts", form.shipping_origin_city_id), {
+        const response = await fetch(`/locations/cities/${selectedCity.value}/districts`, {
             headers: {
                 Accept: "application/json",
                 "X-Requested-With": "XMLHttpRequest",
@@ -153,25 +128,32 @@ const onRegencyChange = async () => {
     }
 };
 
+const onDistrictChange = () => {
+    const found = districtsList.value.find(
+        (d) => String(d.id) === String(form.district_id)
+    );
+    form.district_name = found?.name || "";
+};
+
 watch(
     () => props.profile,
     (newProfile) => {
         if (newProfile) {
             form.name = newProfile.name || "";
             form.address = newProfile.address || "";
-            form.city = newProfile.city || "";
-            form.shipping_origin_city_id = newProfile.shipping_origin_city_id || "";
-            form.shipping_origin_district_id = newProfile.shipping_origin_district_id || "";
+            form.embedded_map = newProfile.embedded_map || "";
+            form.district_id = newProfile.district_id || "";
+            form.district_name = newProfile.district_name || "";
             form.shipping_couriers = newProfile.shipping_couriers || ["jne", "pos", "tiki"];
             form.phone = newProfile.phone || "";
             form.instagram = newProfile.instagram || "";
             form.facebook = newProfile.facebook || "";
             form.tiktok = newProfile.tiktok || "";
             logoPreview.value = newProfile.logo ? `/storage/${newProfile.logo}` : null;
-            qrisPreview.value = newProfile.qris ? `/storage/${newProfile.qris}` : null;
-            selectedProvince.value = props.currentProvinceId ? String(props.currentProvinceId) : "";
-            regenciesList.value = props.initialRegencies ? [...props.initialRegencies] : [];
-            districtsList.value = props.initialDistricts ? [...props.initialDistricts] : [];
+            selectedProvince.value = "";
+            selectedCity.value = "";
+            regenciesList.value = [];
+            districtsList.value = [];
         }
     },
     { deep: true }
@@ -240,35 +222,23 @@ const removeLogo = () => {
     logoPreview.value = null;
 };
 
-const handleQrisUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    form.qris = file;
-    qrisPreview.value = URL.createObjectURL(file);
-};
-
-const removeQris = () => {
-    form.qris = null;
-    qrisPreview.value = null;
-};
-
 const cancelEditing = () => {
     if (props.profile) {
         form.name = props.profile.name || "";
         form.address = props.profile.address || "";
-        form.city = props.profile.city || "";
-        form.shipping_origin_city_id = props.profile.shipping_origin_city_id || "";
-        form.shipping_origin_district_id = props.profile.shipping_origin_district_id || "";
+        form.embedded_map = props.profile.embedded_map || "";
+        form.district_id = props.profile.district_id || "";
+        form.district_name = props.profile.district_name || "";
         form.shipping_couriers = props.profile.shipping_couriers || ["jne", "pos", "tiki"];
         form.phone = props.profile.phone || "";
         form.instagram = props.profile.instagram || "";
         form.facebook = props.profile.facebook || "";
         form.tiktok = props.profile.tiktok || "";
         logoPreview.value = props.profile.logo ? `/storage/${props.profile.logo}` : null;
-        qrisPreview.value = props.profile.qris ? `/storage/${props.profile.qris}` : null;
-        selectedProvince.value = props.currentProvinceId ? String(props.currentProvinceId) : "";
-        regenciesList.value = props.initialRegencies ? [...props.initialRegencies] : [];
-        districtsList.value = props.initialDistricts ? [...props.initialDistricts] : [];
+        selectedProvince.value = "";
+        selectedCity.value = "";
+        regenciesList.value = [];
+        districtsList.value = [];
         isEditing.value = false;
     }
 };
@@ -280,7 +250,6 @@ const submit = () => {
             _method: "PUT",
         };
         if (!payload.logo) delete payload.logo;
-        if (!payload.qris) delete payload.qris;
         return payload;
     }).post(route("profile-store.update"), {
         forceFormData: true,
@@ -380,7 +349,7 @@ const submit = () => {
                                 <div
                                     class="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-xl border border-white/10">
                                     <MapPin class="w-4 h-4 text-orange-400 shrink-0" />
-                                    <span>{{ profile.address }}, {{ profile.city }}</span>
+                                    <span>{{ profile.address }}</span>
                                 </div>
                                 <button @click="copyToClipboard(profile.phone, 'Nomor Telepon')" type="button"
                                     class="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 transition-colors cursor-pointer group">
@@ -396,7 +365,7 @@ const submit = () => {
 
                 <!-- Two Column Details Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- QRIS Payment Card -->
+                    <!-- Shipping Origin Card -->
                     <div
                         class="bg-white p-6 rounded-2xl border border-stone-200/80 shadow-sm flex flex-col justify-between">
                         <div>
@@ -404,36 +373,29 @@ const submit = () => {
                                 <div class="flex items-center gap-2.5">
                                     <div
                                         class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                                        <QrCode class="w-5 h-5" />
+                                        <Truck class="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h3 class="text-base font-bold text-stone-900">QRIS Pembayaran</h3>
-                                        <p class="text-xs text-stone-500">Metode pembayaran QRIS resmi toko</p>
+                                        <h3 class="text-base font-bold text-stone-900">Asal Pengiriman</h3>
+                                        <p class="text-xs text-stone-500">Lokasi asal pengiriman toko</p>
                                     </div>
                                 </div>
-                                <span
-                                    class="px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-800 rounded-full">
-                                    Siap Pakai
-                                </span>
                             </div>
 
-                            <div v-if="profile.qris"
-                                class="mt-4 flex flex-col items-center justify-center p-4 bg-stone-50 rounded-xl border border-stone-200/60 relative group">
-                                <div
-                                    class="w-44 h-44 rounded-lg bg-white p-2 border border-stone-200 shadow-sm overflow-hidden flex items-center justify-center">
-                                    <img :src="`/storage/${profile.qris}`" alt="QRIS Toko"
-                                        class="w-full h-full object-contain" />
+                            <div v-if="profile.district_name || profile.district_id"
+                                class="mt-4 flex items-start gap-3 p-4 bg-stone-50 rounded-xl border border-stone-200/60">
+                                <MapPin class="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                                <div>
+                                    <p class="text-sm font-semibold text-stone-900">
+                                        {{ profile.district_name || 'Kecamatan tidak diatur' }}
+                                    </p>
+                                    <p class="text-xs text-stone-500 mt-1">ID Kecamatan: {{ profile.district_id }}</p>
                                 </div>
-                                <button @click="showQrisModal = true" type="button"
-                                    class="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600 hover:text-orange-700 transition-colors cursor-pointer">
-                                    <Maximize2 class="w-3.5 h-3.5" />
-                                    Perbesar Kode QRIS
-                                </button>
                             </div>
                             <div v-else
-                                class="mt-4 p-8 text-center bg-stone-50 rounded-xl border border-dashed border-stone-200 text-stone-400">
-                                <QrCode class="w-10 h-10 mx-auto mb-2 opacity-50" />
-                                <p class="text-xs">Kode QRIS belum diunggah.</p>
+                                class="mt-4 p-6 text-center bg-stone-50 rounded-xl border border-dashed border-stone-200 text-stone-400">
+                                <Truck class="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                <p class="text-xs">Lokasi asal pengiriman belum diatur.</p>
                             </div>
                         </div>
                     </div>
@@ -554,14 +516,15 @@ const submit = () => {
                                     {{ supportedCouriers[c] || c }}
                                 </span>
                             </div>
-                            <div v-if="profile.shipping_origin_city_id || profile.shipping_origin_district_id" class="text-xs text-stone-500 mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 border-t border-stone-100">
-                                <span v-if="profile.shipping_origin_city_id" class="flex items-center gap-1.5">
-                                    <span class="text-stone-400">ID Kota:</span>
-                                    <span class="font-mono text-stone-800 font-semibold bg-stone-100 px-2 py-0.5 rounded-md text-[11px]">{{ profile.shipping_origin_city_id }}</span>
+                            <div v-if="profile.district_name || profile.district_id"
+                                class="text-xs text-stone-500 mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2 border-t border-stone-100">
+                                <span v-if="profile.district_name" class="flex items-center gap-1.5">
+                                    <span class="text-stone-400">Kecamatan:</span>
+                                    <span class="font-mono text-stone-800 font-semibold bg-stone-100 px-2 py-0.5 rounded-md text-[11px]">{{ profile.district_name }}</span>
                                 </span>
-                                <span v-if="profile.shipping_origin_district_id" class="flex items-center gap-1.5">
+                                <span v-if="profile.district_id" class="flex items-center gap-1.5">
                                     <span class="text-stone-400">ID Kecamatan:</span>
-                                    <span class="font-mono text-stone-800 font-semibold bg-stone-100 px-2 py-0.5 rounded-md text-[11px]">{{ profile.shipping_origin_district_id }}</span>
+                                    <span class="font-mono text-stone-800 font-semibold bg-stone-100 px-2 py-0.5 rounded-md text-[11px]">{{ profile.district_id }}</span>
                                 </span>
                             </div>
                         </div>
@@ -635,16 +598,16 @@ const submit = () => {
 
                             <div>
                                 <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
-                                    Kota Asal Pengiriman <span class="text-red-500">*</span>
+                                    Peta Lokasi Toko (Embed)
                                 </label>
                                 <div class="relative">
                                     <MapPin class="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
-                                    <input v-model="form.city" type="text"
+                                    <input v-model="form.embedded_map" type="text"
                                         class="w-full pl-10 pr-4 py-3 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-colors"
-                                        placeholder="Contoh: Surabaya" />
+                                        placeholder="Embed URL peta lokasi toko" />
                                 </div>
-                                <p v-if="form.errors.city" class="text-xs text-red-500 mt-1 font-medium">{{
-                                    form.errors.city }}</p>
+                                <p v-if="form.errors.embedded_map" class="text-xs text-red-500 mt-1 font-medium">{{
+                                    form.errors.embedded_map }}</p>
                             </div>
                         </div>
 
@@ -700,21 +663,21 @@ const submit = () => {
                                 </p>
                             </div>
 
-                            <!-- Kota / Kabupaten (ID Kota) -->
+                            <!-- Kota / Kabupaten Asal -->
                             <div>
                                 <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
                                     Kota / Kabupaten Asal <span class="text-red-500">*</span>
                                 </label>
                                 <div class="relative">
                                     <MapPin class="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5 pointer-events-none" />
-                                    <select v-model="form.shipping_origin_city_id" @change="onRegencyChange"
+                                    <select v-model="selectedCity" @change="onCityChange"
                                         :disabled="!selectedProvince || isLoadingRegencies"
                                         class="w-full pl-10 pr-9 py-3 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-colors appearance-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
                                         <option value="">
                                             {{ isLoadingRegencies ? 'Memuat Kota/Kabupaten...' : (!selectedProvince ? '-- Pilih Provinsi Dulu --' : '-- Pilih Kota / Kabupaten --') }}
                                         </option>
                                         <option v-for="reg in regenciesList" :key="reg.id" :value="String(reg.id)">
-                                            {{ reg.name }} (ID: {{ reg.id }})
+                                            {{ reg.name }}
                                         </option>
                                     </select>
                                     <div class="absolute right-3.5 top-3.5 pointer-events-none text-stone-400">
@@ -722,29 +685,26 @@ const submit = () => {
                                         <ChevronDown v-else class="w-4 h-4" />
                                     </div>
                                 </div>
-                                <p class="text-[11px] text-stone-400 mt-1">
-                                    ID Kota Ekspedisi yang digunakan sistem.
-                                </p>
-                                <p v-if="form.errors.shipping_origin_city_id" class="text-xs text-red-500 mt-1 font-medium">
-                                    {{ form.errors.shipping_origin_city_id }}
+                                <p v-if="form.errors.district_id" class="text-xs text-red-500 mt-1 font-medium">
+                                    {{ form.errors.district_id }}
                                 </p>
                             </div>
 
-                            <!-- Kecamatan (ID Kecamatan) -->
+                            <!-- Kecamatan Asal -->
                             <div>
                                 <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
                                     Kecamatan Asal <span class="text-red-500">*</span>
                                 </label>
                                 <div class="relative">
                                     <MapPin class="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5 pointer-events-none" />
-                                    <select v-model="form.shipping_origin_district_id"
-                                        :disabled="!form.shipping_origin_city_id || isLoadingDistricts"
+                                    <select v-model="form.district_id" @change="onDistrictChange"
+                                        :disabled="!selectedCity || isLoadingDistricts"
                                         class="w-full pl-10 pr-9 py-3 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-colors appearance-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
                                         <option value="">
-                                            {{ isLoadingDistricts ? 'Memuat Kecamatan...' : (!form.shipping_origin_city_id ? '-- Pilih Kota Dulu --' : '-- Pilih Kecamatan --') }}
+                                            {{ isLoadingDistricts ? 'Memuat Kecamatan...' : (!selectedCity ? '-- Pilih Kota Dulu --' : '-- Pilih Kecamatan --') }}
                                         </option>
                                         <option v-for="dist in districtsList" :key="dist.id" :value="String(dist.id)">
-                                            {{ dist.name }} (ID: {{ dist.id }})
+                                            {{ dist.name }}
                                         </option>
                                     </select>
                                     <div class="absolute right-3.5 top-3.5 pointer-events-none text-stone-400">
@@ -753,10 +713,10 @@ const submit = () => {
                                     </div>
                                 </div>
                                 <p class="text-[11px] text-stone-400 mt-1">
-                                    ID Kecamatan Asal untuk kurir tingkat kecamatan.
+                                    Kecamatan asal untuk perhitungan ongkir.
                                 </p>
-                                <p v-if="form.errors.shipping_origin_district_id" class="text-xs text-red-500 mt-1 font-medium">
-                                    {{ form.errors.shipping_origin_district_id }}
+                                <p v-if="form.errors.district_id" class="text-xs text-red-500 mt-1 font-medium">
+                                    {{ form.errors.district_id }}
                                 </p>
                             </div>
                         </div>
@@ -796,13 +756,13 @@ const submit = () => {
                             <ImageIcon class="w-5 h-5" />
                         </div>
                         <div>
-                            <h2 class="text-lg font-bold text-stone-900">Gambar Logo & Kode QRIS</h2>
+                            <h2 class="text-lg font-bold text-stone-900">Logo Toko</h2>
                             <p class="text-xs text-stone-500">Unggah berkas gambar dengan format PNG, JPG, atau SVG
                                 (maks. 2MB).</p>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                    <div class="pt-2">
                         <!-- Logo Upload Zone -->
                         <div>
                             <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">
@@ -810,7 +770,7 @@ const submit = () => {
                             </label>
                             <div class="relative">
                                 <div v-if="logoPreview"
-                                    class="w-full aspect-square rounded-2xl bg-stone-50 border border-stone-200 overflow-hidden flex items-center justify-center relative group p-4">
+                                    class="w-full max-w-xs aspect-square rounded-2xl bg-stone-50 border border-stone-200 overflow-hidden flex items-center justify-center relative group p-4">
                                     <img :src="logoPreview" class="w-full h-full object-contain" />
                                     <button @click="removeLogo" type="button"
                                         class="absolute top-3 right-3 p-2 bg-red-500 hover:bg-red-600 text-white rounded-xl shadow transition-colors cursor-pointer"
@@ -819,7 +779,7 @@ const submit = () => {
                                     </button>
                                 </div>
                                 <label v-else
-                                    class="flex flex-col items-center justify-center w-full aspect-square rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 hover:bg-orange-50/50 hover:border-orange-400 cursor-pointer transition-all group p-4 text-center">
+                                    class="flex flex-col items-center justify-center w-full max-w-xs aspect-square rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 hover:bg-orange-50/50 hover:border-orange-400 cursor-pointer transition-all group p-4 text-center">
                                     <input type="file" accept="image/*" @change="handleLogoUpload" class="hidden" />
                                     <div
                                         class="w-12 h-12 rounded-2xl bg-stone-100 text-stone-400 group-hover:bg-orange-100 group-hover:text-orange-600 flex items-center justify-center mb-3 transition-colors">
@@ -832,39 +792,7 @@ const submit = () => {
                                 </label>
                             </div>
                             <input v-if="logoPreview" type="file" accept="image/*" @change="handleLogoUpload"
-                                class="mt-3 block w-full text-xs text-stone-500 file:mr-3 file:py-1.5 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-stone-100 file:text-stone-700 hover:file:bg-stone-200 cursor-pointer" />
-                        </div>
-
-                        <!-- QRIS Upload Zone -->
-                        <div>
-                            <label class="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-2">
-                                Gambar QRIS Pembayaran
-                            </label>
-                            <div class="relative">
-                                <div v-if="qrisPreview"
-                                    class="w-full aspect-square rounded-2xl bg-stone-50 border border-stone-200 overflow-hidden flex items-center justify-center relative group p-4">
-                                    <img :src="qrisPreview" class="w-full h-full object-contain" />
-                                    <button @click="removeQris" type="button"
-                                        class="absolute top-3 right-3 p-2 bg-red-500 hover:bg-red-600 text-white rounded-xl shadow transition-colors cursor-pointer"
-                                        title="Hapus gambar">
-                                        <X class="w-4 h-4" />
-                                    </button>
-                                </div>
-                                <label v-else
-                                    class="flex flex-col items-center justify-center w-full aspect-square rounded-2xl border-2 border-dashed border-stone-300 bg-stone-50 hover:bg-orange-50/50 hover:border-orange-400 cursor-pointer transition-all group p-4 text-center">
-                                    <input type="file" accept="image/*" @change="handleQrisUpload" class="hidden" />
-                                    <div
-                                        class="w-12 h-12 rounded-2xl bg-stone-100 text-stone-400 group-hover:bg-orange-100 group-hover:text-orange-600 flex items-center justify-center mb-3 transition-colors">
-                                        <QrCode class="w-6 h-6" />
-                                    </div>
-                                    <span
-                                        class="text-sm font-bold text-stone-700 group-hover:text-orange-600 transition-colors">Pilih
-                                        Kode QRIS</span>
-                                    <span class="text-xs text-stone-400 mt-1">PNG, JPG, SVG (Maks. 2MB)</span>
-                                </label>
-                            </div>
-                            <input v-if="qrisPreview" type="file" accept="image/*" @change="handleQrisUpload"
-                                class="mt-3 block w-full text-xs text-stone-500 file:mr-3 file:py-1.5 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-stone-100 file:text-stone-700 hover:file:bg-stone-200 cursor-pointer" />
+                                class="mt-3 block w-full max-w-xs text-xs text-stone-500 file:mr-3 file:py-1.5 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-stone-100 file:text-stone-700 hover:file:bg-stone-200 cursor-pointer" />
                         </div>
                     </div>
                 </div>
@@ -951,35 +879,6 @@ const submit = () => {
                     </div>
                 </div>
             </form>
-        </div>
-
-        <!-- Zoom QRIS Modal -->
-        <div v-if="showQrisModal && profile?.qris"
-            class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4">
-            <div class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" @click="showQrisModal = false">
-            </div>
-            <div class="relative bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl z-10 space-y-4">
-                <div class="flex items-center justify-between border-b border-stone-100 pb-3">
-                    <h3 class="text-base font-bold text-stone-900 flex items-center gap-2">
-                        <QrCode class="w-5 h-5 text-emerald-600" />
-                        QRIS {{ profile.name }}
-                    </h3>
-                    <button @click="showQrisModal = false"
-                        class="p-1 rounded-lg text-stone-400 hover:bg-stone-100 transition-colors cursor-pointer">
-                        <X class="w-5 h-5" />
-                    </button>
-                </div>
-                <div
-                    class="w-full aspect-square rounded-2xl bg-stone-50 border border-stone-200 p-4 flex items-center justify-center overflow-hidden">
-                    <img :src="`/storage/${profile.qris}`" alt="QRIS Large" class="w-full h-full object-contain" />
-                </div>
-                <div class="text-center">
-                    <button @click="showQrisModal = false"
-                        class="w-full py-2.5 bg-stone-900 text-white rounded-xl font-semibold text-sm hover:bg-stone-800 transition-colors cursor-pointer">
-                        Tutup
-                    </button>
-                </div>
-            </div>
         </div>
     </AdminLayout>
 </template>

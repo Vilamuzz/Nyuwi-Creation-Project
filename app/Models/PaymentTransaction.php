@@ -16,10 +16,22 @@ class PaymentTransaction extends Model
         'gateway_transaction_id',
         'payment_channel',
         'amount',
-        'raw_status',
-        'expired_at',
+        'gateway_fee',
+        'fee_borne_by',
+        'net_amount',
+        'status',
         'paid_at',
-        'raw_payload',
+        'expired_at',
+        'raw_response',
+        'signature_verified',
+    ];
+
+    protected $attributes = [
+        'gateway' => 'midtrans',
+        'gateway_fee' => 0,
+        'fee_borne_by' => 'merchant',
+        'status' => 'pending',
+        'signature_verified' => false,
     ];
 
     /**
@@ -31,9 +43,12 @@ class PaymentTransaction extends Model
     {
         return [
             'amount' => 'decimal:2',
-            'expired_at' => 'datetime',
+            'gateway_fee' => 'decimal:2',
+            'net_amount' => 'decimal:2',
+            'signature_verified' => 'boolean',
             'paid_at' => 'datetime',
-            'raw_payload' => 'array',
+            'expired_at' => 'datetime',
+            'raw_response' => 'array',
         ];
     }
 

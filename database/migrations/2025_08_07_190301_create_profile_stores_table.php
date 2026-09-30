@@ -16,9 +16,11 @@ return new class extends Migration
             $table->string('name');
             $table->string('logo');
             $table->string('address');
-            $table->string('city');
+            $table->text('embedded_map');
+            $table->string('district_id');
+            $table->string('district_name');
             $table->string('phone');
-            $table->string('qris');
+            $table->json('shipping_couriers')->nullable();
             $table->string('instagram')->nullable();
             $table->string('facebook')->nullable();
             $table->string('tiktok')->nullable();

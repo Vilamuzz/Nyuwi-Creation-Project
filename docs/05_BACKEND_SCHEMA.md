@@ -200,48 +200,6 @@
 
 ---
 
-## Indonesian Region Tables (IndoRegion Package)
-
-### `provinces`
-| Column | Type | Constraints | Notes |
-|--------|------|-------------|-------|
-| `id` | char(2) | indexed | BPS province code; the migration does not declare a primary key |
-| `name` | string | | Province name |
-
-**Eloquent model:** `App\Models\Province` — uses `ProvinceTrait`
-
-### `regencies`
-| Column | Type | Constraints | Notes |
-|--------|------|-------------|-------|
-| `id` | char(4) | indexed | BPS regency code; the migration does not declare a primary key |
-| `province_id` | char(2) | FK → `provinces.id`, ON UPDATE CASCADE, ON DELETE RESTRICT | |
-| `name` | string(50) | | Regency/city name |
-
-**Eloquent model:** `App\Models\Regency` — uses `RegencyTrait`
-- `$hidden`: `province_id`
-
-### `districts`
-| Column | Type | Constraints | Notes |
-|--------|------|-------------|-------|
-| `id` | char(7) | indexed | BPS district code; the migration does not declare a primary key |
-| `regency_id` | char(4) | FK → `regencies.id`, ON UPDATE CASCADE, ON DELETE RESTRICT | |
-| `name` | string(50) | | District name |
-
-**Eloquent model:** `App\Models\District` — uses `DistrictTrait`
-- `$hidden`: `regency_id`
-
-### `villages`
-| Column | Type | Constraints | Notes |
-|--------|------|-------------|-------|
-| `id` | char(10) | indexed | BPS village code; the migration does not declare a primary key |
-| `district_id` | char(7) | FK → `districts.id`, ON UPDATE CASCADE, ON DELETE RESTRICT | |
-| `name` | string(50) | | Village name |
-
-**Eloquent model:** `App\Models\Village` — uses `VillageTrait`
-- `$hidden`: `district_id`
-
----
-
 ## Laravel Framework Tables
 
 ### `sessions`
@@ -449,7 +407,7 @@ The database defines the following relationships, but the corresponding Eloquent
 
 - `orders.user_id` → `users.id` (`Order::user()` and `User::orders()` are absent)
 - `product_reviews.user_id` → `users.id` (`User::reviews()` is absent)
-All foreign keys in `carts`, `orders`, `order_items`, and `product_reviews` use `ON DELETE CASCADE`; IndoRegion hierarchy foreign keys use `ON DELETE RESTRICT` and `ON UPDATE CASCADE.
+All foreign keys in `carts`, `orders`, `order_items`, and `product_reviews` use `ON DELETE CASCADE`.
 
 ---
 

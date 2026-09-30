@@ -2,17 +2,6 @@
 import { Link } from "@inertiajs/vue3";
 import { ref } from "vue";
 import { MessageCircle, Instagram, MapPin, Clock, CreditCard } from "lucide-vue-next";
-import PaymentInformationModal from "@/Components/Customer/Sub-main/PaymentInformationModal.vue";
-
-const showPaymentModal = ref(false);
-
-const openPaymentModal = () => {
-    showPaymentModal.value = true;
-};
-
-const closePaymentModal = () => {
-    showPaymentModal.value = false;
-};
 </script>
 
 <template>
@@ -79,13 +68,6 @@ const closePaymentModal = () => {
                     <h3 class="text-sm font-semibold uppercase tracking-wider text-white">Layanan & Bantuan</h3>
                     <ul class="mt-4 space-y-3 text-sm">
                         <li>
-                            <button type="button" @click="openPaymentModal"
-                                class="flex items-center gap-2 text-left font-medium text-orange-400 transition-colors hover:text-orange-300 focus:outline-none">
-                                <CreditCard class="h-4 w-4" />
-                                <span>Informasi Pembayaran</span>
-                            </button>
-                        </li>
-                        <li>
                             <a href="https://wa.me/+6289514923727?text=Halo%20Nyuwi,%20saya%20ingin%20tanya%20pesanan%20kustom"
                                 target="_blank" rel="noopener noreferrer"
                                 class="transition-colors hover:text-orange-400">
@@ -138,8 +120,6 @@ const closePaymentModal = () => {
                 class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-6 text-xs text-stone-500 sm:flex-row lg:px-8">
                 <p>© 2026 Nyuwi Creation. Dibuat dengan sepenuh hati di Klaten, Indonesia.</p>
                 <div class="flex items-center gap-3 text-[11px] text-stone-400">
-                    <span>Menerima QRIS</span>
-                    <span>•</span>
                     <span>Transfer Bank</span>
                     <span>•</span>
                     <span>E-Wallet</span>
@@ -147,6 +127,4 @@ const closePaymentModal = () => {
             </div>
         </div>
     </footer>
-
-    <PaymentInformationModal v-if="showPaymentModal" :on-close="closePaymentModal" />
 </template>

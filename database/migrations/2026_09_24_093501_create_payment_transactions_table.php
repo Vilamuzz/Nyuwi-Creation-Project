@@ -13,18 +13,27 @@ return new class extends Migration
     {
         Schema::create('payment_transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('order_id')->constrained('orders')->cascadeOnDelete();
-            $table->string('gateway');
-            $table->string('gateway_transaction_id')->nullable();
-            $table->string('payment_channel')->nullable();
-            $table->decimal('amount', 15, 2);
-            $table->string('raw_status')->nullable();
-            $table->timestamp('expired_at')->nullable();
-            $table->timestamp('paid_at')->nullable();
-            $table->json('raw_payload')->nullable();
-            $table->timestamps();
+            $table->foreignId('order_id')->constrained()->cascadeOnDelete();
 
-            $table->index(['gateway', 'gateway_transaction_id']);
+            $table->string('gateway')->default('midtrans');
+            $table->string('gateway_transaction_id')->nullable()->unique(); // Midtrans's transaction_id
+            $table->string('payment_channel')->nullable(); // 'gopay', 'bank_transfer', 'qris', 'credit_card'
+
+            $table->decimal('amount', 15, 2);        // what the customer is charged
+            $table->decimal('gateway_fee', 15, 2)->default(0);
+            $table->enum('fee_borne_by', ['customer', 'merchant'])->default('merchant');
+            $table->decimal('net_amount', 15, 2);    // amount received after fee (relevant when merchant absorbs it)
+
+            $table->enum('status', ['pending', 'settlement', 'capture', 'deny', 'cancel', 'expire', 'refund'])
+                  ->default('pending');
+            $table->timestamp('paid_at')->nullable();
+            $table->timestamp('expired_at')->nullable();
+
+            $table->json('raw_response')->nullable(); // full webhook payload, for audit/debugging
+            $table->boolean('signature_verified')->default(false);
+
+            $table->timestamps();
+            $table->index(['order_id', 'status']);
         });
     }
 

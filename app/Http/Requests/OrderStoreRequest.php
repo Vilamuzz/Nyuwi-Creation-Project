@@ -24,18 +24,19 @@ class OrderStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'recipient_name' => ['required', 'string', 'max:255'],
             'address' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:255'],
-            'district' => ['required', 'string', 'max:255'],
-            'village' => ['required', 'string', 'max:255'],
-            'province' => ['required', 'string', 'max:255'],
+            'province_id' => ['required', 'string', 'max:255'],
+            'province_name' => ['required', 'string', 'max:255'],
+            'city_id' => ['required', 'string', 'max:255'],
+            'city_name' => ['required', 'string', 'max:255'],
+            'district_id' => ['required', 'string', 'max:255'],
+            'district_name' => ['required', 'string', 'max:255'],
+            'postal_code' => ['nullable', 'string', 'max:10'],
             'phone' => ['required', 'string', 'max:15'],
-            'email' => ['nullable', 'string', 'email', 'max:255', Rule::requiredIf(!Auth::check())],
-            'payment_method' => ['required', 'in:digital_wallet,qris'],
-            'shipping_method' => ['required', 'string', 'max:100'],
-            'shipping_cost' => ['required', 'numeric', 'min:0'],
-            'note' => ['nullable', 'string', 'max:1000'],
+            'email' => ['nullable', 'string', 'email', 'max:255', Rule::requiredIf(! Auth::check())],
+            'courier' => ['required', 'string', 'max:50'],
+            'shipping_service' => ['required', 'string', 'max:100'],
         ];
     }
 }

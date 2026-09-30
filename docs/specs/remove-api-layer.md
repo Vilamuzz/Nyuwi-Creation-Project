@@ -21,7 +21,7 @@ This specification removes the API layer entirely and consolidates all data flow
 
 ## Decisions
 - **Region data**: Only provinces are passed as initial props. Regencies, districts, and villages are loaded via Inertia partial reloads when the parent selection changes. Never load the full Indonesian region dataset into shared/page props.
-- **Shipping calculation**: Handled as a partial reload or inline prop update during checkout, not a standalone JSON endpoint.
+- **Shipping calculation (RajaOngkir)**: Handled as a partial reload or inline prop update during checkout, not a standalone JSON endpoint. Cost rates are computed server-side via the RajaOngkir API; the server never trusts client-supplied totals.
 - **External tracking (BinderByte)**: Moved to the server. The frontend requests tracking through a web route; the server calls BinderByte and returns the result as an Inertia prop or JSON-like payload inside an Inertia response. This prevents exposing the API key in the browser.
 - **Sanctum**: Removed entirely. Session-based auth with CSRF is sufficient for the Inertia SPA-like experience.
 

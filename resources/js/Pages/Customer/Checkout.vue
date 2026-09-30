@@ -1,27 +1,32 @@
 <script setup>
-import { Head, useForm, router, usePage, Link } from "@inertiajs/vue3";
+import { Head, useForm, Link } from "@inertiajs/vue3";
+import { computed, ref, onMounted, watch } from "vue";
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import FormInput from "@/Components/FormInput.vue";
 import FormSelect from "@/Components/FormSelect.vue";
 import ToastNotification from "@/Components/Customer/Sub-main/ToastNotification.vue";
-import { computed, ref, onMounted, watch } from "vue";
 import { ChevronDown, ChevronLeft, ChevronRight, Mail } from "lucide-vue-next";
 import { formatPrice } from "@/Utils/format";
 
 const form = useForm({
-    name: "",
+    recipient_name: "",
     address: "",
-    city: "",
-    district: "",
-    village: "",
-    province: "",
+    province_id: "",
+    province_name: "",
+    city_id: "",
+    city_name: "",
+    district_id: "",
+    district_name: "",
+    postal_code: "",
     phone: "",
     email: "",
-    note: "",
-    payment_method: "",
-    shipping_method: "",
-    shipping_cost: 0,
+    courier: "",
+    shipping_service: "",
 });
+
+// Display-only mirror of the selected shipping rate. The authoritative cost is
+// recalculated server-side when the order is placed, so it is never submitted.
+const shippingCost = ref(0);
 
 const cartTotal = computed(() => {
     if (!cartItems.value || cartItems.value.length === 0) return 0;
@@ -60,85 +65,79 @@ const regions = ref({
     provinces: [],
     cities: [],
     districts: [],
-    villages: [],
 });
 
-const currentType = ref(null);
-
-const regionConfig = {
-    provinces: { route: "regions.provinces", param: () => null },
-    cities: {
-        route: "regions.regencies",
-        param: () => regions.value.provinces.find((p) => p.name === form.province || p.id === form.province)?.id ?? form.province,
-    },
-    districts: {
-        route: "regions.districts",
-        param: () => regions.value.cities.find((c) => c.name === form.city || c.id === form.city)?.id ?? form.city,
-    },
-    villages: {
-        route: "regions.villages",
-        param: () => regions.value.districts.find((d) => d.name === form.district || d.id === form.district)?.id ?? form.district,
-    },
-};
-
-const fetchRegions = async (type) => {
-    const config = regionConfig[type];
-    if (!config) return;
-    currentType.value = type;
-    const param = config.param?.();
-
-    if (type !== "provinces" && (param === undefined || param === null || param === "")) return;
-
+const fetchProvinces = async () => {
     try {
-        if (type === "cities") {
-            form.city = null;
-            form.district = null;
-            form.village = null;
-            regions.value.cities = [];
-            regions.value.districts = [];
-            regions.value.villages = [];
-        } else if (type === "districts") {
-            form.district = null;
-            form.village = null;
-            regions.value.districts = [];
-            regions.value.villages = [];
-        } else if (type === "villages") {
-            form.village = null;
-            regions.value.villages = [];
-        }
-
-        await router.get(
-            param !== null && param !== undefined ? route(config.route, param) : route(config.route),
-            {},
-            {
-                only: ["regionData"],
-                preserveState: true,
-                preserveScroll: true,
-            },
-        );
+        regions.value.provinces = (await axios.get("/locations/provinces")).data;
     } catch (error) {
-        console.error(`Error fetching ${type}:`, error);
+        console.error("Error fetching provinces:", error);
     }
 };
 
-const totalWithShipping = computed(() => {
-    const subtotal = cartTotal.value;
-    const shippingCost = form.shipping_cost || 0;
-    return subtotal + shippingCost;
-});
+// The order stores both the region id (for shipping APIs) and its name (as a
+// human-readable snapshot), so keep them in sync whenever a selection changes.
+watch(
+    () => form.province_id,
+    async (id) => {
+        form.province_name =
+            regions.value.provinces.find((p) => String(p.id) === String(id))?.name ?? "";
 
-const page = usePage();
+        form.city_id = null;
+        form.city_name = "";
+        form.district_id = null;
+        form.district_name = "";
+        regions.value.cities = [];
+        regions.value.districts = [];
+
+        if (!id) return;
+
+        try {
+            regions.value.cities = (await axios.get(`/locations/provinces/${id}/cities`)).data;
+        } catch (error) {
+            console.error("Error fetching cities:", error);
+        }
+    }
+);
 
 watch(
-    () => page.props.regionData,
-    (data) => {
-        if (!data || !Array.isArray(data)) return;
-        if (currentType.value) {
-            regions.value[currentType.value] = data;
+    () => form.city_id,
+    async (id) => {
+        form.city_name = regions.value.cities.find((c) => String(c.id) === String(id))?.name ?? "";
+
+        form.district_id = null;
+        form.district_name = "";
+        regions.value.districts = [];
+
+        if (!id) return;
+
+        try {
+            regions.value.districts = (await axios.get(`/locations/cities/${id}/districts`)).data;
+        } catch (error) {
+            console.error("Error fetching districts:", error);
         }
-    },
-    { deep: true },
+    }
 );
+
+watch(
+    () => form.district_id,
+    (id) => {
+        form.district_name =
+            regions.value.districts.find((d) => String(d.id) === String(id))?.name ?? "";
+
+        // Reset the shipping choice whenever the destination changes.
+        shippingOptions.value = [];
+        shippingError.value = null;
+        form.courier = null;
+        form.shipping_service = null;
+        shippingCost.value = 0;
+    }
+);
+
+const totalWithShipping = computed(() => {
+    const subtotal = cartTotal.value;
+    return subtotal + (shippingCost.value || 0);
+});
 
 const currentStep = ref("information"); // 'information' | 'shipping' | 'payment'
 
@@ -147,49 +146,41 @@ const isCalculatingShipping = ref(false);
 const shippingError = ref(null);
 
 const paymentOptions = [
-    { id: "qris", name: "QRIS", description: "Scan QRIS (GoPay, OVO, ShopeePay, DANA, Mobile Banking)" },
-    { id: "digital_wallet", name: "Digital Wallet", description: "Pembayaran instan via E-Wallet" },
+    { id: "digital_wallet", name: "Digital Wallet", description: "Pembayaran instan via E-Wallet (DANA)" },
 ];
 
+// Payment runs through Midtrans Snap after the order is created, so the choice
+// is only used for display here and is never submitted.
+const selectedPayment = ref(paymentOptions[0].id);
+
+const isShippingSelected = (option) =>
+    form.courier === option.courier &&
+    form.shipping_service === option.service &&
+    shippingCost.value === option.cost;
+
 const selectShippingOption = (option) => {
-    form.shipping_method = option.methodLabel || option.service;
-    form.shipping_cost = option.cost;
+    form.courier = option.courier;
+    form.shipping_service = option.service;
+    shippingCost.value = option.cost;
 };
 
 const calculateShippingRates = async () => {
-    if (!form.city && !form.district) return;
+    const districtId = form.district_id;
+
+    if (!districtId) return;
 
     isCalculatingShipping.value = true;
     shippingError.value = null;
 
     try {
-        const selectedDistrictObj = regions.value.districts.find(
-            (d) => d.name === form.district || String(d.id) === String(form.district)
-        );
-        const selectedCityObj = regions.value.cities.find(
-            (c) => c.name === form.city || String(c.id) === String(form.city)
-        );
-
-        const destinationId = selectedDistrictObj?.id || selectedCityObj?.id || form.district || form.city;
-
         const weight = props.summary?.totalWeight || 1000;
-        const response = await fetch(route("shipping.calculate"), {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "",
-            },
-            body: JSON.stringify({
-                destination: String(destinationId),
-                weight: weight,
-            }),
+
+        const { data } = await axios.post(route("shipping.calculate"), {
+            destination: String(districtId),
+            weight: weight,
         });
 
-        const data = await response.json();
-
-        if (response.ok && data.status === "success" && Array.isArray(data.rates)) {
+        if (data.status === "success" && Array.isArray(data.rates)) {
             shippingOptions.value = data.rates.map((rate, index) => ({
                 id: `${rate.courier}_${rate.service}_${index}`,
                 name: rate.name,
@@ -203,16 +194,14 @@ const calculateShippingRates = async () => {
 
             if (shippingOptions.value.length > 0) {
                 const existing = shippingOptions.value.find(
-                    (opt) => opt.methodLabel === form.shipping_method || opt.service === form.shipping_method
+                    (opt) =>
+                        opt.courier === form.courier && opt.service === form.shipping_service
                 );
-                if (existing) {
-                    selectShippingOption(existing);
-                } else {
-                    selectShippingOption(shippingOptions.value[0]);
-                }
+                selectShippingOption(existing ?? shippingOptions.value[0]);
             } else {
-                form.shipping_method = "";
-                form.shipping_cost = 0;
+                form.courier = "";
+                form.shipping_service = "";
+                shippingCost.value = 0;
                 shippingError.value = "Tidak ada layanan kurir yang tersedia untuk wilayah tujuan ini.";
             }
         } else {
@@ -225,6 +214,9 @@ const calculateShippingRates = async () => {
         isCalculatingShipping.value = false;
     }
 };
+
+// Re-fetch rates whenever the destination district changes.
+watch(() => form.district_id, () => calculateShippingRates());
 
 const toast = ref({
     show: false,
@@ -246,21 +238,28 @@ const hideToast = () => {
 
 const goToStep = async (step) => {
     if (step === "shipping") {
-        if (!form.name || !form.address || !form.province || !form.city || !form.district || !form.village || !form.phone) {
+        if (
+            !form.recipient_name ||
+            !form.address ||
+            !form.province_id ||
+            !form.city_id ||
+            !form.district_id ||
+            !form.phone
+        ) {
             triggerToast("Silakan lengkapi semua data alamat pengiriman terlebih dahulu.", "warning");
             return;
         }
         currentStep.value = "shipping";
-        await calculateShippingRates();
+        // Rates are already fetched by the district_id watcher; only refresh if missing.
+        if (shippingOptions.value.length === 0) {
+            await calculateShippingRates();
+        }
         return;
     }
     if (step === "payment") {
-        if (!form.shipping_method || form.shipping_cost < 0) {
+        if (!form.courier || !form.shipping_service || shippingCost.value < 0) {
             triggerToast("Silakan pilih opsi pengiriman terlebih dahulu.", "warning");
             return;
-        }
-        if (!form.payment_method && paymentOptions.length > 0) {
-            form.payment_method = paymentOptions[0].id;
         }
     }
     currentStep.value = step;
@@ -275,9 +274,7 @@ const submitOrder = () => {
     });
 };
 
-onMounted(() => {
-    fetchRegions("provinces");
-});
+onMounted(fetchProvinces);
 </script>
 
 <template>
@@ -356,10 +353,10 @@ onMounted(() => {
                                                 <h1>Subtotal</h1>
                                                 <h1>{{ formatPrice(cartTotal) }}</h1>
                                             </div>
-                                            <div v-if="form.shipping_cost > 0"
+                                            <div v-if="shippingCost > 0"
                                                 class="flex justify-between text-gray-200">
                                                 <h1>Shipping</h1>
-                                                <h1>{{ formatPrice(form.shipping_cost) }}</h1>
+                                                <h1>{{ formatPrice(shippingCost) }}</h1>
                                             </div>
                                             <div
                                                 class="flex justify-between pt-2 font-extrabold text-2xl border-orange-400">
@@ -413,22 +410,21 @@ onMounted(() => {
                             <h2 class="flex items-center gap-3 text-xl font-bold text-gray-900 mb-5">
                                 Shipping address
                             </h2>
-                            <FormInput v-model="form.name" type="text" placeholder="Nama lengkap penerima"
-                                :error="form.errors.name" required />
+                            <FormInput v-model="form.recipient_name" type="text" placeholder="Nama lengkap penerima"
+                                :error="form.errors.recipient_name" required />
                             <FormInput v-model="form.address" type="text" placeholder="Alamat lengkap"
                                 :error="form.errors.address" required />
-                            <FormSelect v-model="form.province" :options="regions.provinces" option-label="name"
-                                option-value="name" placeholder="Pilih Provinsi" :error="form.errors.province" required
-                                @update:model-value="() => fetchRegions('cities')" />
-                            <FormSelect v-model="form.city" :options="regions.cities" option-label="name"
-                                option-value="name" placeholder="Pilih Kota" :error="form.errors.city" required
-                                :disabled="!form.province" @update:model-value="() => fetchRegions('districts')" />
-                            <FormSelect v-model="form.district" :options="regions.districts" option-label="name"
-                                option-value="name" placeholder="Pilih Kecamatan" :error="form.errors.district" required
-                                :disabled="!form.city" @update:model-value="() => fetchRegions('villages')" />
-                            <FormSelect v-model="form.village" :options="regions.villages" option-label="name"
-                                option-value="name" placeholder="Pilih Kelurahan" :error="form.errors.village" required
-                                :disabled="!form.district" />
+                            <FormSelect v-model="form.province_id" :options="regions.provinces" option-label="name"
+                                option-value="id" placeholder="Pilih Provinsi" :error="form.errors.province_id"
+                                required />
+                            <FormSelect v-model="form.city_id" :options="regions.cities" option-label="name"
+                                option-value="id" placeholder="Pilih Kota" :error="form.errors.city_id" required
+                                :disabled="!form.province_id" />
+                            <FormSelect v-model="form.district_id" :options="regions.districts" option-label="name"
+                                option-value="id" placeholder="Pilih Kecamatan" :error="form.errors.district_id" required
+                                :disabled="!form.city_id" />
+                            <FormInput v-model="form.postal_code" type="text" placeholder="Kode pos (opsional)"
+                                :error="form.errors.postal_code" />
                             <FormInput v-model="form.phone" type="text" placeholder="08xxxxxxxxxx"
                                 :error="form.errors.phone" required />
                         </div>
@@ -461,8 +457,8 @@ onMounted(() => {
                             <div class="flex justify-between items-center">
                                 <div>
                                     <span class="text-gray-500 block text-xs">Kirim ke</span>
-                                    <span class="text-gray-900 font-medium">{{ form.name }}, {{ form.address }}, {{
-                                        form.city }}, {{ form.province }} ({{ form.phone }})</span>
+                                    <span class="text-gray-900 font-medium">{{ form.recipient_name }}, {{ form.address }}, {{
+                                        form.city_name }}, {{ form.province_name }} ({{ form.phone }})</span>
                                 </div>
                                 <button type="button" @click="goToStep('information')"
                                     class="text-xs font-semibold text-orange-600 hover:underline">Ubah</button>
@@ -480,7 +476,7 @@ onMounted(() => {
                                 class="p-8 text-center bg-gray-50 border border-gray-200 rounded-2xl space-y-3">
                                 <div class="loading loading-spinner text-orange-500 loading-md"></div>
                                 <p class="text-sm font-medium text-gray-600">Menghitung tarif ongkos kirim ke {{
-                                    form.city }}...</p>
+                                    form.city_name }}...</p>
                             </div>
 
                             <!-- Error State -->
@@ -498,10 +494,10 @@ onMounted(() => {
                                 <label v-for="option in shippingOptions" :key="option.id"
                                     @click="selectShippingOption(option)"
                                     class="flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-all"
-                                    :class="(form.shipping_cost === option.cost && (form.shipping_method === option.methodLabel || form.shipping_method === option.service)) ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500' : 'border-gray-200 hover:border-gray-300'">
+                                    :class="isShippingSelected(option) ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500' : 'border-gray-200 hover:border-gray-300'">
                                     <div class="flex items-center gap-3">
                                         <input type="radio" name="shipping_option"
-                                            :checked="form.shipping_cost === option.cost && (form.shipping_method === option.methodLabel || form.shipping_method === option.service)"
+                                            :checked="isShippingSelected(option)"
                                             class="text-orange-500 focus:ring-orange-500" />
                                         <div>
                                             <p class="font-semibold text-gray-900">{{ option.name }}</p>
@@ -546,8 +542,8 @@ onMounted(() => {
                             <div class="flex justify-between items-center pb-2 border-b border-gray-200">
                                 <div>
                                     <span class="text-gray-500 block text-xs">Kirim ke</span>
-                                    <span class="text-gray-900 font-medium">{{ form.name }}, {{ form.address }}, {{
-                                        form.city }}</span>
+                                    <span class="text-gray-900 font-medium">{{ form.recipient_name }}, {{ form.address }}, {{
+                                        form.city_name }}</span>
                                 </div>
                                 <button type="button" @click="goToStep('information')"
                                     class="text-xs font-semibold text-orange-600 hover:underline">Ubah</button>
@@ -555,8 +551,9 @@ onMounted(() => {
                             <div class="flex justify-between items-center">
                                 <div>
                                     <span class="text-gray-500 block text-xs">Metode Pengiriman</span>
-                                    <span class="text-gray-900 font-medium">{{ form.shipping_method }} ({{
-                                        formatPrice(form.shipping_cost) }})</span>
+                                    <span class="text-gray-900 font-medium">{{
+                                        form.courier ? `${form.courier.toUpperCase()} - ${form.shipping_service}` : '-' }} ({{
+                                            formatPrice(shippingCost) }})</span>
                                 </div>
                                 <button type="button" @click="goToStep('shipping')"
                                     class="text-xs font-semibold text-orange-600 hover:underline">Ubah</button>
@@ -568,12 +565,12 @@ onMounted(() => {
                             <h2 class="text-xl font-bold text-gray-900">Metode Pembayaran</h2>
                             <div class="space-y-2">
                                 <label v-for="option in paymentOptions" :key="option.id"
-                                    @click="form.payment_method = option.id"
+                                    @click="selectedPayment = option.id"
                                     class="flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-all"
-                                    :class="form.payment_method === option.id ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500' : 'border-gray-200 hover:border-gray-300'">
+                                    :class="selectedPayment === option.id ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500' : 'border-gray-200 hover:border-gray-300'">
                                     <div class="flex items-center gap-3">
                                         <input type="radio" name="payment_option"
-                                            :checked="form.payment_method === option.id"
+                                            :checked="selectedPayment === option.id"
                                             class="text-orange-500 focus:ring-orange-500" />
                                         <div>
                                             <p class="font-semibold text-gray-900">{{ option.name }}</p>
@@ -634,11 +631,11 @@ onMounted(() => {
                                 <h1>{{ formatPrice(cartTotal) }}</h1>
                             </div>
                             <div class="flex justify-between">
-                                <h1 v-if="form.shipping_cost > 0">
+                                <h1 v-if="shippingCost > 0">
                                     Shipping
                                 </h1>
-                                <h1 v-if="form.shipping_cost > 0">
-                                    {{ formatPrice(form.shipping_cost) }}
+                                <h1 v-if="shippingCost > 0">
+                                    {{ formatPrice(shippingCost) }}
                                 </h1>
                             </div>
                             <div class="flex justify-between">

@@ -18,18 +18,25 @@ class PaymentTransactionTest extends TestCase
 
         return Order::create([
             'user_id' => $user->id,
-            'name' => 'John Doe',
+            'recipient_name' => 'John Doe',
             'address' => 'Jl. Merdeka No. 1',
-            'city' => 'Bandung',
-            'district' => 'Coblong',
-            'village' => 'Dago',
-            'province' => 'Jawa Barat',
+            'province_id' => '6',
+            'province_name' => 'Jawa Barat',
+            'city_id' => '22',
+            'city_name' => 'Bandung',
+            'district_id' => '220108',
+            'district_name' => 'Coblong',
+            'postal_code' => '40135',
             'phone' => '081234567890',
             'email' => 'john@example.com',
+            'courier' => 'jne',
+            'shipping_service' => 'REG',
+            'weight' => 1000,
+            'shipping_cost' => 25000,
+            'subtotal' => 100000,
             'total_price' => 125000,
-            'payment_method' => 'qris',
-            'payment_status' => 'pending',
-            'status' => 'processing',
+            'payment_status' => 'unpaid',
+            'status' => 'waiting',
         ]);
     }
 
@@ -37,8 +44,9 @@ class PaymentTransactionTest extends TestCase
     {
         $order = $this->createOrder();
 
-        $this->assertEquals('pending', $order->payment_status);
-        $this->assertEquals('processing', $order->status);
+        $this->assertEquals('unpaid', $order->payment_status);
+        $this->assertEquals('waiting', $order->status);
+        $this->assertNotEmpty($order->order_number);
     }
 
     public function test_can_create_payment_transaction_linked_to_order(): void
