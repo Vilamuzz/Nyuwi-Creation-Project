@@ -19,17 +19,18 @@ const emit = defineEmits(["viewReviews", "reviewOrder"]);
 const activeSubTab = ref("reviews"); // 'reviews' | 'pending'
 
 const getProductImage = (product) => {
+    const resolve = (img) => img ? (img.startsWith("/") ? img : `/storage/products/${img}`) : "/img/products/default.jpg";
     if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
-        return `/storage/products/${product.images[0]}`;
+        return resolve(product.images[0]);
     }
     if (typeof product?.images === "string") {
         try {
             const parsed = JSON.parse(product.images);
             if (Array.isArray(parsed) && parsed.length > 0) {
-                return `/storage/products/${parsed[0]}`;
+                return resolve(parsed[0]);
             }
         } catch {
-            return `/storage/products/${product.images}`;
+            return resolve(product.images);
         }
     }
     return "/img/products/default.jpg";

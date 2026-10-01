@@ -54,11 +54,15 @@ class ProfileStoreController extends Controller
         ];
 
         if ($request->hasFile('logo')) {
-            if ($profile->logo && Storage::disk('public')->exists($profile->logo)) {
-                Storage::disk('public')->delete($profile->logo);
+            if ($profile->logo) {
+                $oldPath = str_replace('/storage/', '', $profile->logo);
+                if (Storage::disk('public')->exists($oldPath)) {
+                    Storage::disk('public')->delete($oldPath);
+                }
             }
 
-            $updateData['logo'] = $request->file('logo')->store('logo', 'public');
+            $storedPath = $request->file('logo')->store('logo', 'public');
+            $updateData['logo'] = '/storage/' . $storedPath;
         }
 
         if (! $profile->exists) {

@@ -511,7 +511,7 @@ const handleImageError = (event) => {
                             <div class="relative w-12 h-12 rounded-lg bg-stone-100 overflow-hidden flex-shrink-0 border border-stone-200/60">
                                 <img
                                     v-if="product.image"
-                                    :src="`/storage/products/${product.image}`"
+                                    :src="product.image.startsWith('/') ? product.image : `/storage/products/${product.image}`"
                                     :alt="product.name"
                                     class="w-full h-full object-cover"
                                     @error="handleImageError"
@@ -577,7 +577,7 @@ const handleImageError = (event) => {
                             <div class="relative w-12 h-12 rounded-lg bg-stone-100 overflow-hidden flex-shrink-0 border border-stone-200/60">
                                 <img
                                     v-if="product.image"
-                                    :src="`/storage/products/${product.image}`"
+                                    :src="product.image.startsWith('/') ? product.image : `/storage/products/${product.image}`"
                                     :alt="product.name"
                                     class="w-full h-full object-cover"
                                     @error="handleImageError"
@@ -654,7 +654,7 @@ const handleImageError = (event) => {
                             <div class="relative w-12 h-12 rounded-lg bg-stone-100 overflow-hidden flex-shrink-0 border border-stone-200/60">
                                 <img
                                     v-if="product.image"
-                                    :src="`/storage/products/${product.image}`"
+                                    :src="product.image.startsWith('/') ? product.image : `/storage/products/${product.image}`"
                                     :alt="product.name"
                                     class="w-full h-full object-cover"
                                     @error="handleImageError"

@@ -5,8 +5,6 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\Product;
 use App\Models\Category;
-use Carbon\Carbon;
-use Illuminate\Support\Str;
 
 class ProductSeeder extends Seeder
 {
@@ -250,6 +248,11 @@ class ProductSeeder extends Seeder
         foreach ($products as $product) {
             if (isset($categoryMap[$product['category_id']])) {
                 $product['category_id'] = $categoryMap[$product['category_id']];
+            }
+            if (isset($product['images']) && is_array($product['images'])) {
+                $product['images'] = array_map(function ($img) {
+                    return str_starts_with($img, '/') ? $img : '/storage/products/' . $img;
+                }, $product['images']);
             }
             Product::firstOrCreate(['slug' => $product['slug']], $product);
         }

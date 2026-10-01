@@ -13,14 +13,14 @@ class ProfileStoreSeeder extends Seeder
      */
     public function run(): void
     {
-        ProfileStore::firstOrCreate(
+        ProfileStore::updateOrCreate(
             ['name' => 'Nyuwi Creation'],
             [
-                'logo' => 'logo/logo.svg',
+                'logo' => '/storage/logo/logo.svg',
                 'address' => 'Jl. Mawar No. 123, Kecamatan Peterongan',
                 'embedded_map' => '',
-                'district_id' => '3517120',
-                'district_name' => '',
+                'district_id' => '3866',
+                'district_name' => 'Peterongan',
                 'shipping_couriers' => ['jne', 'pos', 'tiki'],
                 'phone' => '081234567890',
                 'instagram' => 'nyuwi_creation',

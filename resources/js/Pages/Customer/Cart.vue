@@ -2,8 +2,6 @@
 import { Head, Link, useForm, usePage, router } from "@inertiajs/vue3";
 import { computed, ref, onMounted } from "vue";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
-import Hero from "@/Components/Customer/Main/Hero.vue";
-import PaymentInformationModal from "@/Components/Customer/Sub-main/PaymentInformationModal.vue";
 import { triggerSnapPayment } from "@/Utils/midtrans";
 import axios from "axios";
 const props = defineProps({
@@ -12,11 +10,6 @@ const props = defineProps({
 });
 
 const cartItems = computed(() => props.cartItems);
-const isLoading = ref(false);
-const error = ref(null);
-
-const fetchCart = () => { };
-
 const deleteForm = useForm({});
 const updateForm = useForm({ quantity: 1 });
 
@@ -51,10 +44,6 @@ const formatPrice = (price) => {
 };
 
 const showPaymentModal = ref(false);
-const paymentInfo = {
-    phone: "088123456789", // Nomor DANA/digital wallet
-    accountName: "Nyuwi Creation",
-};
 
 const page = usePage();
 
@@ -126,9 +115,10 @@ const closePaymentModal = () => {
                             <tr v-for="item in cartItems" :key="item.id">
                                 <td class="px-4 py-4">
                                     <div class="flex gap-4 items-center">
-                                        <img :src="'/storage/products/' +
-                                            item.product.images[0]
-                                            " alt="Product Image" class="w-16 h-16 object-cover rounded-md" />
+                                        <img :src="item.product.images[0].startsWith('/')
+                                            ? item.product.images[0]
+                                            : '/storage/products/' + item.product.images[0]"
+                                            alt="Product Image" class="w-16 h-16 object-cover rounded-md" />
 
                                         <div class="flex flex-col text-sm text-gray-500">
                                             <p class="font-semibold text-black">{{ item.product.name }}</p>
@@ -194,8 +184,5 @@ const closePaymentModal = () => {
                 </div>
             </div>
         </section>
-        <!-- Payment Information Modal -->
-        <PaymentInformationModal v-if="showPaymentModal" :onClose="closePaymentModal" :paymentMethod="localStorage.getItem('paymentMethod') || 'digital_wallet'
-            " />
     </CustomersLayout>
 </template>

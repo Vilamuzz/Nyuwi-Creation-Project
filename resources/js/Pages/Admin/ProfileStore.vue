@@ -66,7 +66,7 @@ const form = useForm({
 });
 
 const logoPreview = ref(
-    props.profile?.logo ? `/storage/${props.profile.logo}` : null
+    props.profile?.logo ? (props.profile.logo.startsWith('/') ? props.profile.logo : `/storage/${props.profile.logo}`) : null
 );
 
 const selectedProvince = ref("");
@@ -149,7 +149,7 @@ watch(
             form.instagram = newProfile.instagram || "";
             form.facebook = newProfile.facebook || "";
             form.tiktok = newProfile.tiktok || "";
-            logoPreview.value = newProfile.logo ? `/storage/${newProfile.logo}` : null;
+            logoPreview.value = newProfile.logo ? (newProfile.logo.startsWith('/') ? newProfile.logo : `/storage/${newProfile.logo}`) : null;
             selectedProvince.value = "";
             selectedCity.value = "";
             regenciesList.value = [];
@@ -234,7 +234,7 @@ const cancelEditing = () => {
         form.instagram = props.profile.instagram || "";
         form.facebook = props.profile.facebook || "";
         form.tiktok = props.profile.tiktok || "";
-        logoPreview.value = props.profile.logo ? `/storage/${props.profile.logo}` : null;
+        logoPreview.value = props.profile.logo ? (props.profile.logo.startsWith('/') ? props.profile.logo : `/storage/${props.profile.logo}`) : null;
         selectedProvince.value = "";
         selectedCity.value = "";
         regenciesList.value = [];
@@ -325,7 +325,7 @@ const submit = () => {
                         <div class="relative group shrink-0">
                             <div
                                 class="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 overflow-hidden flex items-center justify-center p-2 shadow-inner transition-transform duration-300 group-hover:scale-105">
-                                <img v-if="profile.logo" :src="`/storage/${profile.logo}`" :alt="profile.name"
+                                <img v-if="profile.logo" :src="profile.logo.startsWith('/') ? profile.logo : `/storage/${profile.logo}`" :alt="profile.name"
                                     class="w-full h-full object-contain drop-shadow" />
                                 <ImageIcon v-else class="w-12 h-12 text-stone-400" />
                             </div>

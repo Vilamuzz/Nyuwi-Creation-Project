@@ -27,28 +27,28 @@ class GuestCheckoutTest extends TestCase
         Config::set('services.binderbyte.api_key', 'mock-binderbyte-key');
 
         Http::fake([
-            'https://api.binderbyte.com/v1/cost*' => function ($request) {
+            'https://rajaongkir.komerce.id/api/v1/calculate/district/domestic-cost*' => function ($request) {
+                $body = $request->body();
                 // Couriers without an offering for the destination get no costs.
-                if (str_contains((string) $request->url(), 'courier=sicepat')) {
+                if (str_contains((string) $body, 'courier=sicepat')) {
                     return Http::response([
-                        'status' => 200,
-                        'message' => 'Success',
-                        'data' => ['costs' => []],
+                        'status' => 'success',
+                        'data' => [],
                     ], 200);
                 }
 
-                // Mirrors the old mock driver: JNE REG = 18000 for the 1 kg tier.
+                $courier = str_contains((string) $body, 'courier=pos') ? 'pos' : 'jne';
+
                 return Http::response([
-                    'status' => 200,
-                    'message' => 'Success',
+                    'status' => 'success',
                     'data' => [
-                        'costs' => [
-                            [
-                                'service' => 'REG',
-                                'description' => 'Layanan Reguler',
-                                'cost' => 18000,
-                                'etd' => '2-3 hari',
-                            ],
+                        [
+                            'name' => strtoupper($courier),
+                            'code' => $courier,
+                            'service' => 'REG',
+                            'description' => 'Layanan Reguler',
+                            'cost' => 18000,
+                            'etd' => '2-3 hari',
                         ],
                     ],
                 ], 200);

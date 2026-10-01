@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Models\ProfileStore;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -218,5 +220,41 @@ class ProfileStoreTest extends TestCase
             ]);
 
         $this->assertFalse(Cache::has('store_profile'));
+    }
+
+    public function test_admin_can_upload_and_update_store_logo(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $profile = ProfileStore::create([
+            'name' => 'Toko Logo',
+            'logo' => '/storage/logo/old.png',
+            'address' => 'Jl. Logo',
+            'district_id' => '3517120',
+            'district_name' => 'Peterongan',
+            'phone' => '081234567890',
+        ]);
+
+        Storage::disk('public')->put('logo/old.png', 'old content');
+
+        $file = UploadedFile::fake()->image('new_logo.png');
+
+        $response = $this->actingAs($admin)
+            ->put(route('profile-store.update'), [
+                'name' => 'Toko Logo',
+                'address' => 'Jl. Logo',
+                'district_id' => '3517120',
+                'district_name' => 'Peterongan',
+                'phone' => '081234567890',
+                'logo' => $file,
+            ]);
+
+        $response->assertSessionHas('success');
+
+        $profile->refresh();
+        $this->assertStringStartsWith('/storage/logo/', $profile->logo);
+        $newPath = str_replace('/storage/', '', $profile->logo);
+        Storage::disk('public')->assertExists($newPath);
+        Storage::disk('public')->assertMissing('logo/old.png');
     }
 }

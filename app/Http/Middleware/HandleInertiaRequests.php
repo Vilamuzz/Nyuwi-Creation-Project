@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
             'shippingResult' => fn () => $request->session()->get('shippingResult'),
             'trackingData' => fn () => $request->session()->get('trackingData'),
             'storeName' => $profileStore?->name,
+            'storeLogo' => $profileStore?->logo ?: '/img/Logo/Logo.svg',
             'storePaymentMethod' => [
                 'storeDana' => $profileStore?->phone,
             ],

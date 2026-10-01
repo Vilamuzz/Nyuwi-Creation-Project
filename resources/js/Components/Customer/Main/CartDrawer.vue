@@ -35,7 +35,8 @@ const formatPrice = (price) => {
 
 const productImage = (item) => {
     if (item.product?.images && Array.isArray(item.product.images) && item.product.images.length > 0) {
-        return "/storage/products/" + item.product.images[0];
+        const first = item.product.images[0];
+        return first.startsWith("/") ? first : "/storage/products/" + first;
     }
     return null;
 };

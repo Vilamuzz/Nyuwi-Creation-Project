@@ -1,12 +1,19 @@
 <script setup>
-import { Head, useForm, Link } from "@inertiajs/vue3";
+import { Head, useForm, Link, usePage } from "@inertiajs/vue3";
 import { computed, ref, onMounted, watch } from "vue";
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import FormInput from "@/Components/FormInput.vue";
 import FormSelect from "@/Components/FormSelect.vue";
 import ToastNotification from "@/Components/Customer/Sub-main/ToastNotification.vue";
-import { ChevronDown, ChevronLeft, ChevronRight, Mail } from "lucide-vue-next";
+import { ChevronDown, ChevronLeft, ChevronRight, Mail, ShoppingCart } from "lucide-vue-next";
 import { formatPrice } from "@/Utils/format";
+
+const page = usePage();
+
+const props = defineProps({
+    cartItems: { type: Array, default: () => [] },
+    summary: { type: Object, default: () => ({}) },
+});
 
 const form = useForm({
     recipient_name: "",
@@ -19,14 +26,14 @@ const form = useForm({
     district_name: "",
     postal_code: "",
     phone: "",
-    email: "",
+    email: page.props.auth?.user?.email ?? "",
     courier: "",
     shipping_service: "",
 });
 
-// Display-only mirror of the selected shipping rate. The authoritative cost is
-// recalculated server-side when the order is placed, so it is never submitted.
 const shippingCost = ref(0);
+
+const cartItems = computed(() => props.cartItems);
 
 const cartTotal = computed(() => {
     if (!cartItems.value || cartItems.value.length === 0) return 0;
@@ -35,14 +42,6 @@ const cartTotal = computed(() => {
     }, 0);
 });
 
-const props = defineProps({
-    cartItems: { type: Array, default: () => [] },
-    summary: { type: Object, default: () => ({}) },
-});
-
-const cartItems = computed(() => props.cartItems);
-const isLoading = ref(false);
-const error = ref(null);
 const isOrderSummaryOpen = ref(false);
 
 const onEnter = (el) => {
@@ -75,8 +74,6 @@ const fetchProvinces = async () => {
     }
 };
 
-// The order stores both the region id (for shipping APIs) and its name (as a
-// human-readable snapshot), so keep them in sync whenever a selection changes.
 watch(
     () => form.province_id,
     async (id) => {
@@ -121,16 +118,20 @@ watch(
 
 watch(
     () => form.district_id,
-    (id) => {
+    async (id) => {
         form.district_name =
             regions.value.districts.find((d) => String(d.id) === String(id))?.name ?? "";
 
         // Reset the shipping choice whenever the destination changes.
         shippingOptions.value = [];
         shippingError.value = null;
-        form.courier = null;
-        form.shipping_service = null;
+        form.courier = "";
+        form.shipping_service = "";
         shippingCost.value = 0;
+
+        if (id) {
+            await calculateShippingRates();
+        }
     }
 );
 
@@ -149,8 +150,6 @@ const paymentOptions = [
     { id: "digital_wallet", name: "Digital Wallet", description: "Pembayaran instan via E-Wallet (DANA)" },
 ];
 
-// Payment runs through Midtrans Snap after the order is created, so the choice
-// is only used for display here and is never submitted.
 const selectedPayment = ref(paymentOptions[0].id);
 
 const isShippingSelected = (option) =>
@@ -167,7 +166,7 @@ const selectShippingOption = (option) => {
 const calculateShippingRates = async () => {
     const districtId = form.district_id;
 
-    if (!districtId) return;
+    if (!districtId || isCalculatingShipping.value) return;
 
     isCalculatingShipping.value = true;
     shippingError.value = null;
@@ -215,9 +214,6 @@ const calculateShippingRates = async () => {
     }
 };
 
-// Re-fetch rates whenever the destination district changes.
-watch(() => form.district_id, () => calculateShippingRates());
-
 const toast = ref({
     show: false,
     message: "",
@@ -236,22 +232,36 @@ const hideToast = () => {
     toast.value.show = false;
 };
 
+// Listen for flash messages from backend (e.g. stock/order creation errors)
+watch(
+    () => page.props.flash,
+    (flash) => {
+        if (flash?.error) {
+            triggerToast(flash.error, "error");
+        } else if (flash?.success) {
+            triggerToast(flash.success, "success");
+        }
+    },
+    { immediate: true, deep: true }
+);
+
 const goToStep = async (step) => {
     if (step === "shipping") {
+        const isGuest = !page.props.auth?.user;
         if (
             !form.recipient_name ||
             !form.address ||
             !form.province_id ||
             !form.city_id ||
             !form.district_id ||
-            !form.phone
+            !form.phone ||
+            (isGuest && !form.email)
         ) {
-            triggerToast("Silakan lengkapi semua data alamat pengiriman terlebih dahulu.", "warning");
+            triggerToast("Silakan lengkapi semua data kontak dan alamat pengiriman terlebih dahulu.", "warning");
             return;
         }
         currentStep.value = "shipping";
-        // Rates are already fetched by the district_id watcher; only refresh if missing.
-        if (shippingOptions.value.length === 0) {
+        if (shippingOptions.value.length === 0 && !isCalculatingShipping.value) {
             await calculateShippingRates();
         }
         return;
@@ -266,12 +276,36 @@ const goToStep = async (step) => {
 };
 
 const submitOrder = () => {
+    if (form.processing) return;
+
     form.post(route("customer.orders.store"), {
         preserveScroll: true,
         onError: (errors) => {
             console.error("Error submitting order:", errors);
+            const errorKeys = Object.keys(errors);
+            if (errorKeys.length > 0) {
+                const firstError = errors[errorKeys[0]];
+                triggerToast(firstError || "Mohon periksa kembali form checkout.", "warning");
+
+                const infoFields = ["recipient_name", "address", "province_id", "city_id", "district_id", "postal_code", "phone", "email"];
+                const shippingFields = ["courier", "shipping_service"];
+
+                if (errorKeys.some((k) => infoFields.includes(k))) {
+                    currentStep.value = "information";
+                } else if (errorKeys.some((k) => shippingFields.includes(k))) {
+                    currentStep.value = "shipping";
+                }
+            }
         },
     });
+};
+
+const getProductImage = (product) => {
+    if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
+        const first = product.images[0];
+        return first.startsWith("/") ? first : `/storage/products/${first}`;
+    }
+    return "/img/products/default.jpg";
 };
 
 onMounted(fetchProvinces);
@@ -281,21 +315,22 @@ onMounted(fetchProvinces);
 
     <Head title="Checkout" />
     <ToastNotification :show="toast.show" :message="toast.message" :type="toast.type" @close="hideToast" />
-    <!-- Add loading state -->
-    <div v-if="isLoading" class="flex justify-center items-center py-20">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
-        <p class="ml-3">Loading cart items...</p>
+    <!-- Empty Cart state -->
+    <div v-if="!cartItems || cartItems.length === 0"
+        class="flex flex-col items-center justify-center min-h-[60vh] px-4 text-center">
+        <div class="w-20 h-20 mb-4 rounded-full bg-orange-100 flex items-center justify-center text-orange-500">
+            <ShoppingCart :size="36" />
+        </div>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Keranjang Belanja Kosong</h2>
+        <p class="text-gray-500 max-w-md mb-6">Anda tidak memiliki produk di keranjang belanja untuk diproses ke
+            checkout.</p>
+        <Link :href="route('cart.show')"
+            class="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-full shadow-sm transition-colors">
+            Kembali ke Keranjang
+        </Link>
     </div>
 
-    <!-- Add error state -->
-    <div v-else-if="error" class="text-center py-20">
-        <p class="text-red-500">{{ error }}</p>
-        <button @click="() => { }" class="mt-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">
-            Retry
-        </button>
-    </div>
-
-    <form v-else>
+    <form v-else @submit.prevent>
         <div class="flex min-h-screen">
             <section class="flex flex-col items-center w-full md:w-1/2 px-4 sm:px-10 py-10 md:py-14 gap-12">
                 <div class="w-full max-w-md space-y-10">
@@ -325,8 +360,8 @@ onMounted(fetchProvinces);
                                         <div v-for="item in cartItems" :key="item.id"
                                             class="flex flex-row justify-between items-center py-2 text-white border-orange-400/40 last:border-0">
                                             <div class="flex items-center gap-4">
-                                                <img :src="'/storage/products/' + item.product.images[0]"
-                                                    :alt="item.product.name"
+                                                <img :src="getProductImage(item.product)"
+                                                    :alt="item.product?.name ?? 'Produk'"
                                                     class="w-16 h-16 object-cover rounded-2xl" />
                                                 <div class="flex flex-col">
                                                     <h1 class="font-bold">
@@ -353,8 +388,7 @@ onMounted(fetchProvinces);
                                                 <h1>Subtotal</h1>
                                                 <h1>{{ formatPrice(cartTotal) }}</h1>
                                             </div>
-                                            <div v-if="shippingCost > 0"
-                                                class="flex justify-between text-gray-200">
+                                            <div v-if="shippingCost > 0" class="flex justify-between text-gray-200">
                                                 <h1>Shipping</h1>
                                                 <h1>{{ formatPrice(shippingCost) }}</h1>
                                             </div>
@@ -421,8 +455,8 @@ onMounted(fetchProvinces);
                                 option-value="id" placeholder="Pilih Kota" :error="form.errors.city_id" required
                                 :disabled="!form.province_id" />
                             <FormSelect v-model="form.district_id" :options="regions.districts" option-label="name"
-                                option-value="id" placeholder="Pilih Kecamatan" :error="form.errors.district_id" required
-                                :disabled="!form.city_id" />
+                                option-value="id" placeholder="Pilih Kecamatan" :error="form.errors.district_id"
+                                required :disabled="!form.city_id" />
                             <FormInput v-model="form.postal_code" type="text" placeholder="Kode pos (opsional)"
                                 :error="form.errors.postal_code" />
                             <FormInput v-model="form.phone" type="text" placeholder="08xxxxxxxxxx"
@@ -457,8 +491,9 @@ onMounted(fetchProvinces);
                             <div class="flex justify-between items-center">
                                 <div>
                                     <span class="text-gray-500 block text-xs">Kirim ke</span>
-                                    <span class="text-gray-900 font-medium">{{ form.recipient_name }}, {{ form.address }}, {{
-                                        form.city_name }}, {{ form.province_name }} ({{ form.phone }})</span>
+                                    <span class="text-gray-900 font-medium">{{ form.recipient_name }}, {{ form.address
+                                        }}, {{
+                                            form.city_name }}, {{ form.province_name }} ({{ form.phone }})</span>
                                 </div>
                                 <button type="button" @click="goToStep('information')"
                                     class="text-xs font-semibold text-orange-600 hover:underline">Ubah</button>
@@ -496,8 +531,7 @@ onMounted(fetchProvinces);
                                     class="flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-all"
                                     :class="isShippingSelected(option) ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500' : 'border-gray-200 hover:border-gray-300'">
                                     <div class="flex items-center gap-3">
-                                        <input type="radio" name="shipping_option"
-                                            :checked="isShippingSelected(option)"
+                                        <input type="radio" name="shipping_option" :checked="isShippingSelected(option)"
                                             class="text-orange-500 focus:ring-orange-500" />
                                         <div>
                                             <p class="font-semibold text-gray-900">{{ option.name }}</p>
@@ -542,8 +576,9 @@ onMounted(fetchProvinces);
                             <div class="flex justify-between items-center pb-2 border-b border-gray-200">
                                 <div>
                                     <span class="text-gray-500 block text-xs">Kirim ke</span>
-                                    <span class="text-gray-900 font-medium">{{ form.recipient_name }}, {{ form.address }}, {{
-                                        form.city_name }}</span>
+                                    <span class="text-gray-900 font-medium">{{ form.recipient_name }}, {{ form.address
+                                        }}, {{
+                                            form.city_name }}</span>
                                 </div>
                                 <button type="button" @click="goToStep('information')"
                                     class="text-xs font-semibold text-orange-600 hover:underline">Ubah</button>
@@ -552,7 +587,8 @@ onMounted(fetchProvinces);
                                 <div>
                                     <span class="text-gray-500 block text-xs">Metode Pengiriman</span>
                                     <span class="text-gray-900 font-medium">{{
-                                        form.courier ? `${form.courier.toUpperCase()} - ${form.shipping_service}` : '-' }} ({{
+                                        form.courier ? `${form.courier.toUpperCase()} - ${form.shipping_service}` : '-'
+                                        }} ({{
                                             formatPrice(shippingCost) }})</span>
                                 </div>
                                 <button type="button" @click="goToStep('shipping')"
@@ -597,53 +633,50 @@ onMounted(fetchProvinces);
             </section>
             <section
                 class="md:flex flex-col items-center w-full md:w-1/2 px-6 sm:px-10 py-10 md:py-14 gap-12 hidden bg-orange-500 p-10">
-                <div class="w-1/2">
-                    <div class="flex flex-col">
-                        <div v-for="item in cartItems" :key="item.id"
-                            class="flex flex-row justify-between items-center py-2 text-white">
-                            <div class="flex items-center gap-4">
-                                <img :src="'/storage/products/' +
-                                    item.product.images[0]
-                                    " :alt="item.product.name" class="w-16 h-16 object-cover rounded-2xl" />
-                                <div class="flex flex-col">
-                                    <h1 class="font-bold">
-                                        {{ item.product.name }} x
-                                        {{ item.quantity }}
-                                    </h1>
-                                    <div class="flex items-center text-gray-200">
-                                        <span v-if="item.size">Size: {{ item.size }}</span>
-                                        <span v-if="item.color" class="ml-2 flex items-center">
-                                            Color:
-                                            <span class="inline-block w-4 h-4 rounded-full ml-1" :style="{
-                                                backgroundColor: item.color,
-                                            }"></span>
-                                        </span>
-                                    </div>
+                <div class="flex flex-col">
+                    <div v-for="item in cartItems" :key="item.id"
+                        class="flex flex-row justify-between items-center py-2 text-white">
+                        <div class="flex items-center gap-4">
+                            <img :src="getProductImage(item.product)" :alt="item.product?.name ?? 'Produk'"
+                                class="w-16 h-16 object-cover rounded-2xl" />
+                            <div class="flex flex-col">
+                                <h1 class="font-bold">
+                                    {{ item.product.name }} x
+                                    {{ item.quantity }}
+                                </h1>
+                                <div class="flex flex-col text-gray-200">
+                                    <span v-if="item.size">Size: {{ item.size }}</span>
+                                    <span v-if="item.color" class="flex items-center">
+                                        Color:
+                                        <span class="inline-block w-4 h-4 rounded-full ml-1" :style="{
+                                            backgroundColor: item.color,
+                                        }"></span>
+                                    </span>
                                 </div>
                             </div>
-                            <h1 class="text-xl">
-                                {{ formatPrice(item.price * item.quantity) }}
+                        </div>
+                        <h1 class="lg:text-xl text-lg">
+                            {{ formatPrice(item.price * item.quantity) }}
+                        </h1>
+                    </div>
+                    <div class="flex flex-col mt-4 pt-4 border-t text-white text-xl">
+                        <div class="flex justify-between">
+                            <h1>Subtotal</h1>
+                            <h1>{{ formatPrice(cartTotal) }}</h1>
+                        </div>
+                        <div class="flex justify-between">
+                            <h1 v-if="shippingCost > 0">
+                                Shipping
+                            </h1>
+                            <h1 v-if="shippingCost > 0">
+                                {{ formatPrice(shippingCost) }}
                             </h1>
                         </div>
-                        <div class="flex flex-col mt-4 pt-4 border-t text-white text-xl">
-                            <div class="flex justify-between">
-                                <h1>Subtotal</h1>
-                                <h1>{{ formatPrice(cartTotal) }}</h1>
-                            </div>
-                            <div class="flex justify-between">
-                                <h1 v-if="shippingCost > 0">
-                                    Shipping
-                                </h1>
-                                <h1 v-if="shippingCost > 0">
-                                    {{ formatPrice(shippingCost) }}
-                                </h1>
-                            </div>
-                            <div class="flex justify-between">
-                                <h1 class="font-extrabold text-2xl">Total</h1>
-                                <h1 class="font-extrabold text-2xl">
-                                    {{ formatPrice(totalWithShipping) }}
-                                </h1>
-                            </div>
+                        <div class="flex justify-between">
+                            <h1 class="font-extrabold text-2xl">Total</h1>
+                            <h1 class="font-extrabold text-2xl">
+                                {{ formatPrice(totalWithShipping) }}
+                            </h1>
                         </div>
                     </div>
                 </div>

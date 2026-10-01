@@ -11,6 +11,7 @@ use App\Models\ProductReview;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ProductController extends Controller
 {
@@ -98,7 +99,7 @@ class ProductController extends Controller
                     "." .
                     $image->getClientOriginalExtension();
                 $image->storeAs("products", $imageName, "public");
-                $imageNames[] = $imageName;
+                $imageNames[] = "/storage/products/" . $imageName;
             }
         }
 
@@ -184,10 +185,12 @@ class ProductController extends Controller
             // Delete old images
             if ($product->images && is_array($product->images)) {
                 foreach ($product->images as $oldImage) {
-                    if (
-                        Storage::disk("public")->exists("products/{$oldImage}")
-                    ) {
-                        Storage::disk("public")->delete("products/{$oldImage}");
+                    $oldPath = str_replace('/storage/', '', $oldImage);
+                    if (!str_starts_with($oldPath, 'products/')) {
+                        $oldPath = 'products/' . $oldPath;
+                    }
+                    if (Storage::disk("public")->exists($oldPath)) {
+                        Storage::disk("public")->delete($oldPath);
                     }
                 }
             }
@@ -202,7 +205,7 @@ class ProductController extends Controller
                     "." .
                     $image->getClientOriginalExtension();
                 $image->storeAs("products", $imageName, "public");
-                $imageNames[] = $imageName;
+                $imageNames[] = "/storage/products/" . $imageName;
             }
             $updateData["images"] = $imageNames;
         }
@@ -241,9 +244,12 @@ class ProductController extends Controller
         $product->delete();
 
         // Delete images after successful database deletion
-        if ($images) {
+        if ($images && is_array($images)) {
             foreach ($images as $imageName) {
-                $imagePath = "products/{$imageName}";
+                $imagePath = str_replace('/storage/', '', $imageName);
+                if (!str_starts_with($imagePath, 'products/')) {
+                    $imagePath = 'products/' . $imagePath;
+                }
                 if (Storage::disk("public")->exists($imagePath)) {
                     Storage::disk("public")->delete($imagePath);
                 }
@@ -320,7 +326,10 @@ class ProductController extends Controller
             $query->latest();
         }
 
-        $products = $query->paginate(16)->withQueryString();
+        $products = $query->paginate(16);
+
+        /** @var LengthAwarePaginator $products */
+        $products->withQueryString();
 
         return Inertia::render("Customer/NewFeaturedPage", [
             "products" => $products,
@@ -365,7 +374,9 @@ class ProductController extends Controller
             $query->latest();
         }
 
-        $products = $query->paginate(16)->withQueryString();
+        $products = $query->paginate(16);
+        /** @var LengthAwarePaginator $products */
+        $products->withQueryString();
 
         return Inertia::render("Customer/SalePage", [
             "products" => $products,
@@ -374,9 +385,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Helper to render category-specific catalog pages.
-     */
     protected function renderCategoryPage(Request $request, string $categoryName, string $pageComponent, string $fallbackCategoryName = "")
     {
         $category = Category::where("name", $categoryName)->first();
@@ -412,7 +420,9 @@ class ProductController extends Controller
             $query->latest();
         }
 
-        $products = $query->paginate(16)->withQueryString();
+        $products = $query->paginate(16);
+        /** @var LengthAwarePaginator $products */
+        $products->withQueryString();
 
         return Inertia::render($pageComponent, [
             "products" => $products,
@@ -497,7 +507,7 @@ class ProductController extends Controller
                 $imagePath = null;
                 if (!empty($product->images) && is_array($product->images) && count($product->images) > 0) {
                     $imageName = $product->images[0];
-                    $imagePath = str_starts_with($imageName, 'http')
+                    $imagePath = str_starts_with($imageName, 'http') || str_starts_with($imageName, '/')
                         ? $imageName
                         : asset('storage/products/' . $imageName);
                 }

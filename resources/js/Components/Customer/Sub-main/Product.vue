@@ -129,7 +129,7 @@ const confirmAddToCart = () => {
         class="group relative flex w-full flex-col items-start overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-200 transition duration-300 hover:-translate-y-1 hover:shadow-lg">
         <!-- Container Gambar dan Overlay -->
         <div class="relative h-52 sm:h-72 lg:h-96 w-full overflow-hidden">
-            <img :src="image ? `/storage/products/${image}` : '/img/products/default.jpg'" :alt="name"
+            <img :src="image ? (image.startsWith('/') ? image : `/storage/products/${image}`) : '/img/products/default.jpg'" :alt="name"
                 class="h-full w-full rounded-t-2xl object-cover transition-transform duration-500 group-hover:scale-105"
                 @error="$event.target.src = '/img/products/default.jpg'" />
 

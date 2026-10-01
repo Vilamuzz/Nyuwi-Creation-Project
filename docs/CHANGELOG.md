@@ -1,5 +1,81 @@
 # Changelog
 
+## [2026-10-01] — Fix origin `district_id` in `ProfileStoreSeeder` for Komerce API
+
+- **Updated `ProfileStoreSeeder` & active store profile:** Changed default `district_id` from legacy 7-digit BPS code (`3517120`) to valid Komerce API district ID `3866` (Peterongan, Jombang).
+- **Changed Seeder to `updateOrCreate`:** Ensured re-running `php artisan db:seed` always updates existing profile records with valid Komerce IDs.
+- **Fixed shipping calculation empty rates:** When origin was set to legacy BPS code, Komerce API returned `422 Origin or Destination not found`, resulting in empty rates `[]`. Setting valid Komerce district ID `3866` resolves shipping calculation for all couriers.
+- **Verification:** Verified `calculate/district/domestic-cost` endpoint with origin `3866` and destination `1343`, successfully returning JNE/POS/TIKI shipping options.
+
+### Files changed
+- `database/seeders/ProfileStoreSeeder.php`
+- `tests/Feature/ShippingCalculationTest.php`
+- `docs/CHANGELOG.md`
+
+- **Full path storage in `ProductController`:**
+  - Updated `store()` and `update()` to store uploaded product images as full public paths (`/storage/products/{imageName}`).
+  - Updated `update()` and `destroy()` to strip `'/storage/'` when checking and deleting images from the `public` disk.
+  - Updated `apiSearch()` to handle full paths directly without extra prefixing.
+- **Seeder updates (`ProductSeeder.php`):**
+  - Updated `ProductSeeder` to map seeded product images with `/storage/products/` prefix.
+- **Frontend resilience (`resources/js`):**
+  - Updated image URL resolution across customer and admin components (`Product.vue`, `Customer/Product.vue`, `Edit.vue`, `CartDrawer.vue`, `Cart.vue`, `Checkout.vue`, `Dashboard.vue`, `OrderHistoryTab.vue`, `ReviewsTab.vue`) to safely handle full paths (`img.startsWith('/') ? img : '/storage/products/' + img`).
+- **Verification:**
+  - Built frontend production assets cleanly with `npm run build`.
+
+### Files changed
+- `app/Http/Controllers/ProductController.php`
+- `database/seeders/ProductSeeder.php`
+- `resources/js/Components/Customer/Sub-main/Product.vue`
+- `resources/js/Pages/Customer/Product.vue`
+- `resources/js/Pages/Admin/Products/Edit.vue`
+- `resources/js/Components/Customer/Main/CartDrawer.vue`
+- `resources/js/Pages/Customer/Cart.vue`
+- `resources/js/Pages/Customer/Checkout.vue`
+- `resources/js/Pages/Admin/Dashboard.vue`
+- `resources/js/Components/Customer/Main/OrderHistoryTab.vue`
+- `resources/js/Components/Customer/Main/ReviewsTab.vue`
+- `docs/CHANGELOG.md`
+
+## [2026-10-01] — Store full logo path in ProfileStore and simplify middleware
+
+- **Full path storage in `ProfileStoreController`:**
+  - Updated `update()` to store uploaded logos as full public path (`/storage/logo/...`) in the database.
+  - Properly removes old logo files on the public disk by stripping `/storage/`.
+- **Simplified `HandleInertiaRequests` middleware:**
+  - `storeLogo` directly passes `$profileStore?->logo ?: '/img/Logo/Logo.svg'` without complex string parsing.
+- **Updated `ProfileStoreSeeder`:**
+  - Seeded logo set to full path: `'/storage/logo/logo.svg'`.
+- **Admin & Component updates:**
+  - `ProfileStore.vue`: adjusted logo previews to support full paths without double-prefixing.
+  - `ProfileStoreTest.php`: added `test_admin_can_upload_and_update_store_logo` asserting `/storage/logo/` path persistence and file cleanup.
+- **Verification:**
+  - Built frontend production assets cleanly with `npm run build`.
+
+### Files changed
+- `app/Http/Controllers/ProfileStoreController.php`
+- `app/Http/Middleware/HandleInertiaRequests.php`
+- `database/seeders/ProfileStoreSeeder.php`
+- `resources/js/Pages/Admin/ProfileStore.vue`
+- `tests/Feature/ProfileStoreTest.php`
+- `docs/CHANGELOG.md`
+
+## [2026-09-30] — Fix bugs and edge cases in `Customer/Checkout.vue` and `ShippingService`
+
+- **Fixed HTTP 500 error on `/locations/provinces`:** Updated `map()` in `app/Services/ShippingService.php` to handle Komerce RajaOngkir API array format (`id` / `name` keys) alongside traditional RajaOngkir keys (`province_id`/`province_name`, `city_id`/`city_name`, `subdistrict_id`/`subdistrict_name`).
+- **Resolved runtime `page` reference crashes:** Imported `usePage` from `@inertiajs/vue3` and initialized `const page = usePage()`, fixing undefined variable errors on contact email elements.
+- **Fixed guest email validation:** Added email presence check on Step 1 (`goToStep('shipping')`) for guest users so missing emails are caught before advancing to shipping and payment.
+- **Enhanced submission error handling:** Added error feedback via `ToastNotification` and auto-step navigation in `form.post` `onError` callback; added watcher on `page.props.flash` to display backend exception and flash messages.
+- **Prevented duplicate shipping rate requests:** Guarded `calculateShippingRates()` with `isCalculatingShipping` and consolidated the `district_id` watcher.
+- **Added empty cart state:** Handled empty cart scenarios with a friendly message and a link back to `/cart` instead of submitting empty orders.
+- **Form submission & image safety:** Added `@submit.prevent` on the main form to prevent accidental submission on Enter key; added `getProductImage()` helper with fallback to prevent crashes on null/empty product images.
+- **Cleaned up dead code:** Removed unreferenced `isLoading` and `error` states and no-op retry handlers.
+
+### Files changed
+- `app/Services/ShippingService.php`
+- `resources/js/Pages/Customer/Checkout.vue`
+- `docs/CHANGELOG.md`
+
 ## [2026-09-30] — Document shipping provider architecture
 
 - **Documented the provider split:** shipping rate calculation & region data use the **RajaOngkir** API; shipment tracking uses the **BinderByte** API (both server-side, keys never exposed to the browser).

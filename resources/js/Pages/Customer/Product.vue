@@ -287,7 +287,7 @@ onUnmounted(() => {
                     <!-- Main Image Display -->
                     <div class="relative">
                         <div v-if="currentImage" class="bg-gray-200 rounded-2xl overflow-hidden">
-                            <img :src="`/storage/products/${currentImage}`" :alt="product.name || 'Product image'"
+                            <img :src="currentImage?.startsWith('/') ? currentImage : `/storage/products/${currentImage}`" :alt="product.name || 'Product image'"
                                 class="w-full h-96 object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
                                 @click="openImageModal" @error="
                                     $event.target.src = '/img/placeholder.png'
@@ -318,7 +318,7 @@ onUnmounted(() => {
                                 ? 'border-orange-500 shadow-lg'
                                 : 'border-gray-300 hover:border-orange-300',
                         ]">
-                            <img :src="`/storage/products/${image}`" :alt="`Product image ${index + 1}`"
+                            <img :src="image.startsWith('/') ? image : `/storage/products/${image}`" :alt="`Product image ${index + 1}`"
                                 class="w-full h-full object-cover" @error="
                                     $event.target.src = '/img/placeholder.png'
                                     " />
@@ -474,7 +474,7 @@ onUnmounted(() => {
         <div v-if="showImageModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
             @click="closeImageModal">
             <div class="relative max-w-4xl max-h-full p-4">
-                <img :src="`/storage/products/${currentImage}`" :alt="product.name || 'Product image'"
+                <img :src="currentImage?.startsWith('/') ? currentImage : `/storage/products/${currentImage}`" :alt="product.name || 'Product image'"
                     class="max-w-full max-h-full object-contain" @click.stop />
 
                 <!-- Close button -->

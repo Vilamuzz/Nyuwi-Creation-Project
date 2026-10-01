@@ -28,17 +28,16 @@ class ShippingCalculationTest extends TestCase
         Config::set('services.binderbyte.api_key', 'mock-binderbyte-key');
 
         Http::fake([
-            'https://api.binderbyte.com/v1/cost*' => Http::response([
-                'status' => 200,
-                'message' => 'Success',
+            'https://rajaongkir.komerce.id/api/v1/calculate/district/domestic-cost*' => Http::response([
+                'status' => 'success',
                 'data' => [
-                    'costs' => [
-                        [
-                            'service' => 'REG',
-                            'description' => 'Layanan Reguler',
-                            'cost' => 19000,
-                            'etd' => '2-3 hari',
-                        ],
+                    [
+                        'name' => 'TIKI',
+                        'code' => 'tiki',
+                        'service' => 'REG',
+                        'description' => 'Layanan Reguler',
+                        'cost' => 19000,
+                        'etd' => '2-3 hari',
                     ],
                 ],
             ], 200),
@@ -50,7 +49,7 @@ class ShippingCalculationTest extends TestCase
             'logo' => '',
             'address' => 'Jl. Mawar No. 10',
             'embedded_map' => '',
-            'district_id' => '3517120',
+            'district_id' => '3866',
             'district_name' => 'Peterongan',
             'shipping_couriers' => ['tiki'],
             'phone' => '08123456789',
@@ -64,7 +63,7 @@ class ShippingCalculationTest extends TestCase
         $response->assertOk()
             ->assertJson([
                 'status' => 'success',
-                'origin' => '3517120',
+                'origin' => '3866',
                 'destination' => 'Bandung',
             ]);
 
@@ -80,17 +79,16 @@ class ShippingCalculationTest extends TestCase
         Config::set('services.binderbyte.api_key', 'mock-binderbyte-key');
 
         Http::fake([
-            'https://api.binderbyte.com/v1/cost*' => Http::response([
-                'status' => 200,
-                'message' => 'Success',
+            'https://rajaongkir.komerce.id/api/v1/calculate/district/domestic-cost*' => Http::response([
+                'status' => 'success',
                 'data' => [
-                    'costs' => [
-                        [
-                            'service' => 'REG',
-                            'description' => 'Layanan Reguler',
-                            'cost' => 19000,
-                            'etd' => '2-3 hari',
-                        ],
+                    [
+                        'name' => 'TIKI',
+                        'code' => 'tiki',
+                        'service' => 'REG',
+                        'description' => 'Layanan Reguler',
+                        'cost' => 19000,
+                        'etd' => '2-3 hari',
                     ],
                 ],
             ], 200),
@@ -140,37 +138,29 @@ class ShippingCalculationTest extends TestCase
             ], 200),
         ]);
 
-        $citiesResponse = $this->getJson(route('shipping.cities'));
-        $citiesResponse->assertOk()
-            ->assertJsonStructure(['status', 'data']);
-
-        $couriersResponse = $this->getJson(route('shipping.couriers'));
-        $couriersResponse->assertOk()
-            ->assertJsonStructure(['status', 'data']);
+        $citiesResponse = $this->getJson('/locations/provinces');
+        $citiesResponse->assertOk();
     }
 
-    public function test_shipping_service_calculates_rates_via_binderbyte(): void
+    public function test_shipping_service_calculates_rates_via_komerce(): void
     {
-        Config::set('services.binderbyte.api_key', 'mock-binderbyte-key');
-
         Http::fake([
-            'https://api.binderbyte.com/v1/cost*' => Http::response([
-                'status' => 200,
-                'message' => 'Success',
+            'https://rajaongkir.komerce.id/api/v1/calculate/district/domestic-cost*' => Http::response([
+                'status' => 'success',
                 'data' => [
-                    'costs' => [
-                        [
-                            'service' => 'REG',
-                            'description' => 'Layanan Reguler',
-                            'cost' => 19000,
-                            'etd' => '2-3 hari',
-                        ],
+                    [
+                        'name' => 'Jalur Nugraha Ekakurir (JNE)',
+                        'code' => 'jne',
+                        'service' => 'REG',
+                        'description' => 'Layanan Reguler',
+                        'cost' => 19000,
+                        'etd' => '2-3 hari',
                     ],
                 ],
             ], 200),
         ]);
 
-        $rates = app(ShippingService::class)->calculate('Surabaya', 'Bandung', 1000, ['jne']);
+        $rates = app(ShippingService::class)->cost(1, 2, 1000, ['jne']);
 
         $this->assertCount(1, $rates);
         $this->assertEquals('jne', $rates[0]['courier']);

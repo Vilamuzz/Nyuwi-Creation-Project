@@ -17,8 +17,11 @@ class ShippingService
 
     private function cached(string $key, string $path)
     {
-        return Cache::remember($key, now()->addDays(30),
-            fn () => $this->client()->get($path)->throw()->json('data'));
+        return Cache::remember(
+            $key,
+            now()->addDays(30),
+            fn() => $this->client()->get($path)->throw()->json('data')
+        );
     }
 
     public function provinces()
@@ -36,26 +39,53 @@ class ShippingService
         return $this->map($this->cached("ro:dist:$cityId", "destination/district/$cityId"), 'subdistrict_id', 'subdistrict_name');
     }
 
-    /**
-     * RajaOngkir uses level-specific keys; flatten to id/name for the UI.
-     */
     private function map(array $rows, string $idKey, string $nameKey): array
     {
-        return array_map(fn (array $row) => [
-            'id' => (string) $row[$idKey],
-            'name' => (string) $row[$nameKey],
+        return array_map(fn(array $row) => [
+            'id' => (string) ($row[$idKey] ?? $row['id'] ?? ''),
+            'name' => (string) ($row[$nameKey] ?? $row['name'] ?? ''),
         ], $rows);
     }
 
-    public function cost(int $originDistrictId, int $destinationDistrictId, int $weightGram, string $courier)
+    public function cost(int|string $originDistrictId, int|string $destinationDistrictId, int $weightGram, array|string $couriers): array
     {
-        return $this->client()->asForm()->post('calculate/district/domestic-cost', [
-            'origin' => $originDistrictId,
-            'destination' => $destinationDistrictId,
-            'weight' => $weightGram,
-            'courier' => $courier,
-            'price' => 'lowest',
-        ])->throw()->json('data');
+        $courierList = is_array($couriers) ? $couriers : [$couriers];
+        $allRates = [];
+
+        foreach ($courierList as $courierCode) {
+            $code = strtolower(trim((string) $courierCode));
+            if (empty($code)) continue;
+
+            try {
+                $response = $this->client()->asForm()->post('calculate/district/domestic-cost', [
+                    'origin' => (int) $originDistrictId,
+                    'destination' => (int) $destinationDistrictId,
+                    'weight' => $weightGram,
+                    'courier' => $code,
+                    'price' => 'lowest',
+                ]);
+
+                if ($response->successful()) {
+                    $items = $response->json('data') ?? [];
+                    if (is_array($items)) {
+                        foreach ($items as $item) {
+                            $allRates[] = [
+                                'courier' => $item['code'] ?? $code,
+                                'name' => $item['name'] ?? strtoupper($code),
+                                'service' => $item['service'] ?? '',
+                                'description' => $item['description'] ?? '',
+                                'cost' => (float) ($item['cost'] ?? 0),
+                                'etd' => $item['etd'] ?? '',
+                            ];
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Failed to fetch shipping rate for courier {$code}: " . $e->getMessage());
+            }
+        }
+
+        return $allRates;
     }
 
     public function track(string $courier, string $trackingNumber): array
@@ -86,11 +116,11 @@ class ShippingService
                 'message' => 'Respon tidak valid dari server pelacakan.',
             ];
         } catch (\Throwable $e) {
-            Log::error('BinderByte tracking error: '.$e->getMessage());
+            Log::error('BinderByte tracking error: ' . $e->getMessage());
 
             return [
                 'status' => 500,
-                'message' => 'Gagal melacak resi pengiriman: '.$e->getMessage(),
+                'message' => 'Gagal melacak resi pengiriman: ' . $e->getMessage(),
                 'data' => null,
             ];
         }

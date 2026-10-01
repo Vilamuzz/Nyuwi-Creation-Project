@@ -80,7 +80,8 @@ const previewImageUrl = computed(() => {
         }
     }
     if (props.product.images && props.product.images.length > 0) {
-        return `/storage/products/${props.product.images[0]}`;
+        const first = props.product.images[0];
+        return first.startsWith("/") ? first : `/storage/products/${first}`;
     }
     return null;
 });
