@@ -4,18 +4,13 @@ import { router, useForm, usePage, Link } from "@inertiajs/vue3";
 import { triggerSnapPayment } from "@/Utils/midtrans";
 import axios from "axios";
 import {
-    Package,
     ShoppingBag,
     Search,
     Truck,
-    Clock,
     CreditCard,
     ChevronDown,
     ChevronUp,
-    ExternalLink,
     MapPin,
-    AlertCircle,
-    CheckCircle2,
     X,
     Star,
     Loader2
@@ -30,7 +25,7 @@ const props = defineProps({
 
 const page = usePage();
 const searchQuery = ref("");
-const selectedFilter = ref("all"); // 'all' | 'pending' | 'processing' | 'shiping' | 'completed' | 'cancelled'
+const selectedFilter = ref("all");
 const payingOrderId = ref(null);
 const expandedOrders = ref(new Set());
 
@@ -121,6 +116,7 @@ const getStatusBadge = (status) => {
 
 const getPaymentStatusBadge = (status) => {
     switch (status) {
+        case "unpaid":
         case "pending":
             return {
                 label: "Menunggu Pembayaran",
@@ -159,8 +155,8 @@ const filterCounts = computed(() => {
     const list = props.orders || [];
     return {
         all: list.length,
-        pending: list.filter((o) => o.payment_status === "pending").length,
-        processing: list.filter((o) => o.status === "processing" && o.payment_status !== "pending").length,
+        unpaid: list.filter((o) => ["unpaid", "pending"].includes(o.payment_status)).length,
+        processing: list.filter((o) => o.status === "processing" && !["unpaid", "pending"].includes(o.payment_status)).length,
         shiping: list.filter((o) => o.status === "shiping").length,
         completed: list.filter((o) => o.status === "completed").length,
         cancelled: list.filter((o) => o.status === "cancelled").length,
@@ -172,10 +168,10 @@ const filteredOrders = computed(() => {
     let list = props.orders || [];
 
     // Filter by tab
-    if (selectedFilter.value === "pending") {
-        list = list.filter((o) => o.payment_status === "pending");
+    if (selectedFilter.value === "unpaid") {
+        list = list.filter((o) => ["unpaid", "pending"].includes(o.payment_status));
     } else if (selectedFilter.value === "processing") {
-        list = list.filter((o) => o.status === "processing" && o.payment_status !== "pending");
+        list = list.filter((o) => o.status === "processing" && !["unpaid", "pending"].includes(o.payment_status));
     } else if (selectedFilter.value === "shiping") {
         list = list.filter((o) => o.status === "shiping");
     } else if (selectedFilter.value === "completed") {
@@ -375,109 +371,93 @@ defineExpose({
             <!-- Search box -->
             <div class="relative w-full md:w-64">
                 <Search :size="16" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                    type="text"
-                    v-model="searchQuery"
-                    placeholder="Cari ID atau nama produk..."
-                    class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-gray-200 bg-white placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition"
-                />
+                <input type="text" v-model="searchQuery" placeholder="Cari ID atau nama produk..."
+                    class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-gray-200 bg-white placeholder-gray-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition" />
             </div>
         </div>
 
         <!-- Filter tabs bar -->
         <div class="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
-            <button
-                type="button"
-                @click="selectedFilter = 'all'"
+            <button type="button" @click="selectedFilter = 'all'"
                 class="px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5"
                 :class="[
                     selectedFilter === 'all'
                         ? 'bg-orange-500 text-white shadow-sm'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
-                ]"
-            >
+                ]">
                 Semua
-                <span class="px-1.5 py-0.2 rounded-full text-[10px]" :class="selectedFilter === 'all' ? 'bg-white/20 text-white' : 'bg-white text-gray-600'">
+                <span class="px-1.5 py-0.2 rounded-full text-[10px]"
+                    :class="selectedFilter === 'all' ? 'bg-white/20 text-white' : 'bg-white text-gray-600'">
                     {{ filterCounts.all }}
                 </span>
             </button>
 
-            <button
-                type="button"
-                @click="selectedFilter = 'pending'"
+            <button type="button" @click="selectedFilter = 'unpaid'"
                 class="px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5"
                 :class="[
-                    selectedFilter === 'pending'
+                    selectedFilter === 'unpaid'
                         ? 'bg-orange-500 text-white shadow-sm'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
-                ]"
-            >
+                ]">
                 Menunggu Pembayaran
-                <span v-if="filterCounts.pending > 0" class="px-1.5 py-0.2 rounded-full text-[10px]" :class="selectedFilter === 'pending' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'">
-                    {{ filterCounts.pending }}
+                <span v-if="filterCounts.unpaid > 0" class="px-1.5 py-0.2 rounded-full text-[10px]"
+                    :class="selectedFilter === 'unpaid' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'">
+                    {{ filterCounts.unpaid }}
                 </span>
             </button>
 
-            <button
-                type="button"
-                @click="selectedFilter = 'processing'"
+            <button type="button" @click="selectedFilter = 'processing'"
                 class="px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5"
                 :class="[
                     selectedFilter === 'processing'
                         ? 'bg-orange-500 text-white shadow-sm'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
-                ]"
-            >
+                ]">
                 Diproses
-                <span v-if="filterCounts.processing > 0" class="px-1.5 py-0.2 rounded-full text-[10px]" :class="selectedFilter === 'processing' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-800'">
+                <span v-if="filterCounts.processing > 0" class="px-1.5 py-0.2 rounded-full text-[10px]"
+                    :class="selectedFilter === 'processing' ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-800'">
                     {{ filterCounts.processing }}
                 </span>
             </button>
 
-            <button
-                type="button"
-                @click="selectedFilter = 'shiping'"
+            <button type="button" @click="selectedFilter = 'shiping'"
                 class="px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5"
                 :class="[
                     selectedFilter === 'shiping'
                         ? 'bg-orange-500 text-white shadow-sm'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
-                ]"
-            >
+                ]">
                 Dikirim
-                <span v-if="filterCounts.shiping > 0" class="px-1.5 py-0.2 rounded-full text-[10px]" :class="selectedFilter === 'shiping' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-800'">
+                <span v-if="filterCounts.shiping > 0" class="px-1.5 py-0.2 rounded-full text-[10px]"
+                    :class="selectedFilter === 'shiping' ? 'bg-white/20 text-white' : 'bg-purple-100 text-purple-800'">
                     {{ filterCounts.shiping }}
                 </span>
             </button>
 
-            <button
-                type="button"
-                @click="selectedFilter = 'completed'"
+            <button type="button" @click="selectedFilter = 'completed'"
                 class="px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5"
                 :class="[
                     selectedFilter === 'completed'
                         ? 'bg-orange-500 text-white shadow-sm'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
-                ]"
-            >
+                ]">
                 Selesai
-                <span v-if="filterCounts.completed > 0" class="px-1.5 py-0.2 rounded-full text-[10px]" :class="selectedFilter === 'completed' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'">
+                <span v-if="filterCounts.completed > 0" class="px-1.5 py-0.2 rounded-full text-[10px]"
+                    :class="selectedFilter === 'completed' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'">
                     {{ filterCounts.completed }}
                 </span>
             </button>
 
-            <button
-                type="button"
-                @click="selectedFilter = 'cancelled'"
+            <button type="button" @click="selectedFilter = 'cancelled'"
                 class="px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5"
                 :class="[
                     selectedFilter === 'cancelled'
                         ? 'bg-orange-500 text-white shadow-sm'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
-                ]"
-            >
+                ]">
                 Dibatalkan
-                <span v-if="filterCounts.cancelled > 0" class="px-1.5 py-0.2 rounded-full text-[10px]" :class="selectedFilter === 'cancelled' ? 'bg-white/20 text-white' : 'bg-red-100 text-red-800'">
+                <span v-if="filterCounts.cancelled > 0" class="px-1.5 py-0.2 rounded-full text-[10px]"
+                    :class="selectedFilter === 'cancelled' ? 'bg-white/20 text-white' : 'bg-red-100 text-red-800'">
                     {{ filterCounts.cancelled }}
                 </span>
             </button>
@@ -485,11 +465,8 @@ defineExpose({
 
         <!-- Orders list -->
         <div v-if="filteredOrders.length > 0" class="space-y-4">
-            <div
-                v-for="order in filteredOrders"
-                :key="order.id"
-                class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow"
-            >
+            <div v-for="order in filteredOrders" :key="order.id"
+                class="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6 shadow-sm hover:shadow-md transition-shadow">
                 <!-- Card Header -->
                 <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-gray-100">
                     <div class="flex items-center gap-2.5 flex-wrap">
@@ -499,16 +476,12 @@ defineExpose({
                     </div>
 
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span
-                            class="px-2.5 py-1 text-xs font-medium rounded-full border"
-                            :class="getPaymentStatusBadge(order.payment_status).class"
-                        >
+                        <span class="px-2.5 py-1 text-xs font-medium rounded-full border"
+                            :class="getPaymentStatusBadge(order.payment_status).class">
                             {{ getPaymentStatusBadge(order.payment_status).label }}
                         </span>
-                        <span
-                            class="px-2.5 py-1 text-xs font-medium rounded-full border"
-                            :class="getStatusBadge(order.status).class"
-                        >
+                        <span class="px-2.5 py-1 text-xs font-medium rounded-full border"
+                            :class="getStatusBadge(order.status).class">
                             {{ getStatusBadge(order.status).label }}
                         </span>
                     </div>
@@ -516,13 +489,12 @@ defineExpose({
 
                 <!-- Items Preview -->
                 <div class="py-4 space-y-3">
-                    <template v-for="(item, idx) in (expandedOrders.has(order.id) ? order.order_items : (order.order_items || []).slice(0, 1))" :key="item.id || idx">
+                    <template
+                        v-for="(item, idx) in (expandedOrders.has(order.id) ? order.order_items : (order.order_items || []).slice(0, 1))"
+                        :key="item.id || idx">
                         <div class="flex items-center gap-4">
-                            <img
-                                :src="getProductImage(item.product)"
-                                :alt="item.product?.name || 'Produk'"
-                                class="w-16 h-16 object-cover rounded-xl border border-gray-100 bg-gray-50 shrink-0"
-                            />
+                            <img :src="getProductImage(item.product)" :alt="item.product?.name || 'Produk'"
+                                class="w-16 h-16 object-cover rounded-xl border border-gray-100 bg-gray-50 shrink-0" />
                             <div class="flex-1 min-w-0">
                                 <h4 class="font-semibold text-gray-900 text-sm truncate">
                                     {{ item.product?.name || "Produk" }}
@@ -531,9 +503,11 @@ defineExpose({
                                     <span v-if="item.size" class="px-2 py-0.5 bg-gray-100 rounded text-gray-700">
                                         Ukuran: {{ item.size }}
                                     </span>
-                                    <span v-if="item.color" class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded text-gray-700">
+                                    <span v-if="item.color"
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded text-gray-700">
                                         Warna:
-                                        <span class="w-2.5 h-2.5 rounded-full border border-gray-300 inline-block" :style="{ backgroundColor: item.color }"></span>
+                                        <span class="w-2.5 h-2.5 rounded-full border border-gray-300 inline-block"
+                                            :style="{ backgroundColor: item.color }"></span>
                                     </span>
                                     <span>x{{ item.quantity }}</span>
                                 </div>
@@ -547,12 +521,9 @@ defineExpose({
                     </template>
 
                     <!-- Expand/Collapse items toggle if more than 1 item -->
-                    <button
-                        v-if="(order.order_items?.length || 0) > 1"
-                        type="button"
+                    <button v-if="(order.order_items?.length || 0) > 1" type="button"
                         @click="toggleOrderExpand(order.id)"
-                        class="text-xs font-semibold text-orange-600 hover:text-orange-700 inline-flex items-center gap-1 pt-1"
-                    >
+                        class="text-xs font-semibold text-orange-600 hover:text-orange-700 inline-flex items-center gap-1 pt-1">
                         <template v-if="expandedOrders.has(order.id)">
                             <span>Sembunyikan produk lainnya</span>
                             <ChevronUp :size="14" />
@@ -565,43 +536,34 @@ defineExpose({
                 </div>
 
                 <!-- Card Footer with Total & CTAs -->
-                <div class="pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div
+                    class="pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <span class="text-xs text-gray-500 block">Total Pembayaran</span>
                         <span class="text-base font-bold text-gray-900">{{ formatPrice(order.total_price) }}</span>
                     </div>
 
                     <div class="flex items-center gap-2.5 flex-wrap">
-                        <!-- Pay Now button if pending -->
-                        <button
-                            v-if="order.payment_status === 'pending'"
-                            type="button"
-                            @click="payOrder(order)"
+                        <!-- Pay Now button if pending or unpaid -->
+                        <button v-if="['unpaid', 'pending'].includes(order.payment_status)" type="button" @click="payOrder(order)"
                             :disabled="payingOrderId === order.id"
-                            class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-semibold shadow-sm transition disabled:opacity-50 inline-flex items-center gap-1.5"
-                        >
+                            class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-semibold shadow-sm transition disabled:opacity-50 inline-flex items-center gap-1.5">
                             <Loader2 v-if="payingOrderId === order.id" :size="14" class="animate-spin" />
                             <CreditCard v-else :size="14" />
                             <span>{{ payingOrderId === order.id ? 'Memuat...' : 'Bayar Sekarang' }}</span>
                         </button>
 
                         <!-- Tracking shortcut -->
-                        <button
-                            v-if="order.tracking_number && order.shipping_method !== 'GoSend'"
-                            type="button"
+                        <button v-if="order.tracking_number && order.shipping_method !== 'GoSend'" type="button"
                             @click="openOrderModal(order)"
-                            class="px-3.5 py-2 border border-gray-200 text-gray-700 hover:border-orange-500 hover:text-orange-600 rounded-xl text-xs font-medium transition inline-flex items-center gap-1.5"
-                        >
+                            class="px-3.5 py-2 border border-gray-200 text-gray-700 hover:border-orange-500 hover:text-orange-600 rounded-xl text-xs font-medium transition inline-flex items-center gap-1.5">
                             <Truck :size="14" />
                             <span>Lacak Paket</span>
                         </button>
 
                         <!-- View Details button -->
-                        <button
-                            type="button"
-                            @click="openOrderModal(order)"
-                            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-semibold transition"
-                        >
+                        <button type="button" @click="openOrderModal(order)"
+                            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-semibold transition">
                             Lihat Detail
                         </button>
                     </div>
@@ -610,11 +572,9 @@ defineExpose({
         </div>
 
         <!-- Empty State -->
-        <div
-            v-else
-            class="bg-white rounded-2xl border border-gray-100 p-12 text-center shadow-sm"
-        >
-            <div class="w-16 h-16 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div v-else class="bg-white rounded-2xl border border-gray-100 p-12 text-center shadow-sm">
+            <div
+                class="w-16 h-16 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <ShoppingBag :size="32" />
             </div>
             <h3 class="text-base font-semibold text-gray-900">Tidak Ada Pesanan Ditemukan</h3>
@@ -630,10 +590,8 @@ defineExpose({
                 </template>
             </p>
             <div class="mt-6">
-                <Link
-                    href="/boquets"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-xl transition shadow-sm"
-                >
+                <Link href="/boquets"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-xl transition shadow-sm">
                     <ShoppingBag :size="15" />
                     <span>Mulai Belanja</span>
                 </Link>
@@ -644,7 +602,8 @@ defineExpose({
         <div v-if="showOrderModal && selectedOrder" class="fixed inset-0 z-50 overflow-y-auto">
             <div class="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity" @click="closeOrderModal"></div>
             <div class="flex min-h-full items-center justify-center p-4">
-                <div class="relative bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+                <div
+                    class="relative bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
                     <!-- Modal Header -->
                     <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                         <div>
@@ -655,12 +614,9 @@ defineExpose({
                                 {{ formatDate(selectedOrder.created_at) }}
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            @click="closeOrderModal"
+                        <button type="button" @click="closeOrderModal"
                             class="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition"
-                            aria-label="Tutup"
-                        >
+                            aria-label="Tutup">
                             <X :size="20" />
                         </button>
                     </div>
@@ -668,7 +624,8 @@ defineExpose({
                     <!-- Modal Body -->
                     <div class="p-6 max-h-[75vh] overflow-y-auto space-y-6">
                         <!-- Status row -->
-                        <div class="flex items-center justify-between p-4 bg-orange-50/60 rounded-xl border border-orange-100">
+                        <div
+                            class="flex items-center justify-between p-4 bg-orange-50/60 rounded-xl border border-orange-100">
                             <div>
                                 <span class="text-xs font-medium text-orange-900 block">Status Pesanan:</span>
                                 <span class="text-sm font-bold text-orange-950 mt-0.5 block">
@@ -679,25 +636,23 @@ defineExpose({
                                 <span class="text-xs font-medium text-orange-900 block">Status Pembayaran:</span>
                                 <span
                                     class="inline-block mt-0.5 px-2.5 py-0.5 text-xs font-semibold rounded-full border"
-                                    :class="getPaymentStatusBadge(selectedOrder.payment_status).class"
-                                >
+                                    :class="getPaymentStatusBadge(selectedOrder.payment_status).class">
                                     {{ getPaymentStatusBadge(selectedOrder.payment_status).label }}
                                 </span>
                             </div>
                         </div>
 
-                        <!-- Pay now CTA inside modal if pending -->
-                        <div v-if="selectedOrder.payment_status === 'pending'" class="p-4 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between gap-3">
+                        <!-- Pay now CTA inside modal if pending or unpaid -->
+                        <div v-if="['unpaid', 'pending'].includes(selectedOrder.payment_status)"
+                            class="p-4 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between gap-3">
                             <div class="text-xs text-amber-900">
                                 <p class="font-bold">Pembayaran Belum Diselesaikan</p>
-                                <p class="mt-0.5 text-amber-800">Selesaikan pembayaran agar pesanan dapat segera diproses.</p>
+                                <p class="mt-0.5 text-amber-800">Selesaikan pembayaran agar pesanan dapat segera
+                                    diproses.</p>
                             </div>
-                            <button
-                                type="button"
-                                @click="payOrder(selectedOrder)"
+                            <button type="button" @click="payOrder(selectedOrder)"
                                 :disabled="payingOrderId === selectedOrder.id"
-                                class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-semibold shadow-sm transition shrink-0"
-                            >
+                                class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-semibold shadow-sm transition shrink-0">
                                 {{ payingOrderId === selectedOrder.id ? 'Memuat...' : 'Bayar via Midtrans' }}
                             </button>
                         </div>
@@ -705,45 +660,50 @@ defineExpose({
                         <!-- Shipping & Courier Info -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">Pengiriman</span>
-                                <p class="text-sm font-bold text-gray-900">{{ selectedOrder.shipping_method || "Kurir Reguler" }}</p>
+                                <span
+                                    class="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">Pengiriman</span>
+                                <p class="text-sm font-bold text-gray-900">
+                                    {{ selectedOrder.shipping_method || "Kurir Reguler" }}</p>
                                 <p v-if="selectedOrder.tracking_number" class="text-xs text-gray-600 mt-1">
-                                    No. Resi: <span class="font-mono font-medium text-gray-900">{{ selectedOrder.tracking_number }}</span>
+                                    No. Resi: <span class="font-mono font-medium text-gray-900">{{
+                                        selectedOrder.tracking_number
+                                    }}</span>
                                 </p>
                             </div>
                             <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">Metode Pembayaran</span>
-                                <p class="text-sm font-bold text-gray-900">{{ selectedOrder.payment_method || "Midtrans" }}</p>
+                                <span
+                                    class="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">Metode
+                                    Pembayaran</span>
+                                <p class="text-sm font-bold text-gray-900">{{ selectedOrder.payment_method || "Midtrans"
+                                }}</p>
                             </div>
                         </div>
 
                         <!-- Shipping Address -->
                         <div class="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                            <div class="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                            <div
+                                class="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                                 <MapPin :size="14" />
                                 <span>Alamat Penerima</span>
                             </div>
                             <p class="text-sm font-bold text-gray-900">{{ selectedOrder.name }}</p>
                             <p class="text-xs text-gray-600 mt-1 leading-relaxed">
-                                {{ selectedOrder.address }}, {{ selectedOrder.village ? selectedOrder.village + ', ' : '' }}{{ selectedOrder.district }}, {{ selectedOrder.city }}, {{ selectedOrder.province }}
+                                {{ selectedOrder.address }}, {{ selectedOrder.village ? selectedOrder.village + ', ' :
+                                    '' }}{{
+                                    selectedOrder.district }}, {{ selectedOrder.city }}, {{ selectedOrder.province }}
                             </p>
                             <p class="text-xs text-gray-500 mt-1">Telepon: {{ selectedOrder.phone }}</p>
                         </div>
 
                         <!-- Order Items List -->
                         <div>
-                            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Daftar Produk</h4>
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Daftar Produk
+                            </h4>
                             <div class="space-y-3">
-                                <div
-                                    v-for="item in selectedOrder.order_items"
-                                    :key="item.id"
-                                    class="flex items-center gap-4 p-3 bg-white rounded-xl border border-gray-100"
-                                >
-                                    <img
-                                        :src="getProductImage(item.product)"
-                                        :alt="item.product?.name || 'Produk'"
-                                        class="w-14 h-14 object-cover rounded-lg border border-gray-100 bg-gray-50 shrink-0"
-                                    />
+                                <div v-for="item in selectedOrder.order_items" :key="item.id"
+                                    class="flex items-center gap-4 p-3 bg-white rounded-xl border border-gray-100">
+                                    <img :src="getProductImage(item.product)" :alt="item.product?.name || 'Produk'"
+                                        class="w-14 h-14 object-cover rounded-lg border border-gray-100 bg-gray-50 shrink-0" />
                                     <div class="flex-1 min-w-0">
                                         <h5 class="font-semibold text-gray-900 text-sm truncate">
                                             {{ item.product?.name || "Produk" }}
@@ -756,60 +716,65 @@ defineExpose({
                                     </div>
                                     <div class="text-right shrink-0">
                                         <p class="text-xs text-gray-500">{{ formatPrice(item.price) }}</p>
-                                        <p class="text-sm font-bold text-gray-900">{{ formatPrice(item.total_price) }}</p>
+                                        <p class="text-sm font-bold text-gray-900">{{ formatPrice(item.total_price) }}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Live Tracking Info (if applicable) -->
-                        <div v-if="selectedOrder.tracking_number && selectedOrder.shipping_method !== 'GoSend'" class="border border-gray-100 rounded-xl p-4 bg-gray-50/50">
+                        <div v-if="selectedOrder.tracking_number && selectedOrder.shipping_method !== 'GoSend'"
+                            class="border border-gray-100 rounded-xl p-4 bg-gray-50/50">
                             <div class="flex items-center justify-between mb-3">
-                                <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                                <h4
+                                    class="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                                     <Truck :size="14" />
                                     <span>Status Pengiriman Kurir</span>
                                 </h4>
-                                <button
-                                    type="button"
-                                    @click="fetchTrackingInfo(selectedOrder.tracking_number)"
-                                    class="text-xs font-medium text-orange-600 hover:text-orange-700"
-                                >
+                                <button type="button" @click="fetchTrackingInfo(selectedOrder.tracking_number)"
+                                    class="text-xs font-medium text-orange-600 hover:text-orange-700">
                                     Perbarui
                                 </button>
                             </div>
 
-                            <div v-if="isLoadingTracking" class="py-6 text-center text-gray-500 text-xs flex items-center justify-center gap-2">
+                            <div v-if="isLoadingTracking"
+                                class="py-6 text-center text-gray-500 text-xs flex items-center justify-center gap-2">
                                 <Loader2 :size="16" class="animate-spin text-orange-500" />
                                 <span>Memuat informasi pelacakan...</span>
                             </div>
 
                             <div v-else-if="trackingInfo" class="space-y-3">
-                                <div class="p-3 bg-white rounded-lg border border-gray-100 flex items-center justify-between text-xs">
+                                <div
+                                    class="p-3 bg-white rounded-lg border border-gray-100 flex items-center justify-between text-xs">
                                     <span class="text-gray-500">Status Terakhir:</span>
-                                    <span class="font-bold text-gray-900">{{ trackingInfo.summary?.status || "Dalam Perjalanan" }}</span>
+                                    <span class="font-bold text-gray-900">
+                                        {{ trackingInfo.summary?.status || "Dalam Perjalanan" }}</span>
                                 </div>
 
                                 <div v-if="trackingInfo.history?.length" class="space-y-3 pt-2">
-                                    <div
-                                        v-for="(history, index) in trackingInfo.history"
-                                        :key="index"
-                                        class="border-l-2 border-orange-200 pl-4 pb-3 relative"
-                                    >
-                                        <div class="absolute w-2.5 h-2.5 bg-orange-500 rounded-full -left-[6px] top-1"></div>
+                                    <div v-for="(history, index) in trackingInfo.history" :key="index"
+                                        class="border-l-2 border-orange-200 pl-4 pb-3 relative">
+                                        <div class="absolute w-2.5 h-2.5 bg-orange-500 rounded-full -left-[6px] top-1">
+                                        </div>
                                         <p class="text-xs font-bold text-gray-900">{{ history.date }}</p>
                                         <p class="text-xs text-gray-700 mt-0.5">{{ history.desc }}</p>
-                                        <p v-if="history.location" class="text-[11px] text-gray-400 mt-0.5">{{ history.location }}</p>
+                                        <p v-if="history.location" class="text-[11px] text-gray-400 mt-0.5">{{
+                                            history.location
+                                        }}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <div v-else-if="trackingError" class="text-xs text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                            <div v-else-if="trackingError"
+                                class="text-xs text-amber-700 bg-amber-50 p-3 rounded-lg border border-amber-200">
                                 {{ trackingError }}
                             </div>
                         </div>
 
                         <!-- Review & Complete Order Section (If delivered or completed) -->
-                        <div v-if="isDelivered && selectedOrder.status !== 'completed'" class="p-5 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-4">
+                        <div v-if="isDelivered && selectedOrder.status !== 'completed'"
+                            class="p-5 bg-emerald-50/50 rounded-xl border border-emerald-100 space-y-4">
                             <div>
                                 <h4 class="text-sm font-bold text-emerald-950 flex items-center gap-1.5">
                                     <Star :size="16" class="fill-amber-400 text-amber-400" />
@@ -821,51 +786,36 @@ defineExpose({
                             </div>
 
                             <div class="space-y-3">
-                                <div
-                                    v-for="item in selectedOrder.order_items"
-                                    :key="item.id"
-                                    class="bg-white p-3.5 rounded-xl border border-emerald-100 flex items-center justify-between gap-3 flex-wrap"
-                                >
+                                <div v-for="item in selectedOrder.order_items" :key="item.id"
+                                    class="bg-white p-3.5 rounded-xl border border-emerald-100 flex items-center justify-between gap-3 flex-wrap">
                                     <div class="flex items-center gap-3">
-                                        <img
-                                            :src="getProductImage(item.product)"
-                                            :alt="item.product?.name || 'Produk'"
-                                            class="w-10 h-10 object-cover rounded-lg border border-gray-100"
-                                        />
-                                        <span class="text-xs font-semibold text-gray-900 truncate max-w-[180px] sm:max-w-xs">
+                                        <img :src="getProductImage(item.product)" :alt="item.product?.name || 'Produk'"
+                                            class="w-10 h-10 object-cover rounded-lg border border-gray-100" />
+                                        <span
+                                            class="text-xs font-semibold text-gray-900 truncate max-w-[180px] sm:max-w-xs">
                                             {{ item.product?.name }}
                                         </span>
                                     </div>
 
                                     <!-- Star rating input -->
                                     <div class="flex items-center gap-1">
-                                        <button
-                                            v-for="star in 5"
-                                            :key="star"
-                                            type="button"
+                                        <button v-for="star in 5" :key="star" type="button"
                                             @click="setRating(item.product_id, star)"
-                                            class="p-1 focus:outline-none transition-transform hover:scale-110"
-                                        >
-                                            <Star
-                                                :size="20"
-                                                :class="[
-                                                    (reviewForm.reviews.find((r) => r.product_id === item.product_id)?.rating || 0) >= star
-                                                        ? 'fill-amber-400 text-amber-400'
-                                                        : 'text-gray-300 fill-gray-100',
-                                                ]"
-                                            />
+                                            class="p-1 focus:outline-none transition-transform hover:scale-110">
+                                            <Star :size="20" :class="[
+                                                (reviewForm.reviews.find((r) => r.product_id === item.product_id)?.rating || 0) >= star
+                                                    ? 'fill-amber-400 text-amber-400'
+                                                    : 'text-gray-300 fill-gray-100',
+                                            ]" />
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="flex justify-end pt-2">
-                                <button
-                                    type="button"
-                                    @click="completeOrder"
+                                <button type="button" @click="completeOrder"
                                     :disabled="!allProductsReviewed || completeForm.processing"
-                                    class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                >
+                                    class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
                                     <Loader2 v-if="completeForm.processing" :size="14" class="animate-spin" />
                                     <span>Selesaikan Pesanan & Kirim Ulasan</span>
                                 </button>
@@ -876,7 +826,8 @@ defineExpose({
                         <div class="border-t border-gray-100 pt-4 space-y-2">
                             <div class="flex justify-between text-xs text-gray-500">
                                 <span>Total Pembayaran</span>
-                                <span class="text-sm font-bold text-gray-900">{{ formatPrice(selectedOrder.total_price) }}</span>
+                                <span class="text-sm font-bold text-gray-900">{{ formatPrice(selectedOrder.total_price)
+                                }}</span>
                             </div>
                         </div>
                     </div>

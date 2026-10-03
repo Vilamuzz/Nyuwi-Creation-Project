@@ -19,12 +19,27 @@ class MidtransWebhookController extends Controller
             return response()->json(['message' => 'Invalid signature'], 403);
         }
 
-        // order_id we sent was "{order_number}-{transaction_id}"
-        // e.g. "ORD-20260929-0001-17" -> tx id is everything after the last dash
+        // Look up by gateway_order_id first, then fallback to parsing parts
         $midtransOrderId = $payload['order_id'] ?? null;
-        $txId = Str::afterLast($midtransOrderId, '-');
+        $tx = PaymentTransaction::where('gateway_order_id', $midtransOrderId)->first();
 
-        $tx = PaymentTransaction::find($txId);
+        if (!$tx && $midtransOrderId) {
+            $parts = explode('-', $midtransOrderId);
+            if (count($parts) >= 4 && is_numeric($parts[2])) {
+                $tx = PaymentTransaction::find($parts[2]);
+            }
+        }
+
+        if (!$tx && $midtransOrderId) {
+            $txId = Str::afterLast($midtransOrderId, '-');
+            if (is_numeric($txId)) {
+                $tx = PaymentTransaction::find($txId);
+            }
+        }
+
+        if (!$tx && isset($parts[1]) && is_numeric($parts[1])) {
+            $tx = PaymentTransaction::where('order_id', $parts[1])->latest()->first();
+        }
 
         if (!$tx) {
             Log::error('Midtrans webhook: transaction not found', ['order_id' => $midtransOrderId]);
@@ -49,12 +64,12 @@ class MidtransWebhookController extends Controller
 
         $tx->update([
             'gateway_transaction_id' => $payload['transaction_id'] ?? null,
-            'payment_channel'        => $payload['payment_type'] ?? $tx->payment_channel,
-            'status'                 => $resolvedStatus,
-            'raw_response'           => $payload,
-            'signature_verified'     => true,
-            'paid_at'                => $resolvedStatus === 'settlement' ? now() : null,
-            'expired_at'             => $resolvedStatus === 'expire' ? now() : null,
+            'payment_channel' => $payload['payment_type'] ?? $tx->payment_channel,
+            'status' => $resolvedStatus,
+            'raw_response' => $payload,
+            'signature_verified' => true,
+            'paid_at' => $resolvedStatus === 'settlement' ? now() : null,
+            'expired_at' => $resolvedStatus === 'expire' ? now() : null,
         ]);
 
         $this->syncOrderStatus($tx->order, $resolvedStatus);
@@ -68,7 +83,8 @@ class MidtransWebhookController extends Controller
             return false;
         }
 
-        $expected = hash('sha512',
+        $expected = hash(
+            'sha512',
             $payload['order_id']
             . $payload['status_code']
             . $payload['gross_amount']
@@ -83,7 +99,7 @@ class MidtransWebhookController extends Controller
         match ($txStatus) {
             'settlement' => $order->update([
                 'payment_status' => 'paid',
-                'status'         => $order->status === 'waiting' ? 'checking' : $order->status,
+                'status' => $order->status === 'waiting' ? 'checking' : $order->status,
             ]),
             'expire' => $order->update(['payment_status' => 'expired']),
             'deny', 'cancel' => $order->update(['payment_status' => 'failed']),

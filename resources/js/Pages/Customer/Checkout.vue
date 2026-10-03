@@ -1,12 +1,14 @@
 <script setup>
-import { Head, useForm, Link, usePage } from "@inertiajs/vue3";
+import { Head, useForm, Link, usePage, router } from "@inertiajs/vue3";
 import { computed, ref, onMounted, watch } from "vue";
 import ApplicationLogo from "@/Components/ApplicationLogo.vue";
 import FormInput from "@/Components/FormInput.vue";
 import FormSelect from "@/Components/FormSelect.vue";
 import ToastNotification from "@/Components/Customer/Sub-main/ToastNotification.vue";
-import { ChevronDown, ChevronLeft, ChevronRight, Mail, ShoppingCart } from "lucide-vue-next";
+import { ChevronDown, ChevronLeft, ChevronRight, Mail, ShoppingCart, ShieldCheck } from "lucide-vue-next";
 import { formatPrice } from "@/Utils/format";
+import { triggerSnapPayment } from "@/Utils/midtrans";
+import axios from "axios";
 
 const page = usePage();
 
@@ -145,12 +147,7 @@ const currentStep = ref("information"); // 'information' | 'shipping' | 'payment
 const shippingOptions = ref([]);
 const isCalculatingShipping = ref(false);
 const shippingError = ref(null);
-
-const paymentOptions = [
-    { id: "digital_wallet", name: "Digital Wallet", description: "Pembayaran instan via E-Wallet (DANA)" },
-];
-
-const selectedPayment = ref(paymentOptions[0].id);
+const isProcessingPayment = ref(false);
 
 const isShippingSelected = (option) =>
     form.courier === option.courier &&
@@ -275,11 +272,65 @@ const goToStep = async (step) => {
     currentStep.value = step;
 };
 
+const launchPaymentModal = async (orderId) => {
+    isProcessingPayment.value = true;
+    try {
+        const response = await axios.post(route("orders.payment", orderId));
+        const snapToken = response.data.snap_token;
+        const midtrans = page.props.midtrans || {};
+
+        triggerSnapPayment({
+            snapToken,
+            snapJsUrl: midtrans.snapJsUrl,
+            clientKey: midtrans.clientKey,
+            onSuccess: (result) => {
+                triggerToast("Pembayaran berhasil!", "success");
+                if (page.props.auth?.user) {
+                    router.visit(route("customer.profile"));
+                } else {
+                    router.visit(route("cart.show"));
+                }
+            },
+            onPending: (result) => {
+                triggerToast("Menunggu penyelesaian pembayaran.", "info");
+                if (page.props.auth?.user) {
+                    router.visit(route("customer.profile"));
+                } else {
+                    router.visit(route("cart.show"));
+                }
+            },
+            onError: (result) => {
+                triggerToast("Pembayaran gagal atau terjadi kesalahan.", "error");
+            },
+            onClose: () => {
+                triggerToast("Anda menutup popup pembayaran sebelum menyelesaikan transaksi.", "warning");
+                if (page.props.auth?.user) {
+                    router.visit(route("customer.profile"));
+                } else {
+                    router.visit(route("cart.show"));
+                }
+            },
+        });
+    } catch (err) {
+        console.error("Gagal mendapatkan token pembayaran Midtrans:", err);
+        const msg = err.response?.data?.message || "Gagal memulai pembayaran Midtrans. Silakan coba lagi.";
+        triggerToast(msg, "error");
+    } finally {
+        isProcessingPayment.value = false;
+    }
+};
+
 const submitOrder = () => {
-    if (form.processing) return;
+    if (form.processing || isProcessingPayment.value) return;
 
     form.post(route("customer.orders.store"), {
         preserveScroll: true,
+        onSuccess: (pageObj) => {
+            const placedOrderId = pageObj.props?.flash?.placedOrderId || page.props.flash?.placedOrderId;
+            if (placedOrderId) {
+                launchPaymentModal(placedOrderId);
+            }
+        },
         onError: (errors) => {
             console.error("Error submitting order:", errors);
             const errorKeys = Object.keys(errors);
@@ -596,25 +647,15 @@ onMounted(fetchProvinces);
                             </div>
                         </div>
 
-                        <!-- Payment Method Selection -->
-                        <div class="space-y-3">
-                            <h2 class="text-xl font-bold text-gray-900">Metode Pembayaran</h2>
-                            <div class="space-y-2">
-                                <label v-for="option in paymentOptions" :key="option.id"
-                                    @click="selectedPayment = option.id"
-                                    class="flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-all"
-                                    :class="selectedPayment === option.id ? 'border-orange-500 bg-orange-50/50 ring-1 ring-orange-500' : 'border-gray-200 hover:border-gray-300'">
-                                    <div class="flex items-center gap-3">
-                                        <input type="radio" name="payment_option"
-                                            :checked="selectedPayment === option.id"
-                                            class="text-orange-500 focus:ring-orange-500" />
-                                        <div>
-                                            <p class="font-semibold text-gray-900">{{ option.name }}</p>
-                                            <p class="text-xs text-gray-500">{{ option.description }}</p>
-                                        </div>
-                                    </div>
-                                </label>
+                        <!-- Payment Notice -->
+                        <div class="rounded-xl border border-orange-200 bg-orange-50/60 p-5 space-y-2">
+                            <div class="flex items-center gap-2 text-orange-900 font-semibold text-base">
+                                <ShieldCheck class="w-5 h-5 text-orange-600 flex-shrink-0" />
+                                <span>Pembayaran Aman via Midtrans</span>
                             </div>
+                            <p class="text-xs text-gray-600 leading-relaxed">
+                                Pesanan Anda akan dibuat terlebih dahulu, kemudian popup pembayaran resmi dari Midtrans akan terbuka secara otomatis untuk memilih metode pembayaran (GoPay, QRIS, Virtual Account, Kartu Kredit, dll).
+                            </p>
                         </div>
 
                         <div class="flex flex-col sm:flex-row items-center justify-between pt-2 gap-4">
@@ -622,10 +663,11 @@ onMounted(fetchProvinces);
                                 class="inline-flex items-center justify-center w-full sm:w-auto gap-1 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors">
                                 <ChevronLeft :size="18" />Kembali ke Pengiriman
                             </button>
-                            <button type="button" @click="submitOrder" :disabled="form.processing"
+                            <button type="button" @click="submitOrder" :disabled="form.processing || isProcessingPayment"
                                 class="inline-flex items-center justify-center w-full sm:w-auto gap-2 rounded-full bg-orange-500 py-3.5 px-8 text-sm font-bold text-white shadow-md transition-all hover:bg-orange-600 hover:shadow-lg active:scale-[0.98] disabled:opacity-50">
-                                {{ form.processing ? 'Memproses...' : 'Buat Pesanan' }}
-                                <ChevronRight :size="18" />
+                                <span v-if="form.processing || isProcessingPayment" class="loading loading-spinner loading-xs mr-1"></span>
+                                {{ form.processing ? 'Membuat Pesanan...' : isProcessingPayment ? 'Membuka Pembayaran...' : 'Bayar Sekarang' }}
+                                <ChevronRight v-if="!form.processing && !isProcessingPayment" :size="18" />
                             </button>
                         </div>
                     </div>

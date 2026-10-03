@@ -13,7 +13,10 @@ class PaymentTransaction extends Model
     protected $fillable = [
         'order_id',
         'gateway',
+        'gateway_order_id',
         'gateway_transaction_id',
+        'snap_token',
+        'snap_redirect_url',
         'payment_channel',
         'amount',
         'gateway_fee',
@@ -30,6 +33,7 @@ class PaymentTransaction extends Model
         'gateway' => 'midtrans',
         'gateway_fee' => 0,
         'fee_borne_by' => 'merchant',
+        'net_amount' => 0,
         'status' => 'pending',
         'signature_verified' => false,
     ];

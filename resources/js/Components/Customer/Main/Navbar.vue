@@ -169,7 +169,7 @@ onUnmounted(() => {
                 </button>
 
                 <!-- Cart -->
-                <button type="button"
+                <button v-if="!$page.url.startsWith('/cart')" type="button"
                     class="inline-flex items-center justify-center p-2 text-gray-700 hover:text-orange-500 transition relative"
                     aria-label="Open cart" @click="emit('show-cart')">
                     <ShoppingCart />
@@ -216,7 +216,7 @@ onUnmounted(() => {
                         aria-label="Search" @click="toggleSearch">
                         <Search />
                     </button>
-                    <button type="button"
+                    <button v-if="!$page.url.startsWith('/cart')" type="button"
                         class="inline-flex items-center justify-center p-2 text-gray-700 hover:text-orange-500 transition relative"
                         aria-label="Open cart" @click="emit('show-cart')">
                         <ShoppingCart />

@@ -6,7 +6,8 @@ use App\Models\Order;
 use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use RuntimeException;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class PaymentController extends Controller
 {
@@ -24,7 +25,12 @@ class PaymentController extends Controller
 
         try {
             $snap = $this->payments->createSnapToken($order);
-        } catch (RuntimeException $e) {
+        } catch (Throwable $e) {
+            Log::error('Payment token creation failed: ' . $e->getMessage(), [
+                'order_id' => $order->id,
+                'exception' => $e,
+            ]);
+
             return response()->json([
                 'message' => 'Failed to generate payment token: ' . $e->getMessage(),
             ], 500);

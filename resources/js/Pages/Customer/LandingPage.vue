@@ -3,7 +3,7 @@ import { Head, Link } from "@inertiajs/vue3";
 import { ref } from "vue";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
 import Product from "@/Components/Customer/Sub-main/Product.vue";
-import { ChevronLeft, ChevronRight } from "lucide-vue-next";
+import { BadgeCheck, ChevronLeft, ChevronRight, HandHelping, Heart, Trophy } from "lucide-vue-next";
 
 const props = defineProps({
     newProducts: { type: Array, default: () => [] },
@@ -126,11 +126,11 @@ const handleImageError = (event) => {
                     <div ref="newProductsRail"
                         class="flex snap-x snap-mandatory gap-6 overflow-x-auto py-4 no-scrollbar">
                         <Product v-for="item in props.newProducts" :key="item.slug"
-                            class="w-[18rem] shrink-0 snap-start sm:w-[21rem]" :id="item.id" :slug="item.slug" :name="item.name"
-                            :price="formatPrice(item.price)" :category="getCategoryName(item.category_id)"
-                            :image="item.image" :rating="item.average_rating || 0"
-                            :total-reviews="item.total_reviews || 0" :stock="item.stock" :colors="item.colors"
-                            :sizes="item.sizes" />
+                            class="w-[18rem] shrink-0 snap-start sm:w-[21rem]" :id="item.id" :slug="item.slug"
+                            :name="item.name" :price="formatPrice(item.price)"
+                            :category="getCategoryName(item.category_id)" :image="item.image"
+                            :rating="item.average_rating || 0" :total-reviews="item.total_reviews || 0"
+                            :stock="item.stock" :colors="item.colors" :sizes="item.sizes" />
                     </div>
                     <div class="mt-4 flex justify-end gap-3">
                         <button type="button" aria-label="Previous new products"
@@ -171,12 +171,12 @@ const handleImageError = (event) => {
         <section class="px-6 py-20" aria-label="Layanan Nyuwi Creation">
             <div class="mx-auto grid max-w-7xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 <div v-for="benefit in [
-                    { title: 'Material Berkualitas', text: 'Dibuat dari bahan pilihan yang awet dan rapi', icon: '/img/icon/trophy.svg' },
-                    { title: 'Jaminan Kerapian', text: 'Setiap detail dipastikan sempurna sebelum dikirim', icon: '/img/icon/check-badge.svg' },
-                    { title: 'Pengemasan Aman', text: 'Dikemas estetik dan terlindungi ekstra hingga tiba', icon: '/img/icon/boxheart.svg' },
-                    { title: 'Layanan Responsif', text: 'Siap membantu kebutuhan & pesanan kustommu', icon: '/img/icon/support.svg' }
+                    { title: 'Material Berkualitas', text: 'Dibuat dari bahan pilihan yang awet dan rapi', icon: Trophy },
+                    { title: 'Jaminan Kerapian', text: 'Setiap detail dipastikan sempurna sebelum dikirim', icon: BadgeCheck },
+                    { title: 'Pengemasan Aman', text: 'Dikemas estetik dan terlindungi ekstra hingga tiba', icon: Heart },
+                    { title: 'Layanan Responsif', text: 'Siap membantu kebutuhan & pesanan kustommu', icon: HandHelping }
                 ]" :key="benefit.title" class="flex gap-4 rounded-2xl border border-stone-200 bg-white p-5">
-                    <img :src="benefit.icon" :alt="benefit.title" class="h-10 w-10" />
+                    <component :is="benefit.icon" class="h-10 w-10" />
                     <div>
                         <h3 class="font-semibold text-stone-900">{{ benefit.title }}</h3>
                         <p class="mt-1 text-sm text-stone-600">{{ benefit.text }}</p>
@@ -201,11 +201,11 @@ const handleImageError = (event) => {
                     <div ref="featuredProductsRail"
                         class="flex snap-x snap-mandatory gap-6 overflow-x-auto py-4 no-scrollbar">
                         <Product v-for="item in props.featuredProducts" :key="item.slug"
-                            class="w-[18rem] shrink-0 snap-start sm:w-[21rem]" :id="item.id" :slug="item.slug" :name="item.name"
-                            :price="formatPrice(item.price)" :category="getCategoryName(item.category_id)"
-                            :image="item.image" :rating="item.average_rating || 0"
-                            :total-reviews="item.total_reviews || 0" :stock="item.stock" :colors="item.colors"
-                            :sizes="item.sizes" />
+                            class="w-[18rem] shrink-0 snap-start sm:w-[21rem]" :id="item.id" :slug="item.slug"
+                            :name="item.name" :price="formatPrice(item.price)"
+                            :category="getCategoryName(item.category_id)" :image="item.image"
+                            :rating="item.average_rating || 0" :total-reviews="item.total_reviews || 0"
+                            :stock="item.stock" :colors="item.colors" :sizes="item.sizes" />
                     </div>
                     <div class="mt-4 flex justify-end gap-3">
                         <button type="button" aria-label="Previous featured products"

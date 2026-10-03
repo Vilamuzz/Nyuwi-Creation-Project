@@ -59,10 +59,10 @@ class PaymentTransactionTest extends TestCase
             'gateway_transaction_id' => 'midtrans-trx-12345',
             'payment_channel' => 'qris',
             'amount' => 125000,
-            'raw_status' => 'settlement',
+            'status' => 'settlement',
             'expired_at' => now()->addDay(),
             'paid_at' => now(),
-            'raw_payload' => ['transaction_id' => 'midtrans-trx-12345', 'transaction_status' => 'settlement'],
+            'raw_response' => ['transaction_id' => 'midtrans-trx-12345', 'transaction_status' => 'settlement'],
         ]);
 
         $this->assertDatabaseHas('payment_transactions', [
@@ -71,7 +71,7 @@ class PaymentTransactionTest extends TestCase
             'gateway' => 'midtrans',
             'gateway_transaction_id' => 'midtrans-trx-12345',
             'payment_channel' => 'qris',
-            'raw_status' => 'settlement',
+            'status' => 'settlement',
         ]);
 
         $this->assertInstanceOf(Order::class, $transaction->order);
@@ -79,8 +79,8 @@ class PaymentTransactionTest extends TestCase
 
         $this->assertCount(1, $order->paymentTransactions);
         $this->assertEquals($transaction->id, $order->paymentTransactions->first()->id);
-        $this->assertIsArray($transaction->raw_payload);
-        $this->assertEquals('midtrans-trx-12345', $transaction->raw_payload['transaction_id']);
+        $this->assertIsArray($transaction->raw_response);
+        $this->assertEquals('midtrans-trx-12345', $transaction->raw_response['transaction_id']);
     }
 
     public function test_deleting_order_cascades_to_payment_transactions(): void

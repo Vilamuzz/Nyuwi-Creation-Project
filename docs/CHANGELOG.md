@@ -1,5 +1,41 @@
 # Changelog
 
+## [2026-10-04] — Support Reusable Midtrans Snap Token for QRIS and Pending Orders
+
+- **Added `gateway_order_id`, `snap_token`, and `snap_redirect_url` to `payment_transactions`:** Allowed storing the created Midtrans Snap token and custom gateway order identifier directly on the transaction.
+- **Snap Token Reuse in `PaymentService`:** Updated `createSnapToken` to check if a pending transaction already possesses a valid, unexpired `snap_token` (within 24 hours), returning it directly instead of creating duplicate Midtrans transactions. This enables customers to re-open the Midtrans Snap modal with the exact same QRIS code or Virtual Account number intact.
+- **Webhook Resilience in `MidtransWebhookController`:** Matched incoming notifications by `gateway_order_id` first with fallback segment parsing, ensuring 100% reliable transaction lookup and status synchronization (`settlement`, `expire`, `pending`).
+- **Support `pending` payment status in Customer Order History:** Updated `OrderHistoryTab.vue` and `Dashboard.vue` so orders with `payment_status: 'pending'` keep the "Bayar Sekarang" action button visible, are grouped under the "Menunggu Pembayaran" badge and filter tab, and can re-trigger payment seamlessly.
+- **Verification:** Ran `MidtransIntegrationTest` (7 passed), `PaymentTransactionTest` (3 passed), and `npm run build` with zero errors.
+
+### Files changed
+
+- `database/migrations/2026_09_24_093501_create_payment_transactions_table.php`
+- `app/Models/PaymentTransaction.php`
+- `app/Services/PaymentService.php`
+- `app/Http/Controllers/MidtransWebhookController.php`
+- `resources/js/Components/Customer/Main/OrderHistoryTab.vue`
+- `resources/js/Pages/Customer/Dashboard.vue`
+- `tests/Feature/MidtransIntegrationTest.php`
+- `tests/Feature/PaymentTransactionTest.php`
+- `docs/CHANGELOG.md`
+
+## [2026-10-02] — Fix Midtrans payment token creation and eliminate duplicate trigger
+
+- **Fixed missing `net_amount` on `PaymentTransaction`:** Added `'net_amount' => 0` default to `$attributes` in `PaymentTransaction.php` and explicitly provided `'net_amount' => $order->total_price` during transaction creation in `PaymentService.php`, preventing database 1364 strict mode constraint errors.
+- **Added fallback for Midtrans `customer_details`:** Provided fallbacks for customer email, phone, and recipient name in `PaymentService.php` to prevent Midtrans API payload rejections on guest checkouts.
+- **Enhanced error logging in `PaymentController`:** Caught `\Throwable` instead of only `RuntimeException`, writing failures to `Log::error` with order context and returning informative 500 JSON responses.
+- **Eliminated duplicate auto-launch in `Cart.vue`:** Removed duplicate `onMounted` Snap payment trigger and unused imports from `Cart.vue`, making `Checkout.vue` the single owner of the Midtrans Snap modal lifecycle.
+- **Verification:** Ran `npm run build` with 0 errors.
+
+### Files changed
+
+- `app/Models/PaymentTransaction.php`
+- `app/Services/PaymentService.php`
+- `app/Http/Controllers/PaymentController.php`
+- `resources/js/Pages/Customer/Cart.vue`
+- `docs/CHANGELOG.md`
+
 ## [2026-10-01] — Fix origin `district_id` in `ProfileStoreSeeder` for Komerce API
 
 - **Updated `ProfileStoreSeeder` & active store profile:** Changed default `district_id` from legacy 7-digit BPS code (`3517120`) to valid Komerce API district ID `3866` (Peterongan, Jombang).
@@ -8,22 +44,24 @@
 - **Verification:** Verified `calculate/district/domestic-cost` endpoint with origin `3866` and destination `1343`, successfully returning JNE/POS/TIKI shipping options.
 
 ### Files changed
+
 - `database/seeders/ProfileStoreSeeder.php`
 - `tests/Feature/ShippingCalculationTest.php`
 - `docs/CHANGELOG.md`
 
 - **Full path storage in `ProductController`:**
-  - Updated `store()` and `update()` to store uploaded product images as full public paths (`/storage/products/{imageName}`).
-  - Updated `update()` and `destroy()` to strip `'/storage/'` when checking and deleting images from the `public` disk.
-  - Updated `apiSearch()` to handle full paths directly without extra prefixing.
+    - Updated `store()` and `update()` to store uploaded product images as full public paths (`/storage/products/{imageName}`).
+    - Updated `update()` and `destroy()` to strip `'/storage/'` when checking and deleting images from the `public` disk.
+    - Updated `apiSearch()` to handle full paths directly without extra prefixing.
 - **Seeder updates (`ProductSeeder.php`):**
-  - Updated `ProductSeeder` to map seeded product images with `/storage/products/` prefix.
+    - Updated `ProductSeeder` to map seeded product images with `/storage/products/` prefix.
 - **Frontend resilience (`resources/js`):**
-  - Updated image URL resolution across customer and admin components (`Product.vue`, `Customer/Product.vue`, `Edit.vue`, `CartDrawer.vue`, `Cart.vue`, `Checkout.vue`, `Dashboard.vue`, `OrderHistoryTab.vue`, `ReviewsTab.vue`) to safely handle full paths (`img.startsWith('/') ? img : '/storage/products/' + img`).
+    - Updated image URL resolution across customer and admin components (`Product.vue`, `Customer/Product.vue`, `Edit.vue`, `CartDrawer.vue`, `Cart.vue`, `Checkout.vue`, `Dashboard.vue`, `OrderHistoryTab.vue`, `ReviewsTab.vue`) to safely handle full paths (`img.startsWith('/') ? img : '/storage/products/' + img`).
 - **Verification:**
-  - Built frontend production assets cleanly with `npm run build`.
+    - Built frontend production assets cleanly with `npm run build`.
 
 ### Files changed
+
 - `app/Http/Controllers/ProductController.php`
 - `database/seeders/ProductSeeder.php`
 - `resources/js/Components/Customer/Sub-main/Product.vue`
@@ -40,19 +78,20 @@
 ## [2026-10-01] — Store full logo path in ProfileStore and simplify middleware
 
 - **Full path storage in `ProfileStoreController`:**
-  - Updated `update()` to store uploaded logos as full public path (`/storage/logo/...`) in the database.
-  - Properly removes old logo files on the public disk by stripping `/storage/`.
+    - Updated `update()` to store uploaded logos as full public path (`/storage/logo/...`) in the database.
+    - Properly removes old logo files on the public disk by stripping `/storage/`.
 - **Simplified `HandleInertiaRequests` middleware:**
-  - `storeLogo` directly passes `$profileStore?->logo ?: '/img/Logo/Logo.svg'` without complex string parsing.
+    - `storeLogo` directly passes `$profileStore?->logo ?: '/img/Logo/Logo.svg'` without complex string parsing.
 - **Updated `ProfileStoreSeeder`:**
-  - Seeded logo set to full path: `'/storage/logo/logo.svg'`.
+    - Seeded logo set to full path: `'/storage/logo/logo.svg'`.
 - **Admin & Component updates:**
-  - `ProfileStore.vue`: adjusted logo previews to support full paths without double-prefixing.
-  - `ProfileStoreTest.php`: added `test_admin_can_upload_and_update_store_logo` asserting `/storage/logo/` path persistence and file cleanup.
+    - `ProfileStore.vue`: adjusted logo previews to support full paths without double-prefixing.
+    - `ProfileStoreTest.php`: added `test_admin_can_upload_and_update_store_logo` asserting `/storage/logo/` path persistence and file cleanup.
 - **Verification:**
-  - Built frontend production assets cleanly with `npm run build`.
+    - Built frontend production assets cleanly with `npm run build`.
 
 ### Files changed
+
 - `app/Http/Controllers/ProfileStoreController.php`
 - `app/Http/Middleware/HandleInertiaRequests.php`
 - `database/seeders/ProfileStoreSeeder.php`
@@ -72,6 +111,7 @@
 - **Cleaned up dead code:** Removed unreferenced `isLoading` and `error` states and no-op retry handlers.
 
 ### Files changed
+
 - `app/Services/ShippingService.php`
 - `resources/js/Pages/Customer/Checkout.vue`
 - `docs/CHANGELOG.md`
@@ -83,6 +123,7 @@
 - **Note:** `ShippingService::calculate()` is currently BinderByte-backed from the previous consolidation; the documented target is RajaOngkir for calculation. Code unchanged in this entry.
 
 ### Files changed
+
 - `docs/02_TRD.md`
 - `docs/06_IMPLEMENTATION_PLAN.md`
 - `docs/specs/remove-api-layer.md`
@@ -92,18 +133,19 @@
 
 - **Removed the driver-based shipping architecture** (`app/Services/Shipping/`): `ShippingManager`, `Contracts/ShippingCalculatorInterface`, `Drivers/BinderByteShippingDriver`, `Drivers/MockShippingDriver` are deleted.
 - **`app/Services/ShippingService.php` is now the single shipping provider** (BinderByte-backed, plus the existing RajaOngkir region lookups):
-  - Ported `calculate()` (BinderByte `/cost`, kg rounding, courier filter, rate normalization), `getSupportedCouriers()`, and `getCities(?string $search)` (BinderByte `/list_city` + cache) from the deleted `BinderByteShippingDriver`.
-  - `track()` (moved here earlier) and private `normalizeCourierCode()` unchanged.
-  - *Interim:* the documented target architecture is calculate via RajaOngkir / tracking via BinderByte (see the TRD update above); `calculate()` stayed BinderByte-backed in this change.
+    - Ported `calculate()` (BinderByte `/cost`, kg rounding, courier filter, rate normalization), `getSupportedCouriers()`, and `getCities(?string $search)` (BinderByte `/list_city` + cache) from the deleted `BinderByteShippingDriver`.
+    - `track()` (moved here earlier) and private `normalizeCourierCode()` unchanged.
+    - _Interim:_ the documented target architecture is calculate via RajaOngkir / tracking via BinderByte (see the TRD update above); `calculate()` stayed BinderByte-backed in this change.
 - **Consumers switched from `ShippingManager` to `ShippingService`:**
-  - `ShippingController::calculate()` → `$shippingService->calculate(...)`; `cities()` → `$shippingService->getCities($q)`; `couriers()` → `$shippingService->getSupportedCouriers()`.
-  - `OrderController::store()` / `calculateShippingCost()` now inject `ShippingService`; the `ShippingManager` import was removed.
+    - `ShippingController::calculate()` → `$shippingService->calculate(...)`; `cities()` → `$shippingService->getCities($q)`; `couriers()` → `$shippingService->getSupportedCouriers()`.
+    - `OrderController::store()` / `calculateShippingCost()` now inject `ShippingService`; the `ShippingManager` import was removed.
 - **`AppServiceProvider`:** removed the `ShippingManager` singleton and `ShippingCalculatorInterface` bindings (no longer needed — `ShippingService` is auto-resolved).
 - **Tests:**
-  - `ShippingCalculationTest` dropped the manager/mock/rajaongkir-driver tests; the BinderByte cost test now targets `ShippingService`; controller tests use `Http::fake` against the BinderByte endpoints and set `services.binderbyte.api_key`; `ProfileStore::create()` calls include `embedded_map` (required by the current schema).
-  - `GuestCheckoutTest` no longer sets `shipping.default = mock` (dead config); it now fakes BinderByte `/cost` with the old mock rates (JNE REG = 18000) and returns empty costs for `sicepat` to preserve the “courier not offered” test.
+    - `ShippingCalculationTest` dropped the manager/mock/rajaongkir-driver tests; the BinderByte cost test now targets `ShippingService`; controller tests use `Http::fake` against the BinderByte endpoints and set `services.binderbyte.api_key`; `ProfileStore::create()` calls include `embedded_map` (required by the current schema).
+    - `GuestCheckoutTest` no longer sets `shipping.default = mock` (dead config); it now fakes BinderByte `/cost` with the old mock rates (JNE REG = 18000) and returns empty costs for `sicepat` to preserve the “courier not offered” test.
 
 ### Files changed
+
 - `app/Services/ShippingService.php`
 - `app/Http/Controllers/ShippingController.php`
 - `app/Http/Controllers/OrderController.php`
@@ -115,30 +157,32 @@
 ## [2026-09-29] — Replace manual `fetch` with axios in `Customer/Checkout.vue`
 
 - **`resources/js/Pages/Customer/Checkout.vue`:**
-  - Region loading now uses axios and is driven by `watch` instead of manual `fetch` + template handlers: `onMounted(fetchProvinces)` loads provinces, `watch(form.province_id)` loads cities (and clears city/district), and `watch(form.city_id)` loads districts.
-  - `watch(form.district_id)` derives `district_name` and resets the shipping choice; a second watcher on the same source re-calculates rates, so switching destination refetches automatically.
-  - `calculateShippingRates()` now POSTs via axios to `shipping.calculate` using the district id (previously a hand-built `fetch` with manual CSRF/XHR headers and a city fallback).
-  - Removed the now-unused `regionConfig`, `currentType`, and `fetchRegions` helpers, plus the `@update:model-value="fetchRegions(...)"` handlers on the region selects.
-  - `goToStep('shipping')` only fetches when no rates are loaded yet, avoiding a double request now that the watcher fires on district selection.
+    - Region loading now uses axios and is driven by `watch` instead of manual `fetch` + template handlers: `onMounted(fetchProvinces)` loads provinces, `watch(form.province_id)` loads cities (and clears city/district), and `watch(form.city_id)` loads districts.
+    - `watch(form.district_id)` derives `district_name` and resets the shipping choice; a second watcher on the same source re-calculates rates, so switching destination refetches automatically.
+    - `calculateShippingRates()` now POSTs via axios to `shipping.calculate` using the district id (previously a hand-built `fetch` with manual CSRF/XHR headers and a city fallback).
+    - Removed the now-unused `regionConfig`, `currentType`, and `fetchRegions` helpers, plus the `@update:model-value="fetchRegions(...)"` handlers on the region selects.
+    - `goToStep('shipping')` only fetches when no rates are loaded yet, avoiding a double request now that the watcher fires on district selection.
 - **`resources/js/bootstrap.js`:** configure the axios CSRF token from the `csrf-token` meta tag (standard Laravel pattern) so component code doesn't repeat headers.
 
 ### Files changed
+
 - `resources/js/Pages/Customer/Checkout.vue`
 - `resources/js/bootstrap.js`
 
 ## [2026-09-29] — Recalculate shipping cost server-side at order creation
 
 - **Security fix — shipping cost is no longer trusted from the client:**
-  - `OrderController::store()` now recomputes the shipping cost via a new private `calculateShippingCost()` helper using `ShippingManager`, using the store origin (`ProfileStore.district_id`, falling back to `services.rajaongkir.origin`), the cart-derived weight, and the destination district (falling back to city). It matches the client-requested `courier` + `shipping_service` against the freshly fetched rates and stores the authoritative cost.
-  - If the requested courier/service is not offered for the destination, the method throws and the order is rejected (no partial/invalid order).
-  - `OrderStoreRequest` no longer accepts `shipping_cost`, so it cannot be submitted at all. `total_price = subtotal + shipping_cost` is now fully server-derived.
+    - `OrderController::store()` now recomputes the shipping cost via a new private `calculateShippingCost()` helper using `ShippingManager`, using the store origin (`ProfileStore.district_id`, falling back to `services.rajaongkir.origin`), the cart-derived weight, and the destination district (falling back to city). It matches the client-requested `courier` + `shipping_service` against the freshly fetched rates and stores the authoritative cost.
+    - If the requested courier/service is not offered for the destination, the method throws and the order is rejected (no partial/invalid order).
+    - `OrderStoreRequest` no longer accepts `shipping_cost`, so it cannot be submitted at all. `total_price = subtotal + shipping_cost` is now fully server-derived.
 - **Frontend (`Customer/Checkout.vue`):**
-  - Removed `shipping_cost` from the submitted form; it is now a display-only `shippingCost` ref mirroring the selected rate. Shipping totals and the "Metode Pengiriman" summary still render for the customer, but nothing authoritative is sent to the server.
+    - Removed `shipping_cost` from the submitted form; it is now a display-only `shippingCost` ref mirroring the selected rate. Shipping totals and the "Metode Pengiriman" summary still render for the customer, but nothing authoritative is sent to the server.
 - **Tests:**
-  - `GuestCheckoutTest` pins `shipping.default = mock` and asserts the server-computed shipping cost (JNE REG = 18000 at the 1kg tier) and total.
-  - Added a tampering test proving a client-supplied `shipping_cost: 0` / `total_price: 1` is ignored, and a test asserting an unavailable courier/service aborts order creation.
+    - `GuestCheckoutTest` pins `shipping.default = mock` and asserts the server-computed shipping cost (JNE REG = 18000 at the 1kg tier) and total.
+    - Added a tampering test proving a client-supplied `shipping_cost: 0` / `total_price: 1` is ignored, and a test asserting an unavailable courier/service aborts order creation.
 
 ### Files changed
+
 - `app/Http/Controllers/OrderController.php`
 - `app/Http/Requests/OrderStoreRequest.php`
 - `resources/js/Pages/Customer/Checkout.vue`
@@ -147,39 +191,41 @@
 ## [2026-09-29] — Migrate `Customer/Checkout.vue` to the new order payload
 
 - **Form payload now matches `OrderController::store()` / `OrderStoreRequest`:**
-  - Replaced `name` → `recipient_name`; `province`/`city`/`district` → `province_id`/`province_name`, `city_id`/`city_name`, `district_id`/`district_name`; dropped `village`, `note`, `payment_method`, `shipping_method`; added `postal_code`, `courier`, `shipping_service`.
-  - Region `<FormSelect>`s now bind to the region **id** (`option-value="id"`); the matching `*_name` is derived with `watch` so the order keeps a human-readable snapshot alongside the API id.
-  - Shipping option selection stores `courier` + `shipping_service` (selected-state matching moved into an `isShippingSelected()` helper); the shipping-rate call sends the district id directly.
-  - Payment radio binds to a local `selectedPayment` ref — payment method is no longer submitted (Midtrans Snap handles it after the order is created).
-  - Step guards and the "Kirim ke" / "Metode Pengiriman" summaries updated to the new fields; `postal_code` input added (optional).
+    - Replaced `name` → `recipient_name`; `province`/`city`/`district` → `province_id`/`province_name`, `city_id`/`city_name`, `district_id`/`district_name`; dropped `village`, `note`, `payment_method`, `shipping_method`; added `postal_code`, `courier`, `shipping_service`.
+    - Region `<FormSelect>`s now bind to the region **id** (`option-value="id"`); the matching `*_name` is derived with `watch` so the order keeps a human-readable snapshot alongside the API id.
+    - Shipping option selection stores `courier` + `shipping_service` (selected-state matching moved into an `isShippingSelected()` helper); the shipping-rate call sends the district id directly.
+    - Payment radio binds to a local `selectedPayment` ref — payment method is no longer submitted (Midtrans Snap handles it after the order is created).
+    - Step guards and the "Kirim ke" / "Metode Pengiriman" summaries updated to the new fields; `postal_code` input added (optional).
 - **Pre-existing build blocker (not introduced here):** `npm run build` fails because `Pages/Customer/Cart.vue` imports `Components/Customer/Sub-main/PaymentInformationModal.vue`, which was deleted in the earlier QRIS-removal change. `Checkout.vue` itself compiles cleanly.
 
 ### Files changed
+
 - `resources/js/Pages/Customer/Checkout.vue`
 
 ## [2026-09-29] — Align order backend with the new `orders` schema
 
 - **`OrderController`:**
-  - `store()` now persists the current `orders` columns: `recipient_name`, `province_id`/`province_name`, `city_id`/`city_name`, `district_id`/`district_name`, `postal_code`, `courier`, `shipping_service`, `weight`, `shipping_cost`, `subtotal`, `total_price`. Dropped the removed `name`/`city`/`district`/`village`/`province`/`payment_method`/`shipping_method`/`note` fields. `order_number` is generated by the model.
-  - New orders start at `status = waiting`, `payment_status = unpaid`; `subtotal` and `weight` are derived server-side from the cart (`CartService::summarize()`) rather than trusted from the client; `total_price = subtotal + shipping_cost`.
-  - `store()` unified logged-in and guest paths on `CartService::items()` (cart rows still locked via `lockForUpdate()` for authenticated checkouts), removing the duplicated ternaries.
-  - `update()` uses the corrected status `shipped` (was `shiping`) for tracking + stock deduction, and blocks cancellation once an order is `shipped`.
-  - `tracking()`/`adminTracking()` track via `$order->courier` (replacing `shipping_method`); the GoSend no-tracking guard now matches the courier code `gosend`.
-  - `paymentToken()` accepts `unpaid` or `pending` (new orders start `unpaid`).
+    - `store()` now persists the current `orders` columns: `recipient_name`, `province_id`/`province_name`, `city_id`/`city_name`, `district_id`/`district_name`, `postal_code`, `courier`, `shipping_service`, `weight`, `shipping_cost`, `subtotal`, `total_price`. Dropped the removed `name`/`city`/`district`/`village`/`province`/`payment_method`/`shipping_method`/`note` fields. `order_number` is generated by the model.
+    - New orders start at `status = waiting`, `payment_status = unpaid`; `subtotal` and `weight` are derived server-side from the cart (`CartService::summarize()`) rather than trusted from the client; `total_price = subtotal + shipping_cost`.
+    - `store()` unified logged-in and guest paths on `CartService::items()` (cart rows still locked via `lockForUpdate()` for authenticated checkouts), removing the duplicated ternaries.
+    - `update()` uses the corrected status `shipped` (was `shiping`) for tracking + stock deduction, and blocks cancellation once an order is `shipped`.
+    - `tracking()`/`adminTracking()` track via `$order->courier` (replacing `shipping_method`); the GoSend no-tracking guard now matches the courier code `gosend`.
+    - `paymentToken()` accepts `unpaid` or `pending` (new orders start `unpaid`).
 - **Requests:**
-  - `OrderStoreRequest` validates the new region ID/name pairs, `postal_code`, `courier`, `shipping_service`, and `shipping_cost`; no longer accepts `payment_method`, `shipping_method`, or `note`.
-  - `OrderStatusUpdateRequest` status enum updated to `waiting, checking, pending, processing, shipped, completed, cancelled`.
+    - `OrderStoreRequest` validates the new region ID/name pairs, `postal_code`, `courier`, `shipping_service`, and `shipping_cost`; no longer accepts `payment_method`, `shipping_method`, or `note`.
+    - `OrderStatusUpdateRequest` status enum updated to `waiting, checking, pending, processing, shipped, completed, cancelled`.
 - **`DashboardController`:** recent-orders mapping reads `recipient_name`, `courier`, `shipping_service`, and `order_number` (was reading removed `name`/`payment_method`).
 - **Tests:**
-  - Updated `GuestCheckoutTest`, `CustomerDashboardTest`, `MidtransIntegrationTest`, `ShippingCalculationTest`, `PaymentTransactionTest`, and `AdminDashboardTest` order fixtures to the new schema.
-  - Added `AdminOrderUpdateTest` covering the shipped/cancel/status-flow behaviour of the admin status endpoint.
-  - Added guest-checkout tests for server-side totals and required region/courier fields.
+    - Updated `GuestCheckoutTest`, `CustomerDashboardTest`, `MidtransIntegrationTest`, `ShippingCalculationTest`, `PaymentTransactionTest`, and `AdminDashboardTest` order fixtures to the new schema.
+    - Added `AdminOrderUpdateTest` covering the shipped/cancel/status-flow behaviour of the admin status endpoint.
+    - Added guest-checkout tests for server-side totals and required region/courier fields.
 - **Known follow-ups (not in this change):**
-  - `MidtransService` still reads removed `$order->name`/`$order->shipping_method` (left as-is per request); will need `recipient_name` and `courier`+`shipping_service`.
-  - `MidtransWebhookController` and `PaymentTransactionTest` write `raw_status`/`raw_payload`, but the `payment_transactions` table/model use `status`/`raw_response` — a pre-existing mismatch.
-  - Frontend pages (`Customer/Checkout.vue`, `Admin/Orders/*`) still send/read the old field names (`name`, `city`, `shipping_method`, `village`); migrated separately.
+    - `MidtransService` still reads removed `$order->name`/`$order->shipping_method` (left as-is per request); will need `recipient_name` and `courier`+`shipping_service`.
+    - `MidtransWebhookController` and `PaymentTransactionTest` write `raw_status`/`raw_payload`, but the `payment_transactions` table/model use `status`/`raw_response` — a pre-existing mismatch.
+    - Frontend pages (`Customer/Checkout.vue`, `Admin/Orders/*`) still send/read the old field names (`name`, `city`, `shipping_method`, `village`); migrated separately.
 
 ### Files changed
+
 - `app/Http/Controllers/OrderController.php`
 - `app/Http/Controllers/DashboardController.php`
 - `app/Http/Requests/OrderStoreRequest.php`
@@ -195,21 +241,22 @@
 ## [2026-09-29] — Remove indoregion, QRIS, and store-city implementation
 
 - **Dependency removal:**
-  - Removed `azishapidin/indoregion` (deprecated, unmaintained since 2021) and its transitive `parsecsv/php-parsecsv` from `composer.json`/`composer.lock`.
-  - Region data now comes from the RajaOngkir API via `App\Services\ShippingService` (`/locations/*` routes); local `provinces`/`regencies`/`districts`/`villages` tables and models deleted.
+    - Removed `azishapidin/indoregion` (deprecated, unmaintained since 2021) and its transitive `parsecsv/php-parsecsv` from `composer.json`/`composer.lock`.
+    - Region data now comes from the RajaOngkir API via `App\Services\ShippingService` (`/locations/*` routes); local `provinces`/`regencies`/`districts`/`villages` tables and models deleted.
 - **Store profile alignment (`profile_stores`):**
-  - Form (`Admin/ProfileStore.vue`), `StoreProfileUpdateRequest`, and `ProfileStoreController` now persist the model's actual fields: `embedded_map`, `district_id`, `district_name`.
-  - Dropped `city`, `qris`, `shipping_origin_city_id`, `shipping_origin_district_id` everywhere (form, request, controller, shared props, views).
-  - Origin for shipping is now `district_id` (falling back to `services.rajaongkir.origin`); both shipping drivers hard-fail instead of falling back to deleted local region tables.
+    - Form (`Admin/ProfileStore.vue`), `StoreProfileUpdateRequest`, and `ProfileStoreController` now persist the model's actual fields: `embedded_map`, `district_id`, `district_name`.
+    - Dropped `city`, `qris`, `shipping_origin_city_id`, `shipping_origin_district_id` everywhere (form, request, controller, shared props, views).
+    - Origin for shipping is now `district_id` (falling back to `services.rajaongkir.origin`); both shipping drivers hard-fail instead of falling back to deleted local region tables.
 - **QRIS removal:**
-  - Removed the QRIS payment option from checkout (`Checkout.vue`), the QRIS tab from `PaymentInformationModal.vue`, the QRIS upload zone, and the footer claim.
-  - `OrderStoreRequest` now accepts only `digital_wallet`.
-  - `MidtransService` uses `$order->city_name` (the order's actual field) instead of the nonexistent `$order->city`.
+    - Removed the QRIS payment option from checkout (`Checkout.vue`), the QRIS tab from `PaymentInformationModal.vue`, the QRIS upload zone, and the footer claim.
+    - `OrderStoreRequest` now accepts only `digital_wallet`.
+    - `MidtransService` uses `$order->city_name` (the order's actual field) instead of the nonexistent `$order->city`.
 - **Tests:**
-  - Updated `tests/Feature/ProfileStoreTest.php` and `tests/Feature/ShippingCalculationTest.php` to the new schema (no `city`/`qris`/`shipping_origin_*`).
-  - Updated seeded `payment_method` values from `qris` to `digital_wallet` in feature tests.
+    - Updated `tests/Feature/ProfileStoreTest.php` and `tests/Feature/ShippingCalculationTest.php` to the new schema (no `city`/`qris`/`shipping_origin_*`).
+    - Updated seeded `payment_method` values from `qris` to `digital_wallet` in feature tests.
 
 ### Files changed
+
 - `composer.json`, `composer.lock`, `bootstrap/cache/*`
 - `app/Http/Controllers/ProfileStoreController.php`
 - `app/Http/Controllers/ShippingController.php`
@@ -238,20 +285,21 @@
 ## [2026-09-28] — Region Dropdowns & Mandatory Origin City and Subdistrict IDs
 
 - **Region Dropdown Cascades & Easier Input:**
-  - Updated `ProfileStoreController@index` to pre-load `provinces`, current store's province ID, and matching `regencies` and `districts` from IndoRegion models.
-  - Enhanced `RegionController` (`provinces`, `regencies`, `districts`, `villages`) to support JSON responses when called via AJAX/fetch.
-  - Updated `resources/js/Pages/Admin/ProfileStore.vue` with interactive, cascading dropdowns for Provinsi, Kota/Kabupaten, and Kecamatan, displaying official region names along with their database IDs.
-  - Automatically synchronizes `form.city` and `form.shipping_origin_city_id` when a Kota/Kabupaten is selected, and loads districts for selecting `form.shipping_origin_district_id`.
+    - Updated `ProfileStoreController@index` to pre-load `provinces`, current store's province ID, and matching `regencies` and `districts` from IndoRegion models.
+    - Enhanced `RegionController` (`provinces`, `regencies`, `districts`, `villages`) to support JSON responses when called via AJAX/fetch.
+    - Updated `resources/js/Pages/Admin/ProfileStore.vue` with interactive, cascading dropdowns for Provinsi, Kota/Kabupaten, and Kecamatan, displaying official region names along with their database IDs.
+    - Automatically synchronizes `form.city` and `form.shipping_origin_city_id` when a Kota/Kabupaten is selected, and loads districts for selecting `form.shipping_origin_district_id`.
 - **Validation & Seeding:**
-  - Made `shipping_origin_city_id` and `shipping_origin_district_id` mandatory (`required`) in `StoreProfileUpdateRequest`.
-  - Updated `ProfileStoreSeeder` with valid default city and district IDs for Jombang & Peterongan (`3517` and `3517120`).
+    - Made `shipping_origin_city_id` and `shipping_origin_district_id` mandatory (`required`) in `StoreProfileUpdateRequest`.
+    - Updated `ProfileStoreSeeder` with valid default city and district IDs for Jombang & Peterongan (`3517` and `3517120`).
 - **Testing & Verification:**
-  - Updated `tests/Feature/ProfileStoreTest.php` with assertions verifying that omitting origin city or district ID produces validation errors (all 9 tests passing).
-  - Verified `tests/Feature/ShippingCalculationTest.php` (all 11 tests passing).
-  - Built production assets cleanly with `npm run build`.
+    - Updated `tests/Feature/ProfileStoreTest.php` with assertions verifying that omitting origin city or district ID produces validation errors (all 9 tests passing).
+    - Verified `tests/Feature/ShippingCalculationTest.php` (all 11 tests passing).
+    - Built production assets cleanly with `npm run build`.
 
 ### Files changed
-- `database/migrations/2026_09_28_000001_add_shipping_origin_district_id_to_profile_stores_table.php` *(New)*
+
+- `database/migrations/2026_09_28_000001_add_shipping_origin_district_id_to_profile_stores_table.php` _(New)_
 - `database/seeders/ProfileStoreSeeder.php`
 - `app/Models/ProfileStore.php`
 - `app/Http/Requests/StoreProfileUpdateRequest.php`
@@ -266,15 +314,16 @@
 ## [2026-09-27] — Fix RajaOngkir HTTP Post Arguments & Komerce RajaOngkir Integration
 
 - **RajaOngkir Shipping Driver Fix & Komerce Support:**
-  - Fixed `Http::post()` argument count error in `RajaOngkirShippingDriver::calculate()` by removing the 3rd argument and setting headers using `Http::withHeaders(['key' => $this->apiKey])`.
-  - Added support for Komerce RajaOngkir API (`https://rajaongkir.komerce.id/api/v1`) with automatic endpoint detection (`POST /calculate/domestic-cost` for Komerce vs `POST /cost` for legacy).
-  - Formatted request payload with `asForm()` and weight in grams.
-  - Implemented response parser supporting both Komerce (`data` list) and legacy (`data.costs` or `rajaongkir.results.costs`) JSON structures.
-  - Improved API key resolution in `RajaOngkirShippingDriver::__construct()` to check `$config['key']`, `$config['api_key']`, and respective fallback configs (`shipping.drivers.rajaongkir.key`, `services.rajaongkir.key`, `services.rajaongkir.api_key`).
-  - Added test case `test_rajaongkir_driver_formats_komerce_api_response` in `tests/Feature/ShippingCalculationTest.php` (all 10 tests passing).
-  - Verified with real Komerce API test call and compiled frontend assets (`npm run build`).
+    - Fixed `Http::post()` argument count error in `RajaOngkirShippingDriver::calculate()` by removing the 3rd argument and setting headers using `Http::withHeaders(['key' => $this->apiKey])`.
+    - Added support for Komerce RajaOngkir API (`https://rajaongkir.komerce.id/api/v1`) with automatic endpoint detection (`POST /calculate/domestic-cost` for Komerce vs `POST /cost` for legacy).
+    - Formatted request payload with `asForm()` and weight in grams.
+    - Implemented response parser supporting both Komerce (`data` list) and legacy (`data.costs` or `rajaongkir.results.costs`) JSON structures.
+    - Improved API key resolution in `RajaOngkirShippingDriver::__construct()` to check `$config['key']`, `$config['api_key']`, and respective fallback configs (`shipping.drivers.rajaongkir.key`, `services.rajaongkir.key`, `services.rajaongkir.api_key`).
+    - Added test case `test_rajaongkir_driver_formats_komerce_api_response` in `tests/Feature/ShippingCalculationTest.php` (all 10 tests passing).
+    - Verified with real Komerce API test call and compiled frontend assets (`npm run build`).
 
 ### Files changed
+
 - `config/services.php`
 - `app/Services/Shipping/Drivers/RajaOngkirShippingDriver.php`
 - `tests/Feature/ShippingCalculationTest.php`
@@ -283,19 +332,20 @@
 ## [2026-09-25] — BinderByte Shipping Driver & Unified Package Tracking Integration
 
 - **BinderByte Shipping Driver:**
-  - Implemented `BinderByteShippingDriver` supporting cost calculation (`/v1/cost`), airway bill tracking (`/v1/track`), city fallback resolution, and supported couriers.
-  - Added `track(string $courier, string $trackingNumber)` to `ShippingCalculatorInterface`, implemented across `BinderByteShippingDriver`, `MockShippingDriver`, and `ShippingDriver`.
-  - Registered `createBinderbyteDriver()` and `track()` proxy in `ShippingManager`, setting `binderbyte` as the default shipping driver.
-  - Configured `config/shipping.php`, `config/services.php`, and `.env.example` with `SHIPPING_DRIVER=binderbyte` and `BINDERBYTE_API_KEY`.
+    - Implemented `BinderByteShippingDriver` supporting cost calculation (`/v1/cost`), airway bill tracking (`/v1/track`), city fallback resolution, and supported couriers.
+    - Added `track(string $courier, string $trackingNumber)` to `ShippingCalculatorInterface`, implemented across `BinderByteShippingDriver`, `MockShippingDriver`, and `ShippingDriver`.
+    - Registered `createBinderbyteDriver()` and `track()` proxy in `ShippingManager`, setting `binderbyte` as the default shipping driver.
+    - Configured `config/shipping.php`, `config/services.php`, and `.env.example` with `SHIPPING_DRIVER=binderbyte` and `BINDERBYTE_API_KEY`.
 - **Unified Order Tracking:**
-  - Updated `OrderController::tracking` and `OrderController::adminTracking` to delegate package tracking to `ShippingManager::track()` with automatic courier name normalization (e.g. `'JNE - REG'` normalized to `'jne'`).
+    - Updated `OrderController::tracking` and `OrderController::adminTracking` to delegate package tracking to `ShippingManager::track()` with automatic courier name normalization (e.g. `'JNE - REG'` normalized to `'jne'`).
 - **Testing & Verification:**
-  - Added test cases in `tests/Feature/ShippingCalculationTest.php` for BinderByte cost calculation, package tracking, and order tracking flow (all 9 tests passing).
-  - Verified integration tests and compiled frontend assets (`npm run build`).
+    - Added test cases in `tests/Feature/ShippingCalculationTest.php` for BinderByte cost calculation, package tracking, and order tracking flow (all 9 tests passing).
+    - Verified integration tests and compiled frontend assets (`npm run build`).
 
 ### Files changed
+
 - `app/Services/Shipping/Contracts/ShippingCalculatorInterface.php`
-- `app/Services/Shipping/Drivers/BinderByteShippingDriver.php` *(New)*
+- `app/Services/Shipping/Drivers/BinderByteShippingDriver.php` _(New)_
 - `app/Services/Shipping/Drivers/MockShippingDriver.php`
 - `app/Services/Shipping/Drivers/ShippingDriver.php`
 - `app/Services/Shipping/ShippingManager.php`
@@ -309,34 +359,35 @@
 ## [2026-09-25] — Modular Shipping Cost Calculation & Store Courier Settings
 
 - **Modular Shipping Calculation Architecture:**
-  - Created provider-agnostic `ShippingCalculatorInterface` defining `calculate()`, `getSupportedCouriers()`, and `getCities()`.
-  - Implemented `RajaOngkirShippingDriver` supporting starter/pro RajaOngkir endpoints (`/cost`, `/city`), city resolution, and standardized rate output format (`courier`, `service`, `name`, `description`, `cost`, `etd`).
-  - Implemented `MockShippingDriver` for offline local development and deterministic automated test execution.
-  - Implemented `ShippingManager` extending Laravel's `Manager` pattern to resolve configured driver dynamically (`env('SHIPPING_DRIVER', 'rajaongkir')`).
-  - Added `config/shipping.php` and updated `config/services.php` & `.env.example`.
+    - Created provider-agnostic `ShippingCalculatorInterface` defining `calculate()`, `getSupportedCouriers()`, and `getCities()`.
+    - Implemented `RajaOngkirShippingDriver` supporting starter/pro RajaOngkir endpoints (`/cost`, `/city`), city resolution, and standardized rate output format (`courier`, `service`, `name`, `description`, `cost`, `etd`).
+    - Implemented `MockShippingDriver` for offline local development and deterministic automated test execution.
+    - Implemented `ShippingManager` extending Laravel's `Manager` pattern to resolve configured driver dynamically (`env('SHIPPING_DRIVER', 'rajaongkir')`).
+    - Added `config/shipping.php` and updated `config/services.php` & `.env.example`.
 - **Store Courier Settings (Admin):**
-  - Created migration `2026_09_25_000001_add_shipping_settings_to_profile_stores_table.php` adding `shipping_origin_city_id` and `shipping_couriers` to `profile_stores`.
-  - Updated `ProfileStore` model with fillable attributes, JSON casting, and `getEnabledCouriers()` helper method.
-  - Updated `StoreProfileUpdateRequest` and `ProfileStoreController` to persist courier configurations and provide supported couriers to the frontend.
-  - Updated `resources/js/Pages/Admin/ProfileStore.vue` with an interactive "Ekspedisi & Pengiriman" section allowing admins to toggle active couriers (JNE, POS, TIKI, SiCepat, J&T) and origin city, displayed in both View and Edit modes.
+    - Created migration `2026_09_25_000001_add_shipping_settings_to_profile_stores_table.php` adding `shipping_origin_city_id` and `shipping_couriers` to `profile_stores`.
+    - Updated `ProfileStore` model with fillable attributes, JSON casting, and `getEnabledCouriers()` helper method.
+    - Updated `StoreProfileUpdateRequest` and `ProfileStoreController` to persist courier configurations and provide supported couriers to the frontend.
+    - Updated `resources/js/Pages/Admin/ProfileStore.vue` with an interactive "Ekspedisi & Pengiriman" section allowing admins to toggle active couriers (JNE, POS, TIKI, SiCepat, J&T) and origin city, displayed in both View and Edit modes.
 - **Dynamic Customer Checkout (Customer):**
-  - Updated `CartService::summarize()` to calculate `totalWeight` from products in cart.
-  - Updated `resources/js/Pages/Customer/Checkout.vue` to dynamically calculate real-time shipping costs via `/shipping/calculate` based on the store's enabled couriers and customer's destination city, with loading and error states.
-  - Relaxed `OrderStoreRequest` validation for `shipping_method` from hardcoded `'in:JNE,GoSend'` to `'string|max:100'` to accept any configured courier service.
+    - Updated `CartService::summarize()` to calculate `totalWeight` from products in cart.
+    - Updated `resources/js/Pages/Customer/Checkout.vue` to dynamically calculate real-time shipping costs via `/shipping/calculate` based on the store's enabled couriers and customer's destination city, with loading and error states.
+    - Relaxed `OrderStoreRequest` validation for `shipping_method` from hardcoded `'in:JNE,GoSend'` to `'string|max:100'` to accept any configured courier service.
 - **Testing & Verification:**
-  - Created feature test suite `tests/Feature/ShippingCalculationTest.php` (6 tests passing).
-  - Verified `tests/Feature/ProfileStoreTest.php` (9 tests passing) and `tests/Feature/GuestCheckoutTest.php` (6 tests passing).
-  - Verified frontend asset compilation (`npm run build`).
+    - Created feature test suite `tests/Feature/ShippingCalculationTest.php` (6 tests passing).
+    - Verified `tests/Feature/ProfileStoreTest.php` (9 tests passing) and `tests/Feature/GuestCheckoutTest.php` (6 tests passing).
+    - Verified frontend asset compilation (`npm run build`).
 
 ### Files changed
-- `database/migrations/2026_09_25_000001_add_shipping_settings_to_profile_stores_table.php` *(New)*
-- `config/shipping.php` *(New)*
+
+- `database/migrations/2026_09_25_000001_add_shipping_settings_to_profile_stores_table.php` _(New)_
+- `config/shipping.php` _(New)_
 - `config/services.php`
 - `.env.example`
-- `app/Services/Shipping/Contracts/ShippingCalculatorInterface.php` *(New)*
-- `app/Services/Shipping/Drivers/RajaOngkirShippingDriver.php` *(New)*
-- `app/Services/Shipping/Drivers/MockShippingDriver.php` *(New)*
-- `app/Services/Shipping/ShippingManager.php` *(New)*
+- `app/Services/Shipping/Contracts/ShippingCalculatorInterface.php` _(New)_
+- `app/Services/Shipping/Drivers/RajaOngkirShippingDriver.php` _(New)_
+- `app/Services/Shipping/Drivers/MockShippingDriver.php` _(New)_
+- `app/Services/Shipping/ShippingManager.php` _(New)_
 - `app/Providers/AppServiceProvider.php`
 - `app/Models/ProfileStore.php`
 - `app/Http/Requests/StoreProfileUpdateRequest.php`
@@ -348,7 +399,7 @@
 - `routes/web.php`
 - `resources/js/Pages/Admin/ProfileStore.vue`
 - `resources/js/Pages/Customer/Checkout.vue`
-- `tests/Feature/ShippingCalculationTest.php` *(New)*
+- `tests/Feature/ShippingCalculationTest.php` _(New)_
 - `docs/05_BACKEND_SCHEMA.md`
 - `docs/CHANGELOG.md`
 
@@ -363,6 +414,7 @@
 - Verified with `npm run build` (passes). `php artisan test` could not be run in this environment (no PHP/Docker access) — run it locally.
 
 ### Files changed
+
 - `resources/js/Components/Customer/Sub-main/CategoryInput.vue`
 - `resources/js/Pages/Admin/Products/Create.vue`
 - `resources/js/Pages/Admin/Products/Edit.vue`
@@ -373,50 +425,52 @@
 ## [2026-09-24] — Dedicated Navbar Category Pages & Seeder Synchronization
 
 - Created dedicated catalog pages matching all customer navigation links:
-  - `/new-featured` (`NewFeaturedPage.vue`): Newest products and featured favorites across all categories with search, sorting, and pagination.
-  - `/boquets` (`BoquetsPage.vue`): Scoped specifically to `Buket` category. Fixed `route("shop")` reference to `route("boquets")`.
-  - `/flowers` (`FlowersPage.vue`): Scoped specifically to `Bunga` category with custom Hero, breadcrumbs, and filters.
-  - `/accessories` (`AccessoriesPage.vue`): Scoped specifically to `Aksesoris` category with custom Hero, breadcrumbs, and filters.
-  - `/bags` (`BagsPage.vue`): Scoped specifically to `Tas` category with custom Hero, breadcrumbs, and filters.
-  - `/sale` (`SalePage.vue`): Serves all product categories with flexible filters. Fixed `route("shop")` reference to `route("sale")`.
+    - `/new-featured` (`NewFeaturedPage.vue`): Newest products and featured favorites across all categories with search, sorting, and pagination.
+    - `/boquets` (`BoquetsPage.vue`): Scoped specifically to `Buket` category. Fixed `route("shop")` reference to `route("boquets")`.
+    - `/flowers` (`FlowersPage.vue`): Scoped specifically to `Bunga` category with custom Hero, breadcrumbs, and filters.
+    - `/accessories` (`AccessoriesPage.vue`): Scoped specifically to `Aksesoris` category with custom Hero, breadcrumbs, and filters.
+    - `/bags` (`BagsPage.vue`): Scoped specifically to `Tas` category with custom Hero, breadcrumbs, and filters.
+    - `/sale` (`SalePage.vue`): Serves all product categories with flexible filters. Fixed `route("shop")` reference to `route("sale")`.
 - Updated navigation links in `resources/js/Components/Customer/Main/Navbar.vue` and `MenuDrawer.vue` to point to `/new-featured`, `/boquets`, `/flowers`, `/accessories`, `/bags`, `/sale`.
 - Updated database seeders:
-  - `database/seeders/CategorySeeder.php`: Added `Bunga` and `Tas` alongside `Aksesoris`, `Buket`, `Dekorasi`.
-  - `database/seeders/ProductSeeder.php`: Added sample products for `Bunga` (Mawar & Matahari Rajut) and `Tas` (Tas Bahu & Tas Jinjing Mini) and updated category mapping.
+    - `database/seeders/CategorySeeder.php`: Added `Bunga` and `Tas` alongside `Aksesoris`, `Buket`, `Dekorasi`.
+    - `database/seeders/ProductSeeder.php`: Added sample products for `Bunga` (Mawar & Matahari Rajut) and `Tas` (Tas Bahu & Tas Jinjing Mini) and updated category mapping.
 - Added controller actions in `app/Http/Controllers/ProductController.php`: `newFeaturedPage`, `flowersPage`, `accessoriesPage`, `bagsPage`, and reusable `renderCategoryPage` helper.
 - Created feature test suite `tests/Feature/CategoryPagesTest.php` covering all 6 endpoints, Inertia component rendering, and category filtering.
 - Verified all feature tests and production asset compilation (`npm run build`).
 
 ### Files changed
+
 - `database/seeders/CategorySeeder.php`
 - `database/seeders/ProductSeeder.php`
 - `routes/web.php`
 - `app/Http/Controllers/ProductController.php`
-- `resources/js/Pages/Customer/NewFeaturedPage.vue` *(New)*
-- `resources/js/Pages/Customer/FlowersPage.vue` *(New)*
-- `resources/js/Pages/Customer/AccessoriesPage.vue` *(New)*
-- `resources/js/Pages/Customer/BagsPage.vue` *(New)*
+- `resources/js/Pages/Customer/NewFeaturedPage.vue` _(New)_
+- `resources/js/Pages/Customer/FlowersPage.vue` _(New)_
+- `resources/js/Pages/Customer/AccessoriesPage.vue` _(New)_
+- `resources/js/Pages/Customer/BagsPage.vue` _(New)_
 - `resources/js/Pages/Customer/BoquetsPage.vue`
 - `resources/js/Pages/Customer/SalePage.vue`
 - `resources/js/Components/Customer/Main/Navbar.vue`
 - `resources/js/Components/Customer/Main/MenuDrawer.vue`
-- `tests/Feature/CategoryPagesTest.php` *(New)*
+- `tests/Feature/CategoryPagesTest.php` _(New)_
 - `docs/CHANGELOG.md`
 
 ## [2026-09-24] — Header Live Product Search Floating Dropdown
 
 - Integrated live debounced product search with a floating dropdown window in `resources/js/Components/Customer/Main/Navbar.vue`:
-  - Search trigger icon/button available in **both** Authenticated (`isLoggedIn`) and Guest navbar layouts, plus mobile search trigger.
-  - Floating search popover window anchored below header search action with animated entrance.
-  - Live debounced API search (`300ms`) querying `/api/products/search?q={query}`.
-  - Displays search results with product thumbnail, title, category badge, formatted IDR price (`Rp 150.000`), and direct link to product detail (`/product/{slug}`).
-  - View all results link navigating to `/sale?search={query}` on button click or `Enter` key submission.
-  - Handles click-outside dismissal and `Escape` key shortcut.
+    - Search trigger icon/button available in **both** Authenticated (`isLoggedIn`) and Guest navbar layouts, plus mobile search trigger.
+    - Floating search popover window anchored below header search action with animated entrance.
+    - Live debounced API search (`300ms`) querying `/api/products/search?q={query}`.
+    - Displays search results with product thumbnail, title, category badge, formatted IDR price (`Rp 150.000`), and direct link to product detail (`/product/{slug}`).
+    - View all results link navigating to `/sale?search={query}` on button click or `Enter` key submission.
+    - Handles click-outside dismissal and `Escape` key shortcut.
 - Added `apiSearch` endpoint in `app/Http/Controllers/ProductController.php` and public route `Route::get('/api/products/search')` in `routes/web.php`.
 - Created feature test `tests/Feature/ProductSearchTest.php`.
 - Verified asset build with `npm run build`.
 
 ### Files changed
+
 - `resources/js/Components/Customer/Main/Navbar.vue`
 - `app/Http/Controllers/ProductController.php`
 - `routes/web.php`
@@ -426,30 +480,32 @@
 ## [2026-09-24] — Product Create & Edit Forms Executive UX Elevation
 
 - Redesigned `resources/js/Pages/Admin/Products/Create.vue` and `resources/js/Pages/Admin/Products/Edit.vue` with executive 2-column card layout:
-  - **Left 2 Columns**: Product Spec details (*Informasi Utama*, *Harga/Stok/Berat*, *Variasi Warna & Ukuran*).
-  - **Right Column**: Media Galeri and real-time **Live Storefront Preview Card** showing how the product will appear in customer view (Title, formatted price in Rp, category badge, stock status badge, and color/size chips).
-  - **Input Adornments**: `Rp` currency prefix with live Indonesian locale formatting (`formatRupiah`), `Package` stock icon, and `Scale` weight icon with `gram` unit suffix.
-  - **Sticky Action Footer**: Bottom floating action bar featuring `Kembali` link button and `Simpan Produk` / `Perbarui Produk` button with `form.processing` spinner state.
+    - **Left 2 Columns**: Product Spec details (_Informasi Utama_, _Harga/Stok/Berat_, _Variasi Warna & Ukuran_).
+    - **Right Column**: Media Galeri and real-time **Live Storefront Preview Card** showing how the product will appear in customer view (Title, formatted price in Rp, category badge, stock status badge, and color/size chips).
+    - **Input Adornments**: `Rp` currency prefix with live Indonesian locale formatting (`formatRupiah`), `Package` stock icon, and `Scale` weight icon with `gram` unit suffix.
+    - **Sticky Action Footer**: Bottom floating action bar featuring `Kembali` link button and `Simpan Produk` / `Perbarui Produk` button with `form.processing` spinner state.
 - Fixed stray top-line text in `resources/js/Components/Customer/Sub-main/ImageInput.vue` for clean Vite compilation.
 
 ### Files changed
+
 - `resources/js/Pages/Admin/Products/Create.vue`
 - `resources/js/Pages/Admin/Products/Edit.vue`
 - `resources/js/Components/Customer/Sub-main/ImageInput.vue`
 - `docs/CHANGELOG.md`
 
 - Overhauled `resources/js/Pages/Admin/ProfileStore.vue` with executive dashboard UX:
-  - Added hero identity banner with store logo zoom effect, verified badge, and address card.
-  - Added dedicated QRIS payment card with interactive zoom modal (`showQrisModal`).
-  - Added brand-styled social media cards (Instagram, Facebook, TikTok) with 1-click clipboard copy and direct link launch.
-  - Added drag-and-drop media file upload zones for Logo and QRIS images with live preview overlays.
-  - Added sticky bottom save bar during edit mode for smooth submission without excessive scrolling.
+    - Added hero identity banner with store logo zoom effect, verified badge, and address card.
+    - Added dedicated QRIS payment card with interactive zoom modal (`showQrisModal`).
+    - Added brand-styled social media cards (Instagram, Facebook, TikTok) with 1-click clipboard copy and direct link launch.
+    - Added drag-and-drop media file upload zones for Logo and QRIS images with live preview overlays.
+    - Added sticky bottom save bar during edit mode for smooth submission without excessive scrolling.
 - Consolidated editing directly into single-page `ProfileStore.vue` and removed `Edit.vue`.
 - Updated backend seeders (`CategorySeeder`, `ProductSeeder`, `UserSeeder`, `ProfileStoreSeeder`) to use idempotent `firstOrCreate` logic.
 
 ### Files changed
+
 - `resources/js/Pages/Admin/ProfileStore.vue`
-- `resources/js/Pages/Admin/ProfileStore/Edit.vue` *(Deleted)*
+- `resources/js/Pages/Admin/ProfileStore/Edit.vue` _(Deleted)_
 - `routes/web.php`
 - `app/Http/Controllers/ProfileStoreController.php`
 - `tests/Feature/ProfileStoreTest.php`
@@ -463,37 +519,38 @@
 - Verified build with `npm run build`.
 
 ### Files changed
+
 - `app/Http/Controllers/ProfileController.php`
 - `resources/js/Pages/Admin/Profile/Edit.vue`
 - `resources/js/Pages/Admin/ProfileStore.vue`
 - `resources/js/Pages/Admin/ProfileStore/Edit.vue`
 - `docs/CHANGELOG.md`
 
-
 ## [2026-09-23] — Revamp Admin Orders List Page UX & Interaction
 
 - Completely overhauled `resources/js/Pages/Admin/Orders/Index.vue` with modern, responsive order management interface following the DaisyUI autumn theme and design guidelines.
 - **Order KPI Cards**: Added 4 top metric summary cards (Total Pesanan, Perlu Tindakan, Sedang Diproses/Kirim, Pesanan Selesai) with interactive one-click filtering.
 - **Advanced Search & Filtering Toolbar**:
-  - Real-time live search matching Order ID (`#ID`), Customer Name, Email, Phone, City, and Tracking Number with quick clear (`X`) button.
-  - Order status dropdown supporting all core lifecycle states (`waiting`, `checking`, `processing`, `shiping`, `completed`, `cancelled`) plus quick groups (`needs_action`, `in_progress`).
-  - Payment method filter (`digital_wallet`, `cod`).
-  - Sorter selector (Terbaru, Terlama, Total Tertinggi, Total Terendah).
-  - Active filter chips bar with one-click "Reset Semua Filter".
+    - Real-time live search matching Order ID (`#ID`), Customer Name, Email, Phone, City, and Tracking Number with quick clear (`X`) button.
+    - Order status dropdown supporting all core lifecycle states (`waiting`, `checking`, `processing`, `shiping`, `completed`, `cancelled`) plus quick groups (`needs_action`, `in_progress`).
+    - Payment method filter (`digital_wallet`, `cod`).
+    - Sorter selector (Terbaru, Terlama, Total Tertinggi, Total Terendah).
+    - Active filter chips bar with one-click "Reset Semua Filter".
 - **Enhanced Order Table**:
-  - Order reference with date & time formatted in Indonesian locale (`12 Sep 2026, 14:30 WIB`).
-  - Customer info with initials avatar, full name, email / phone, and city badge.
-  - Payment method badge with payment proof status indicator (Bukti Diunggah / Belum Ada Bukti).
-  - Semantic status badges with color-coded dot and icon.
-  - Shipping method and courier tracking number indicator.
-  - Direct actions: Quick Preview modal and "Kelola" full detail page link.
+    - Order reference with date & time formatted in Indonesian locale (`12 Sep 2026, 14:30 WIB`).
+    - Customer info with initials avatar, full name, email / phone, and city badge.
+    - Payment method badge with payment proof status indicator (Bukti Diunggah / Belum Ada Bukti).
+    - Semantic status badges with color-coded dot and icon.
+    - Shipping method and courier tracking number indicator.
+    - Direct actions: Quick Preview modal and "Kelola" full detail page link.
 - **Quick Order Preview Modal**:
-  - Modal displaying customer shipping destination, payment proof preview thumbnail, total amount, shipping info, and customer notes without full page reload.
+    - Modal displaying customer shipping destination, payment proof preview thumbnail, total amount, shipping info, and customer notes without full page reload.
 - **Client-side Pagination**:
-  - Smooth client-side pagination with configurable page size (10, 25, 50), page numbers with ellipsis windowing, and dedicated empty states.
+    - Smooth client-side pagination with configurable page size (10, 25, 50), page numbers with ellipsis windowing, and dedicated empty states.
 - Verified build with `npm run build`.
 
 ### Files changed
+
 - `resources/js/Pages/Admin/Orders/Index.vue`
 - `docs/CHANGELOG.md`
 
@@ -502,28 +559,29 @@
 - Completely redesigned `resources/js/Pages/Admin/Products/Index.vue` with modern, data-dense and accessible UI matching the DaisyUI autumn theme and brand orange palette.
 - **KPI Summary Cards**: Added 4 top metric cards (Total Produk, Stok Aman (>5), Stok Menipis (1-5), and Stok Habis (0)) with interactive quick-filter toggling.
 - **Advanced Search & Filter Toolbar**:
-  - Debounced search input (350ms) with clear (`X`) button and Lucide search icon.
-  - Category selector dropdown and stock status dropdown.
-  - Sort dropdown with direction indicators (Terbaru, Terlama, Nama A-Z / Z-A, Harga, Stok).
-  - View switcher between Table View and Grid/Card View (persisted in `localStorage`).
-  - Active filter chips bar with one-click "Reset Semua Filter" button.
+    - Debounced search input (350ms) with clear (`X`) button and Lucide search icon.
+    - Category selector dropdown and stock status dropdown.
+    - Sort dropdown with direction indicators (Terbaru, Terlama, Nama A-Z / Z-A, Harga, Stok).
+    - View switcher between Table View and Grid/Card View (persisted in `localStorage`).
+    - Active filter chips bar with one-click "Reset Semua Filter" button.
 - **Refined Table View**:
-  - Image thumbnail with multi-image indicator badge (`+N`) and fallback for missing photos.
-  - Product name, slug, category badge, and formatted Indonesian Rupiah pricing.
-  - Dynamic stock status badges (green for available, amber for low stock, red for out-of-stock).
-  - Weight in grams with Lucide scale icon.
-  - Row action buttons: quick preview, edit, and delete.
+    - Image thumbnail with multi-image indicator badge (`+N`) and fallback for missing photos.
+    - Product name, slug, category badge, and formatted Indonesian Rupiah pricing.
+    - Dynamic stock status badges (green for available, amber for low stock, red for out-of-stock).
+    - Weight in grams with Lucide scale icon.
+    - Row action buttons: quick preview, edit, and delete.
 - **Responsive Grid / Card View**:
-  - High quality card layout with category and stock badges, image aspect ratio, multi-image counter, price, and quick actions.
+    - High quality card layout with category and stock badges, image aspect ratio, multi-image counter, price, and quick actions.
 - **Custom Modals**:
-  - Replaced browser `window.confirm()` with a custom confirmation `Modal.vue` displaying product thumbnail, name, category, and loading state while deleting.
-  - Added Quick Product Details Preview modal displaying full image gallery with thumbnail navigation, pricing, weight, sizes, colors, description, and link to storefront.
+    - Replaced browser `window.confirm()` with a custom confirmation `Modal.vue` displaying product thumbnail, name, category, and loading state while deleting.
+    - Added Quick Product Details Preview modal displaying full image gallery with thumbnail navigation, pricing, weight, sizes, colors, description, and link to storefront.
 - **Smart Pagination & Empty States**:
-  - Added windowed pagination numbers with ellipsis to prevent overflow on large datasets.
-  - Added distinct empty states for zero search/filter results and an empty inventory.
+    - Added windowed pagination numbers with ellipsis to prevent overflow on large datasets.
+    - Added distinct empty states for zero search/filter results and an empty inventory.
 - Verified build with `npm run build`.
 
 ### Files changed
+
 - `resources/js/Pages/Admin/Products/Index.vue`
 - `docs/CHANGELOG.md`
 
@@ -538,6 +596,7 @@
 - Verified with `docker compose exec app php artisan test tests/Feature` (52 passed) and `npm run build`.
 
 ### Files changed
+
 - `app/Http/Controllers/DashboardController.php`
 - `tests/Feature/AdminDashboardTest.php`
 - `resources/js/Layouts/AdminLayout.vue`
@@ -558,6 +617,7 @@
 - Verified with `npm run build` and `php artisan test`.
 
 ### Files changed
+
 - `resources/js/Pages/Customer/Checkout.vue`
 - `resources/js/Components/FormInput.vue`
 - `resources/js/Components/FormSelect.vue`
@@ -568,6 +628,7 @@
 - Removed `confirm(...)` browser prompt in `removeItem(item)` method in `resources/js/Components/Customer/Main/CartDrawer.vue`.
 
 ### Files changed
+
 - `resources/js/Components/Customer/Main/CartDrawer.vue`
 
 ## [2026-09-19] — Bottom-right option selection confirmation pop-up for product add-to-cart
@@ -580,6 +641,7 @@
 - Submits selected options (`product_id`, `quantity`, `color`, `size`) to `cart.store` via Inertia `router.post`.
 
 ### Files changed
+
 - `resources/js/Components/Customer/Sub-main/Product.vue`
 - `resources/js/Pages/Customer/LandingPage.vue`
 - `resources/js/Pages/Customer/BoquetsPage.vue`
@@ -598,6 +660,7 @@
 - Verified with `php artisan test --testsuite=Feature` (49 passed) and `npm run build`.
 
 ### Files changed
+
 - `database/migrations/2026_09_19_053218_make_orders_user_id_nullable_add_email.php`
 - `app/Http/Controllers/CartController.php`
 - `app/Http/Controllers/OrderController.php`
@@ -617,15 +680,16 @@
 - Enhanced `GuestLayout` card container with responsive padding, modern rounded corners (`rounded-2xl`), subtle borders, and soft elevation (`shadow-xl shadow-stone-200/60`).
 - Updated core form components (`TextInput.vue`, `Checkbox.vue`, `PrimaryButton.vue`) to replace Breeze default indigo accents and dark gray uppercase buttons with Nyuwi Creation brand orange styling (`orange-500`, `focus:ring-orange-400/500`, modern border radii).
 - Modernized all authentication views:
-  - `Login.vue`: Welcoming title and subtitle, brand input placeholders, full-width CTA button, and clear link to registration.
-  - `Register.vue`: Modern stacked fields, full-width CTA button, and link to login.
-  - `ForgotPassword.vue`: Clean instructions, branded status alerts, full-width reset link button, and link back to login.
-  - `ResetPassword.vue`: Clean password reset card with full-width submit button.
-  - `VerifyEmail.vue`: Branded verification status card with mail icon, full-width resend button, and logout action.
-  - `ConfirmPassword.vue`: Secure area prompt with lock icon and branded controls.
+    - `Login.vue`: Welcoming title and subtitle, brand input placeholders, full-width CTA button, and clear link to registration.
+    - `Register.vue`: Modern stacked fields, full-width CTA button, and link to login.
+    - `ForgotPassword.vue`: Clean instructions, branded status alerts, full-width reset link button, and link back to login.
+    - `ResetPassword.vue`: Clean password reset card with full-width submit button.
+    - `VerifyEmail.vue`: Branded verification status card with mail icon, full-width resend button, and logout action.
+    - `ConfirmPassword.vue`: Secure area prompt with lock icon and branded controls.
 - Verified with `docker compose exec app php artisan test tests/Feature/Auth/` (all 18 tests passed) and `npm run build` (built cleanly).
 
 ### Files changed
+
 - `resources/js/Layouts/GuestLayout.vue`
 - `resources/js/Components/TextInput.vue`
 - `resources/js/Components/Checkbox.vue`
@@ -646,41 +710,43 @@
 - Documented CLI command for creating admin accounts (`php artisan create:admin` interactive and option flags).
 
 ### Files changed
+
 - `README.md`
 - `docs/CHANGELOG.md`
 
 ## [2026-09-24] — Split Order Statuses, Add Payment Transactions Table & Drop Payment Proof
 
 - Created migration `2026_09_24_093500_split_orders_status_and_drop_payment_proof.php`:
-  - Added `payment_status` enum (`pending`, `paid`, `failed`, `expired`, `refunded`) with default `pending`.
-  - Migrated existing orders status values into `payment_status` and new fulfillment-only `status`.
-  - Altered `status` enum column to fulfillment-only: `processing`, `shiping`, `completed`, `cancelled` (default: `processing`).
-  - Dropped obsolete `payment_proof` column.
+    - Added `payment_status` enum (`pending`, `paid`, `failed`, `expired`, `refunded`) with default `pending`.
+    - Migrated existing orders status values into `payment_status` and new fulfillment-only `status`.
+    - Altered `status` enum column to fulfillment-only: `processing`, `shiping`, `completed`, `cancelled` (default: `processing`).
+    - Dropped obsolete `payment_proof` column.
 - Created migration `2026_09_24_093501_create_payment_transactions_table.php`:
-  - Created `payment_transactions` table with `order_id` (foreign key cascading on delete), `gateway`, `gateway_transaction_id`, `payment_channel`, `amount`, `raw_status`, `expired_at`, `paid_at`, `raw_payload`, and timestamps.
-  - Added composite index on `['gateway', 'gateway_transaction_id']` for webhook idempotency and audit lookups.
+    - Created `payment_transactions` table with `order_id` (foreign key cascading on delete), `gateway`, `gateway_transaction_id`, `payment_channel`, `amount`, `raw_status`, `expired_at`, `paid_at`, `raw_payload`, and timestamps.
+    - Added composite index on `['gateway', 'gateway_transaction_id']` for webhook idempotency and audit lookups.
 - Created `App\Models\PaymentTransaction` Eloquent model with `$fillable`, `casts()` (`decimal:2`, `datetime`, `array`), and `belongsTo(Order::class)`.
 - Updated `App\Models\Order` to include `payment_status`, remove `payment_proof`, and define `hasMany(PaymentTransaction::class)`.
 - Updated `OrderStatusUpdateRequest` to validate fulfillment statuses (`processing,shiping,completed,cancelled`).
 - Updated `OrderController`:
-  - In `store()`: sets `'payment_status' => 'pending'` and `'status' => 'processing'`.
-  - In `update()`: removed obsolete checks on payment proof and digital wallet status waiting.
-  - In `uploadPaymentProof()`: safe return indicating manual proof uploads are discontinued.
+    - In `store()`: sets `'payment_status' => 'pending'` and `'status' => 'processing'`.
+    - In `update()`: removed obsolete checks on payment proof and digital wallet status waiting.
+    - In `uploadPaymentProof()`: safe return indicating manual proof uploads are discontinued.
 - Updated `DashboardController`:
-  - Updated KPI total revenue calculation to query `payment_status = 'paid'`.
-  - Updated `pendingOrdersCount` and `topSelling` subqueries to align with separated payment and fulfillment statuses.
+    - Updated KPI total revenue calculation to query `payment_status = 'paid'`.
+    - Updated `pendingOrdersCount` and `topSelling` subqueries to align with separated payment and fulfillment statuses.
 - Updated UI components to display both payment and fulfillment statuses:
-  - `Admin/Orders/Index.vue`: Added `getPaymentStatusBadge`, updated table row and preview drawer.
-  - `Admin/Orders/Show.vue`: Added payment status details, updated fulfillment badges, removed payment proof modal.
-  - `Admin/Dashboard.vue`: Added `getPaymentStatusBadge` and updated recent orders status column.
-  - `Customer/Dashboard.vue`: Removed payment proof modal and upload form.
-  - `Customer/Main/OrderHistoryTab.vue`: Added `getPaymentStatusClass`, rendered both statuses, removed manual upload button.
-  - `Customer/Main/Navbar.vue`: Checked `order.payment_status === 'pending'` for pending order alerts.
+    - `Admin/Orders/Index.vue`: Added `getPaymentStatusBadge`, updated table row and preview drawer.
+    - `Admin/Orders/Show.vue`: Added payment status details, updated fulfillment badges, removed payment proof modal.
+    - `Admin/Dashboard.vue`: Added `getPaymentStatusBadge` and updated recent orders status column.
+    - `Customer/Dashboard.vue`: Removed payment proof modal and upload form.
+    - `Customer/Main/OrderHistoryTab.vue`: Added `getPaymentStatusClass`, rendered both statuses, removed manual upload button.
+    - `Customer/Main/Navbar.vue`: Checked `order.payment_status === 'pending'` for pending order alerts.
 - Added `EnsureCustomer` middleware and registered alias `customer` in `bootstrap/app.php`.
 - Created feature test `tests/Feature/PaymentTransactionTest.php` and updated `GuestCheckoutTest.php` & `AdminDashboardTest.php`.
 - Updated backend documentation in `docs/05_BACKEND_SCHEMA.md` with schema tables, ER diagram, relationships, and indexes.
 
 ### Files changed
+
 - `database/migrations/2026_09_24_093500_split_orders_status_and_drop_payment_proof.php`
 - `database/migrations/2026_09_24_093501_create_payment_transactions_table.php`
 - `app/Models/PaymentTransaction.php`
@@ -707,9 +773,9 @@
 - Configured Midtrans credentials and URLs in `config/services.php` and placeholders in `.env.example`.
 - Created `App\Services\MidtransService` encapsulating Midtrans Snap token generation and SHA-512 notification signature verification using native Laravel HTTP client (`Http::withBasicAuth()`), with automatic line item shipping cost balancing.
 - Created `App\Http\Controllers\MidtransWebhookController` to handle incoming Midtrans notifications:
-  - Validates SHA-512 signature against order and server key.
-  - Guarantees idempotency via `payment_transactions` lookup (`order_id`, `gateway`, `gateway_transaction_id`, `raw_status`).
-  - Maps Midtrans status codes (`capture`, `settlement`, `pending`, `expire`, `cancel`, `deny`, `refund`) directly to `orders.payment_status` within an atomic database transaction.
+    - Validates SHA-512 signature against order and server key.
+    - Guarantees idempotency via `payment_transactions` lookup (`order_id`, `gateway`, `gateway_transaction_id`, `raw_status`).
+    - Maps Midtrans status codes (`capture`, `settlement`, `pending`, `expire`, `cancel`, `deny`, `refund`) directly to `orders.payment_status` within an atomic database transaction.
 - Added `paymentToken` endpoint to `OrderController` and updated `store` to flash `placedOrderId`.
 - Excluded `/webhooks/midtrans` from CSRF verification in `bootstrap/app.php`.
 - Registered webhook and payment token routes in `routes/web.php`.
@@ -720,6 +786,7 @@
 - Created feature test suite `tests/Feature/MidtransIntegrationTest.php` covering token generation, webhook signature validation, idempotency, and status updates (all 7 tests passing).
 
 ### Files changed
+
 - `config/services.php`
 - `.env.example`
 - `app/Services/MidtransService.php`
@@ -737,34 +804,35 @@
 ## [2026-09-25] - Customer Dashboard UX Enhancement
 
 ### Added & Changed
+
 - **Customer Dashboard Redesign (`resources/js/Pages/Customer/Dashboard.vue`):**
-  - Revamped into a fully responsive mobile-first customer hub with Autumn theme aesthetic (`orange-500` accents, soft warm background gradient, rounded-3xl cards).
-  - Added customer profile banner with user avatar initials, greeting, member badge, email, and join date.
-  - Added quick KPI stat summary cards (Total Pesanan, Belum Dibayar, Dalam Pengiriman, Ulasan Diberikan) with interactive navigation shortcuts.
-  - Replaced rigid desktop-only sidebar with a sticky desktop sidebar and a horizontal scrollable tab bar on mobile/tablet screens.
-  - Added toast notification feedback integration.
+    - Revamped into a fully responsive mobile-first customer hub with Autumn theme aesthetic (`orange-500` accents, soft warm background gradient, rounded-3xl cards).
+    - Added customer profile banner with user avatar initials, greeting, member badge, email, and join date.
+    - Added quick KPI stat summary cards (Total Pesanan, Belum Dibayar, Dalam Pengiriman, Ulasan Diberikan) with interactive navigation shortcuts.
+    - Replaced rigid desktop-only sidebar with a sticky desktop sidebar and a horizontal scrollable tab bar on mobile/tablet screens.
+    - Added toast notification feedback integration.
 - **Order History Upgrade (`resources/js/Components/Customer/Main/OrderHistoryTab.vue`):**
-  - Added status filter pills (Semua, Menunggu Pembayaran, Diproses, Dikirim, Selesai, Dibatalkan) with live badge counts.
-  - Added order search bar supporting search by Order ID and product title.
-  - Redesigned order cards with product thumbnail preview, variant tags (size/color), item count, expandable product lists, and clear status badges.
-  - Integrated direct Midtrans payment CTA ("Bayar Sekarang") for pending orders.
-  - Upgraded Order Details modal with comprehensive order information, delivery address card, courier tracking status timeline, and inline star rating for completed deliveries.
-  - Added warm empty state with shopping bag illustration and CTA to product catalog.
+    - Added status filter pills (Semua, Menunggu Pembayaran, Diproses, Dikirim, Selesai, Dibatalkan) with live badge counts.
+    - Added order search bar supporting search by Order ID and product title.
+    - Redesigned order cards with product thumbnail preview, variant tags (size/color), item count, expandable product lists, and clear status badges.
+    - Integrated direct Midtrans payment CTA ("Bayar Sekarang") for pending orders.
+    - Upgraded Order Details modal with comprehensive order information, delivery address card, courier tracking status timeline, and inline star rating for completed deliveries.
+    - Added warm empty state with shopping bag illustration and CTA to product catalog.
 - **Reviews Center (`resources/js/Components/Customer/Main/ReviewsTab.vue`):**
-  - Replaced broken stub with a dedicated review management center with two subtabs: "Ulasan Saya" (displaying submitted reviews with product image, star ratings, date, and product link) and "Menunggu Diulas" (completed orders eligible for rating).
-  - Connected review actions to automatically open the rating modal in Order History.
-  - Added empty states for both review views.
+    - Replaced broken stub with a dedicated review management center with two subtabs: "Ulasan Saya" (displaying submitted reviews with product image, star ratings, date, and product link) and "Menunggu Diulas" (completed orders eligible for rating).
+    - Connected review actions to automatically open the rating modal in Order History.
+    - Added empty states for both review views.
 - **Account Settings Implementation (`resources/js/Components/Customer/Main/SettingsTab.vue`):**
-  - Replaced duplicate review code with complete Customer Account Settings.
-  - Implemented Profile Information form (Name, Email, email verification status notice) and Password Update form (Current, New, Confirm) with validation error feedback.
+    - Replaced duplicate review code with complete Customer Account Settings.
+    - Implemented Profile Information form (Name, Email, email verification status notice) and Password Update form (Current, New, Confirm) with validation error feedback.
 - **Feature Tests (`tests/Feature/CustomerDashboardTest.php`):**
-  - Added test coverage for guest redirection, customer dashboard access, and order/review rendering.
+    - Added test coverage for guest redirection, customer dashboard access, and order/review rendering.
 
 ### Files changed
+
 - `resources/js/Pages/Customer/Dashboard.vue`
 - `resources/js/Components/Customer/Main/OrderHistoryTab.vue`
 - `resources/js/Components/Customer/Main/ReviewsTab.vue`
 - `resources/js/Components/Customer/Main/SettingsTab.vue`
 - `tests/Feature/CustomerDashboardTest.php`
 - `docs/CHANGELOG.md`
-

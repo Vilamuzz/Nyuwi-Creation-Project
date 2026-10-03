@@ -16,7 +16,10 @@ return new class extends Migration
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
 
             $table->string('gateway')->default('midtrans');
+            $table->string('gateway_order_id')->nullable()->index();
             $table->string('gateway_transaction_id')->nullable()->unique(); // Midtrans's transaction_id
+            $table->string('snap_token')->nullable();
+            $table->string('snap_redirect_url')->nullable();
             $table->string('payment_channel')->nullable(); // 'gopay', 'bank_transfer', 'qris', 'credit_card'
 
             $table->decimal('amount', 15, 2);        // what the customer is charged

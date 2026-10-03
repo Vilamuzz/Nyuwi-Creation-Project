@@ -1,9 +1,8 @@
 <script setup>
-import { Head, Link, useForm, usePage, router } from "@inertiajs/vue3";
+import { Head, Link, useForm } from "@inertiajs/vue3";
 import { computed, ref, onMounted } from "vue";
 import CustomersLayout from "@/Layouts/CustomersLayout.vue";
-import { triggerSnapPayment } from "@/Utils/midtrans";
-import axios from "axios";
+import ConfirmationModal from "@/Components/ConfirmationModal.vue";
 const props = defineProps({
     cartItems: { type: Array, default: () => [] },
     summary: { type: Object, default: () => ({}) },
@@ -13,10 +12,25 @@ const cartItems = computed(() => props.cartItems);
 const deleteForm = useForm({});
 const updateForm = useForm({ quantity: 1 });
 
-// Delete cart item
-const deleteCartItem = (itemId) => {
-    if (confirm("Apakah anda yakin ingin menghapus item ini?")) {
-        deleteForm.delete(route("cart.destroy", itemId), { preserveScroll: true });
+const showDeleteModal = ref(false);
+const itemToDelete = ref(null);
+
+// Open delete confirmation modal
+const confirmDeleteCartItem = (itemId) => {
+    itemToDelete.value = itemId;
+    showDeleteModal.value = true;
+};
+
+// Execute delete
+const handleDeleteConfirm = () => {
+    if (itemToDelete.value) {
+        deleteForm.delete(route("cart.destroy", itemToDelete.value), {
+            preserveScroll: true,
+            onSuccess: () => {
+                showDeleteModal.value = false;
+                itemToDelete.value = null;
+            },
+        });
     }
 };
 
@@ -45,12 +59,9 @@ const formatPrice = (price) => {
 
 const showPaymentModal = ref(false);
 
-const page = usePage();
-
 onMounted(async () => {
     // Check localStorage for payment info
     const showPaymentInfo = localStorage.getItem("showPaymentInfo");
-    const paymentMethod = localStorage.getItem("paymentMethod");
 
     if (showPaymentInfo === "true") {
         showPaymentModal.value = true;
@@ -58,29 +69,6 @@ onMounted(async () => {
         localStorage.removeItem("showPaymentInfo");
         localStorage.removeItem("paymentAmount");
         localStorage.removeItem("paymentMethod");
-    }
-
-    // Auto-launch Midtrans Snap if order was just placed
-    const placedOrderId = page.props.flash?.placedOrderId;
-    if (placedOrderId) {
-        try {
-            const res = await axios.post(route("orders.payment", placedOrderId));
-            const snapToken = res.data.snap_token;
-            const midtrans = page.props.midtrans || {};
-
-            triggerSnapPayment({
-                snapToken,
-                snapJsUrl: midtrans.snapJsUrl,
-                clientKey: midtrans.clientKey,
-                onSuccess: () => {
-                    if (page.props.auth?.user) {
-                        router.visit(route("customer.profile"));
-                    }
-                },
-            });
-        } catch (err) {
-            console.error("Gagal membuka popup pembayaran:", err);
-        }
     }
 });
 
@@ -117,17 +105,20 @@ const closePaymentModal = () => {
                                     <div class="flex gap-4 items-center">
                                         <img :src="item.product.images[0].startsWith('/')
                                             ? item.product.images[0]
-                                            : '/storage/products/' + item.product.images[0]"
-                                            alt="Product Image" class="w-16 h-16 object-cover rounded-md" />
+                                            : '/storage/products/' + item.product.images[0]" alt="Product Image"
+                                            class="w-16 h-16 object-cover rounded-md" />
 
                                         <div class="flex flex-col text-sm text-gray-500">
                                             <p class="font-semibold text-black">{{ item.product.name }}</p>
-                                            <p class="font-semibold text-black">{{ formatPrice(item.price) }}</p>
-                                            <span v-if="item.color">Color:
-                                                <span class="inline-block w-4 h-4 rounded-full" :style="{
-                                                    backgroundColor: item.color,
-                                                }"></span>
-                                            </span>
+                                            <div>
+                                                <p class="font-semibold text-black">{{ formatPrice(item.price) }}</p>
+                                                <span v-if="item.color" class="flex items-center">
+                                                    Color:
+                                                    <span class="inline-block w-4 h-4 rounded-full ml-1" :style="{
+                                                        backgroundColor: item.color,
+                                                    }"></span>
+                                                </span>
+                                            </div>
                                             <span v-if="item.size">Size: {{ item.size }}</span>
                                         </div>
                                     </div>
@@ -143,7 +134,7 @@ const closePaymentModal = () => {
                                                 )
                                                 " />
 
-                                        <button @click="deleteCartItem(item.id)"
+                                        <button @click="confirmDeleteCartItem(item.id)"
                                             class="text-red-500 hover:text-red-700 underline">
                                             Hapus
                                         </button>
@@ -157,7 +148,6 @@ const closePaymentModal = () => {
                                 </td>
                             </tr>
                         </tbody>
-
                         <tbody v-else>
                             <tr>
                                 <td colspan="7" class="text-center py-4">
@@ -184,5 +174,10 @@ const closePaymentModal = () => {
                 </div>
             </div>
         </section>
+
+        <!-- Delete Confirmation Modal -->
+        <ConfirmationModal :show="showDeleteModal" title="Hapus Produk"
+            message="Apakah Anda yakin ingin menghapus produk ini dari keranjang?" confirm-text="Hapus"
+            cancel-text="Batal" @confirm="handleDeleteConfirm" @close="showDeleteModal = false" />
     </CustomersLayout>
 </template>

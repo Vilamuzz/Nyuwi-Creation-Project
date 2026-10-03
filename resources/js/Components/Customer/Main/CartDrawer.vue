@@ -1,21 +1,22 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { Link, router, usePage } from "@inertiajs/vue3";
-import { Minus, Plus, Trash2, X } from "lucide-vue-next";
+import { X } from "lucide-vue-next";
+import ConfirmationModal from "@/Components/ConfirmationModal.vue";
 
 const props = defineProps({
     isOpen: Boolean,
 });
 
 const emit = defineEmits(["close"]);
-
 const page = usePage();
 const cart = computed(() => page.props.cart || { items: [], summary: {} });
 const items = computed(() => cart.value.items || []);
 const summary = computed(() => cart.value.summary || {});
-
 const notice = ref(null);
 const noticeTimer = ref(null);
+const showDeleteModal = ref(false);
+const itemToDelete = ref(null);
 
 const showNotice = (message) => {
     notice.value = message;
@@ -42,7 +43,6 @@ const productImage = (item) => {
 };
 
 const notFoundImage = "/img/placeholder.png";
-
 const updateQuantity = (item, newQuantity) => {
     if (newQuantity < 1) return;
     router.put(
@@ -58,14 +58,25 @@ const updateQuantity = (item, newQuantity) => {
     );
 };
 
-const removeItem = (item) => {
-    router.delete(route("cart.destroy", item.id), {
-        preserveScroll: true,
-        onError: (errors) => {
-            const message = Object.values(errors)[0] || "Gagal menghapus item.";
-            showNotice(message);
-        },
-    });
+const confirmRemoveItem = (item) => {
+    itemToDelete.value = item;
+    showDeleteModal.value = true;
+};
+
+const handleConfirmRemove = () => {
+    if (itemToDelete.value) {
+        router.delete(route("cart.destroy", itemToDelete.value.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                showDeleteModal.value = false;
+                itemToDelete.value = null;
+            },
+            onError: (errors) => {
+                const message = Object.values(errors)[0] || "Gagal menghapus item.";
+                showNotice(message);
+            },
+        });
+    }
 };
 
 const handleKeydown = (event) => {
@@ -163,7 +174,7 @@ onUnmounted(() => {
                                                 " />
                                     </div>
                                     <button type="button" class="text-red-500 hover:text-red-700 underline"
-                                        aria-label="Remove item" @click="removeItem(item)">
+                                        aria-label="Remove item" @click="confirmRemoveItem(item)">
                                         Hapus
                                     </button>
                                 </div>
@@ -199,9 +210,13 @@ onUnmounted(() => {
                         @click="emit('close')">
                         Lihat Keranjang
                     </Link>
-
                 </div>
             </div>
         </div>
     </Transition>
+
+    <!-- Remove Item Confirmation Modal -->
+    <ConfirmationModal :show="showDeleteModal" title="Hapus Produk"
+        message="Apakah Anda yakin ingin menghapus produk ini dari keranjang?" confirm-text="Hapus" cancel-text="Batal"
+        @confirm="handleConfirmRemove" @close="showDeleteModal = false" />
 </template>

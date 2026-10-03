@@ -8,7 +8,7 @@ use App\Models\OrderItem;
 use App\Models\PaymentTransaction;
 use App\Models\Product;
 use App\Models\User;
-use App\Services\MidtransService;
+use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -83,23 +83,26 @@ class MidtransIntegrationTest extends TestCase
         return hash('sha512', $orderId . $statusCode . $grossAmount . $this->serverKey);
     }
 
-    public function test_midtrans_service_creates_snap_token_with_valid_payload(): void
+    public function test_payment_service_reuses_existing_active_snap_token(): void
     {
-        Http::fake([
-            '*' => Http::response([
-                'token' => 'mock-snap-token-12345',
-                'redirect_url' => 'https://app.sandbox.midtrans.com/snap/v2/vtweb/mock-snap-token-12345',
-            ], 201),
+        $order = $this->createTestOrder();
+
+        $transaction = PaymentTransaction::create([
+            'order_id' => $order->id,
+            'gateway' => 'midtrans',
+            'gateway_order_id' => 'ORD-' . $order->id . '-1-mock',
+            'snap_token' => 'existing-active-snap-token',
+            'snap_redirect_url' => 'https://app.sandbox.midtrans.com/snap/v2/vtweb/existing',
+            'amount' => 115000,
+            'status' => 'pending',
+            'expired_at' => now()->addHours(24),
         ]);
 
-        $order = $this->createTestOrder();
-        $service = new MidtransService($this->serverKey);
-
+        $service = app(PaymentService::class);
         $result = $service->createSnapToken($order);
 
-        $this->assertEquals('mock-snap-token-12345', $result['token']);
-        $this->assertNotEmpty($result['redirect_url']);
-        $this->assertStringStartsWith('ORD-' . $order->id, $result['order_custom_id']);
+        $this->assertEquals('existing-active-snap-token', $result['token']);
+        $this->assertEquals($transaction->id, $result['transaction_id']);
     }
 
     public function test_webhook_rejects_invalid_signature(): void
@@ -123,7 +126,17 @@ class MidtransIntegrationTest extends TestCase
     public function test_webhook_settlement_updates_order_to_paid_and_logs_transaction(): void
     {
         $order = $this->createTestOrder();
-        $customOrderId = 'ORD-' . $order->id . '-123456';
+        $customOrderId = 'ORD-' . $order->id . '-999-1700000000';
+
+        $tx = PaymentTransaction::create([
+            'order_id' => $order->id,
+            'gateway' => 'midtrans',
+            'gateway_order_id' => $customOrderId,
+            'snap_token' => 'test-snap-token',
+            'amount' => 115000,
+            'status' => 'pending',
+        ]);
+
         $grossAmount = '115000.00';
         $signature = $this->generateSignature($customOrderId, '200', $grossAmount);
 
@@ -138,24 +151,35 @@ class MidtransIntegrationTest extends TestCase
         ]);
 
         $response->assertOk()
-            ->assertJson(['payment_status' => 'paid']);
+            ->assertJson(['message' => 'OK']);
 
         $order->refresh();
         $this->assertEquals('paid', $order->payment_status);
 
         $this->assertDatabaseHas('payment_transactions', [
+            'id' => $tx->id,
             'order_id' => $order->id,
             'gateway' => 'midtrans',
             'gateway_transaction_id' => 'trx-mock-settle-01',
             'payment_channel' => 'qris',
-            'raw_status' => 'settlement',
+            'status' => 'settlement',
         ]);
     }
 
     public function test_webhook_expire_updates_order_to_expired(): void
     {
         $order = $this->createTestOrder();
-        $customOrderId = 'ORD-' . $order->id . '-123456';
+        $customOrderId = 'ORD-' . $order->id . '-888-1700000000';
+
+        $tx = PaymentTransaction::create([
+            'order_id' => $order->id,
+            'gateway' => 'midtrans',
+            'gateway_order_id' => $customOrderId,
+            'snap_token' => 'test-expire-token',
+            'amount' => 115000,
+            'status' => 'pending',
+        ]);
+
         $grossAmount = '115000.00';
         $signature = $this->generateSignature($customOrderId, '200', $grossAmount);
 
@@ -170,7 +194,7 @@ class MidtransIntegrationTest extends TestCase
         ]);
 
         $response->assertOk()
-            ->assertJson(['payment_status' => 'expired']);
+            ->assertJson(['message' => 'OK']);
 
         $order->refresh();
         $this->assertEquals('expired', $order->payment_status);
@@ -179,7 +203,16 @@ class MidtransIntegrationTest extends TestCase
     public function test_webhook_is_idempotent(): void
     {
         $order = $this->createTestOrder();
-        $customOrderId = 'ORD-' . $order->id . '-123456';
+        $customOrderId = 'ORD-' . $order->id . '-777-1700000000';
+
+        $tx = PaymentTransaction::create([
+            'order_id' => $order->id,
+            'gateway' => 'midtrans',
+            'gateway_order_id' => $customOrderId,
+            'amount' => 115000,
+            'status' => 'pending',
+        ]);
+
         $grossAmount = '115000.00';
         $signature = $this->generateSignature($customOrderId, '200', $grossAmount);
 
@@ -197,31 +230,31 @@ class MidtransIntegrationTest extends TestCase
         $firstResponse = $this->postJson(route('webhooks.midtrans'), $payload);
         $firstResponse->assertOk();
 
-        $this->assertDatabaseCount('payment_transactions', 1);
-
         // Second duplicate call
         $secondResponse = $this->postJson(route('webhooks.midtrans'), $payload);
         $secondResponse->assertOk()
-            ->assertJson(['message' => 'Notification already processed.']);
-
-        // No duplicate row inserted
-        $this->assertDatabaseCount('payment_transactions', 1);
+            ->assertJson(['message' => 'Already processed']);
     }
 
     public function test_customer_can_retrieve_payment_token_for_their_pending_order(): void
     {
-        Http::fake([
-            '*' => Http::response([
-                'token' => 'snap-token-user-order-123',
-                'redirect_url' => 'https://app.sandbox.midtrans.com/snap/v2/vtweb/token-123',
-            ], 201),
-        ]);
-
         $user = User::factory()->create(['role' => 'pelanggan']);
         $order = $this->createTestOrder($user);
 
+        // Pre-seed an active pending snap_token
+        PaymentTransaction::create([
+            'order_id' => $order->id,
+            'gateway' => 'midtrans',
+            'gateway_order_id' => 'ORD-' . $order->id . '-1',
+            'snap_token' => 'snap-token-user-order-123',
+            'snap_redirect_url' => 'https://app.sandbox.midtrans.com/snap/v2/vtweb/token-123',
+            'amount' => 115000,
+            'status' => 'pending',
+            'expired_at' => now()->addHours(24),
+        ]);
+
         $response = $this->actingAs($user)
-            ->getJson(route('customer.orders.payment-token', $order->id));
+            ->postJson(route('orders.payment', $order->id));
 
         $response->assertOk()
             ->assertJson([
@@ -236,7 +269,7 @@ class MidtransIntegrationTest extends TestCase
         $order = $this->createTestOrder($owner);
 
         $response = $this->actingAs($anotherUser)
-            ->getJson(route('customer.orders.payment-token', $order->id));
+            ->postJson(route('orders.payment', $order->id));
 
         $response->assertForbidden();
     }

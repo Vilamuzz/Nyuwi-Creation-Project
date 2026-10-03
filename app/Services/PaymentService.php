@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Order;
-use Illuminate\Support\Facades\Http;
 use Midtrans\Config;
 use Midtrans\Snap;
 use RuntimeException;
@@ -22,23 +21,36 @@ class PaymentService
     {
         $order->loadMissing("orderItems.product");
 
-        // idempotency: reuse a pending transaction if one already exists for this order
-        $transaction = $order
+        $existing = $order
             ->paymentTransactions()
             ->where("status", "pending")
+            ->whereNotNull("snap_token")
             ->latest()
             ->first();
 
-        if (!$transaction) {
-            $transaction = $order->paymentTransactions()->create([
-                "gateway" => "midtrans",
-                "amount" => $order->total_price,
-                "status" => "pending",
-            ]);
+        $isTokenFresh = $existing &&
+            (!$existing->expired_at || $existing->expired_at->isFuture()) &&
+            $existing->created_at->gt(now()->subHours(24));
+
+        if ($isTokenFresh) {
+            return [
+                "token" => $existing->snap_token,
+                "redirect_url" => $existing->snap_redirect_url,
+                "order_custom_id" => $existing->gateway_order_id,
+                "transaction_id" => $existing->id,
+            ];
         }
 
+        $transaction = $order->paymentTransactions()->create([
+            "gateway" => "midtrans",
+            "amount" => $order->total_price,
+            "net_amount" => $order->total_price,
+            "status" => "pending",
+        ]);
+
         $grossAmount = (int) round((float) $order->total_price);
-        $orderCustomId = "ORD-{$order->id}-{$transaction->id}"; // stable, tied to a real DB row
+        // Use timestamp/uniqid in order_id sent to Midtrans so retries don't fail with 400 'order_id already used'
+        $orderCustomId = "ORD-{$order->id}-{$transaction->id}-" . time();
 
         $itemDetails = [];
         foreach ($order->orderItems as $item) {
@@ -64,8 +76,8 @@ class PaymentService
                 "quantity" => 1,
                 "name" => mb_substr(
                     "Ongkos Kirim (" .
-                        ($order->shipping_service ?? "Ekspedisi") .
-                        ")",
+                    ($order->shipping_service ?? "Ekspedisi") .
+                    ")",
                     0,
                     50,
                 ),
@@ -86,14 +98,14 @@ class PaymentService
                 "gross_amount" => $grossAmount,
             ],
             "customer_details" => [
-                "first_name" => $order->recipient_name,
-                "phone" => $order->phone,
-                "email" => $order->user?->email,
+                "first_name" => $order->recipient_name ?: "Pelanggan",
+                "phone" => $order->phone ?: "08123456789",
+                "email" => $order->email ?: ($order->user?->email ?: "customer@nyuwi.com"),
                 "shipping_address" => [
-                    "first_name" => $order->recipient_name,
-                    "phone" => $order->phone,
-                    "address" => $order->address,
-                    "city" => $order->city_name,
+                    "first_name" => $order->recipient_name ?: "Pelanggan",
+                    "phone" => $order->phone ?: "08123456789",
+                    "address" => $order->address ?: "-",
+                    "city" => $order->city_name ?: "-",
                 ],
             ],
             "item_details" => $itemDetails,
@@ -104,13 +116,20 @@ class PaymentService
         } catch (\Exception $e) {
             throw new RuntimeException(
                 "Failed to create Midtrans Snap transaction: " .
-                    $e->getMessage(),
+                $e->getMessage(),
             );
         }
 
         if (empty($result->token)) {
             throw new RuntimeException("Midtrans response missing token.");
         }
+
+        $transaction->update([
+            "gateway_order_id" => $orderCustomId,
+            "snap_token" => $result->token,
+            "snap_redirect_url" => $result->redirect_url ?? null,
+            "expired_at" => now()->addHours(24),
+        ]);
 
         return [
             "token" => $result->token,
