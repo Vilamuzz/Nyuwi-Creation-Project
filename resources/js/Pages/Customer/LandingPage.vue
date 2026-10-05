@@ -94,15 +94,14 @@ const handleImageError = (event) => {
                     <p class="mt-4 text-stone-600">Pilih kategori kreasi yang paling pas untuk hadiah orang tersayang
                         maupun pelengkap ruangmu.</p>
                 </div>
-                <div v-if="props.categories.length" class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div v-if="props.categories.length" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     <Link v-for="category in props.categories.slice(0, 3)" :key="category.id" href="/sale"
                         class="group overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-stone-200 transition hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-orange-500">
                         <img :src="categoryImage(category)" :alt="category.name"
                             class="h-72 w-full object-cover transition duration-500 group-hover:scale-105"
                             @error="handleImageError" />
-                        <div class="flex items-center justify-between p-5">
-                            <h3 class="text-xl font-semibold text-stone-900">{{ category.name }}</h3><span
-                                class="text-orange-600" aria-hidden="true">→</span>
+                        <div class="flex items-center justify-center p-5">
+                            <h3 class="text-xl font-semibold text-stone-900">{{ category.name }}</h3>
                         </div>
                     </Link>
                 </div>

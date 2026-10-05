@@ -82,4 +82,17 @@ class Order extends Model
     {
         return $this->hasMany(PaymentTransaction::class);
     }
+
+    /**
+     * Restore stock for all items in this order.
+     */
+    public function restoreStock(): void
+    {
+        foreach ($this->orderItems as $item) {
+            $product = Product::find($item->product_id);
+            if ($product) {
+                $product->increment('stock', $item->quantity);
+            }
+        }
+    }
 }

@@ -101,10 +101,24 @@ class MidtransWebhookController extends Controller
                 'payment_status' => 'paid',
                 'status' => $order->status === 'waiting' ? 'checking' : $order->status,
             ]),
-            'expire' => $order->update(['payment_status' => 'expired']),
-            'deny', 'cancel' => $order->update(['payment_status' => 'failed']),
+            'expire' => $this->handleFailedOrExpiredPayment($order, 'expired'),
+            'deny', 'cancel' => $this->handleFailedOrExpiredPayment($order, 'failed'),
             'pending' => $order->update(['payment_status' => 'pending']),
             default => null,
         };
+    }
+
+    private function handleFailedOrExpiredPayment(Order $order, string $paymentStatus): void
+    {
+        $wasCancelled = $order->status === 'cancelled';
+
+        $order->update([
+            'payment_status' => $paymentStatus,
+            'status' => 'cancelled',
+        ]);
+
+        if (! $wasCancelled) {
+            $order->restoreStock();
+        }
     }
 }

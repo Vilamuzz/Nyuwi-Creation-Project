@@ -67,11 +67,11 @@ class AdminOrderUpdateTest extends TestCase
         return $order;
     }
 
-    public function test_admin_can_mark_order_as_shipped_and_reduces_stock(): void
+    public function test_admin_can_mark_order_as_shipped_and_does_not_double_reduce_stock(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = User::factory()->create(['role' => 'pelanggan']);
-        $product = $this->makeProduct(stock: 5);
+        $product = $this->makeProduct(stock: 3); // Stock was already decremented upon checkout
         $order = $this->makeOrder($customer, $product);
 
         $this->actingAs($admin)
@@ -86,7 +86,29 @@ class AdminOrderUpdateTest extends TestCase
 
         $this->assertEquals('shipped', $order->status);
         $this->assertEquals('TRK123456', $order->tracking_number);
+        // Stock remains 3 (not decremented again on shipping)
         $this->assertEquals(3, $product->fresh()->stock);
+    }
+
+    public function test_admin_can_cancel_order_and_restores_stock(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'pelanggan']);
+        $product = $this->makeProduct(stock: 3);
+        $order = $this->makeOrder($customer, $product, ['status' => 'processing']);
+
+        $this->actingAs($admin)
+            ->put(route('admin.orders.update', $order->id), [
+                'status' => 'cancelled',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $order->refresh();
+
+        $this->assertEquals('cancelled', $order->status);
+        // Stock restored from 3 to 5 (2 items in makeOrder)
+        $this->assertEquals(5, $product->fresh()->stock);
     }
 
     public function test_admin_cannot_cancel_an_order_that_has_shipped(): void

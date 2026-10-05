@@ -1,5 +1,47 @@
 # Changelog
 
+## [2026-10-05] — Database Row Locking and Stock Reservation Lifecycle
+
+- **Pessimistic Row-Level Locking on Checkout:**
+    - Updated `OrderController::store` to extract unique product IDs, sort them in ascending order to prevent deadlocks, and acquire pessimistic row locks via `Product::whereIn('id', $productIds)->orderBy('id')->lockForUpdate()->get()`.
+    - Aggregated required quantities across cart items and validated sufficient stock before checkout proceeds.
+    - Atomically decremented product stock upon order placement within the existing database transaction, preventing overselling race conditions under concurrent checkouts.
+- **Stock Restoration Lifecycle:**
+    - Added `restoreStock()` helper to `Order` model to iterate over order items and restore product quantities.
+    - Updated `OrderController::update` to restore stock when an order is transitioned to `cancelled`, and removed stock reduction on status `shipped` to eliminate double-decrementing.
+    - Updated `MidtransWebhookController::syncOrderStatus` to mark orders as `cancelled` and restore reserved stock when receiving `expire`, `deny`, or `cancel` webhook notifications.
+    - Created `orders:expire-unpaid` console command (`app/Console/Commands/ExpireUnpaidOrders.php`) to automatically cancel abandoned unpaid orders past the payment window (default 24h) and restore their reserved stock.
+- **Documentation and Tests:**
+    - Updated `docs/03_APP_FLOW.md` marking concurrent stock row locking as implemented.
+    - Added comprehensive feature tests in `tests/Feature/OrderConcurrencyTest.php` covering stock deduction on checkout, out-of-stock rejection, and unpaid order expiration.
+    - Updated `tests/Feature/AdminOrderUpdateTest.php`, `tests/Feature/MidtransIntegrationTest.php`, and `tests/Feature/GuestCheckoutTest.php` to assert stock reservation and restoration.
+- **Verification:** Ran `npm run build` with zero errors.
+
+### Files changed
+
+- `app/Models/Order.php`
+- `app/Http/Controllers/OrderController.php`
+- `app/Http/Controllers/MidtransWebhookController.php`
+- `app/Console/Commands/ExpireUnpaidOrders.php`
+- `tests/Feature/OrderConcurrencyTest.php`
+- `tests/Feature/AdminOrderUpdateTest.php`
+- `tests/Feature/MidtransIntegrationTest.php`
+- `tests/Feature/GuestCheckoutTest.php`
+- `docs/03_APP_FLOW.md`
+- `docs/CHANGELOG.md`
+
+## [2026-10-05] — Mobile Search Dropdown Responsive Positioning
+
+- **Repositioned Search Dropdown on Mobile Displays:**
+    - Updated search floating dropdown in `resources/js/Components/Customer/Main/Navbar.vue` to use responsive positioning (`fixed left-4 right-4 top-[72px] sm:left-4 sm:right-auto sm:w-96 lg:absolute lg:inset-auto lg:right-0 lg:top-full lg:mt-3 lg:w-96`).
+    - Positioned dropdown directly beneath the mobile search trigger on mobile viewports while preserving desktop alignment and maintaining click-outside behavior.
+- **Verification:** Ran `npm run build` with zero errors.
+
+### Files changed
+
+- `resources/js/Components/Customer/Main/Navbar.vue`
+- `docs/CHANGELOG.md`
+
 ## [2026-10-04] — Support Reusable Midtrans Snap Token for QRIS and Pending Orders
 
 - **Added `gateway_order_id`, `snap_token`, and `snap_redirect_url` to `payment_transactions`:** Allowed storing the created Midtrans Snap token and custom gateway order identifier directly on the transaction.

@@ -159,6 +159,7 @@ class GuestCheckoutTest extends TestCase
             'quantity' => 2,
         ]);
 
+        $this->assertEquals(3, $product->fresh()->stock);
         $this->assertNull(session('cart'));
     }
 

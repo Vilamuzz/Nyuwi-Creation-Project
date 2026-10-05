@@ -169,6 +169,9 @@ class MidtransIntegrationTest extends TestCase
     public function test_webhook_expire_updates_order_to_expired(): void
     {
         $order = $this->createTestOrder();
+        $product = $order->orderItems->first()->product;
+        $product->update(['stock' => 9]); // Simulate stock reserved at checkout
+
         $customOrderId = 'ORD-' . $order->id . '-888-1700000000';
 
         $tx = PaymentTransaction::create([
@@ -198,6 +201,8 @@ class MidtransIntegrationTest extends TestCase
 
         $order->refresh();
         $this->assertEquals('expired', $order->payment_status);
+        $this->assertEquals('cancelled', $order->status);
+        $this->assertEquals(10, $product->fresh()->stock);
     }
 
     public function test_webhook_is_idempotent(): void

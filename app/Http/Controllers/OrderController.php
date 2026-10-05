@@ -51,36 +51,21 @@ class OrderController extends Controller
         }
 
         DB::transaction(function () use ($validated, $order) {
+            $newStatus = $validated['status'] ?? null;
+
             if (!empty($validated['tracking_number'])) {
-                // Update order to shipped status
                 $order->update([
                     'tracking_number' => $validated['tracking_number'],
                     'status' => 'shipped'
                 ]);
+            } else if (!empty($newStatus)) {
+                // If transitioning to cancelled and was not already cancelled, restore reserved stock
+                if ($newStatus === 'cancelled' && $order->status !== 'cancelled') {
+                    $order->restoreStock();
+                }
 
-                // Reduce product stock for each order item
-                foreach ($order->orderItems as $item) {
-                    $product = Product::find($item->product_id);
-                    if ($product) {
-                        $product->update([
-                            'stock' => $product->stock - $item->quantity
-                        ]);
-                    }
-                }
-            } else if (!empty($validated['status'])) {
-                if ($validated['status'] === 'shipped') {
-                    // Reduce product stock for each order item
-                    foreach ($order->orderItems as $item) {
-                        $product = Product::find($item->product_id);
-                        if ($product) {
-                            $product->update([
-                                'stock' => $product->stock - $item->quantity
-                            ]);
-                        }
-                    }
-                }
                 $order->update([
-                    'status' => $validated['status']
+                    'status' => $newStatus
                 ]);
             }
         });
@@ -138,12 +123,37 @@ class OrderController extends Controller
                     throw new \Exception('Cart is empty');
                 }
 
+                // Aggregate quantities by product_id
+                $quantitiesByProduct = [];
                 foreach ($cartItems as $cartItem) {
-                    $product = $cartItem['product'];
+                    $productId = (int) $cartItem['product_id'];
+                    $quantitiesByProduct[$productId] = ($quantitiesByProduct[$productId] ?? 0) + (int) $cartItem['quantity'];
+                }
 
-                    if (! $product || $cartItem['quantity'] > $product->stock) {
-                        throw new \RuntimeException("Insufficient stock for {$product?->name}");
+                // Sort product IDs to prevent deadlocks across concurrent transactions
+                $productIds = array_keys($quantitiesByProduct);
+                sort($productIds);
+
+                // Lock product rows for update
+                $lockedProducts = Product::whereIn('id', $productIds)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                foreach ($quantitiesByProduct as $productId => $requiredQty) {
+                    $product = $lockedProducts->get($productId);
+
+                    if (! $product || $product->stock < $requiredQty) {
+                        $name = $product?->name ?? "Product #{$productId}";
+                        throw new \RuntimeException("Insufficient stock for {$name}");
                     }
+                }
+
+                // Atomically decrement reserved stock
+                foreach ($quantitiesByProduct as $productId => $requiredQty) {
+                    $product = $lockedProducts->get($productId);
+                    $product->decrement('stock', $requiredQty);
                 }
 
                 $summary = $cartService->summarize($cartItems);

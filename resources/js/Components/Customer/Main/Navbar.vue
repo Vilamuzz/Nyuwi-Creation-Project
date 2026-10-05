@@ -127,9 +127,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="sticky top-0 p-4 px-4 sm:px-10 flex flex-row justify-between items-center bg-white shadow-md z-50">
+    <div class="sticky top-0 p-4 px-4 sm:px-10 flex flex-row justify-between items-center bg-white shadow-lg z-50">
         <!-- Mobile menu + search (left, mobile only) -->
-        <div class="flex items-center gap-1 md:hidden">
+        <div class="flex items-center gap-1 lg:hidden">
             <button type="button"
                 class="inline-flex items-center justify-center p-2 text-gray-700 hover:text-orange-500 transition"
                 aria-label="Open menu" @click="isMenuOpen = true">
@@ -137,18 +137,18 @@ onUnmounted(() => {
             </button>
             <button type="button"
                 class="inline-flex items-center justify-center p-2 text-gray-700 hover:text-orange-500 transition"
-                aria-label="Search" @click="toggleSearch">
+                aria-label="Search" @click.stop="toggleSearch">
                 <Search />
             </button>
         </div>
 
-        <!-- Logo (centered on mobile, left on md+) -->
-        <Link href="/" class="flex items-center absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
+        <!-- Logo (centered on mobile, left on lg+) -->
+        <Link href="/" class="flex items-center absolute left-1/2 -translate-x-1/2 lg:static lg:translate-x-0">
             <ApplicationLogo class="h-10 w-auto fill-current text-gray-800" />
         </Link>
 
         <!-- Links -->
-        <div class="hidden md:flex space-x-10 text-gray-700 text-xl">
+        <div class="hidden lg:flex space-x-10 text-gray-700 text-xl">
             <Link href="/new-featured" class="font-bold rounded hover:text-orange-500">New & Featured</Link>
             <Link href="/boquets" class="font-bold rounded hover:text-orange-500">Boquets</Link>
             <Link href="/flowers" class="font-bold rounded hover:text-orange-500">Flowers</Link>
@@ -163,7 +163,7 @@ onUnmounted(() => {
             <template v-if="$page.props.auth.user">
                 <!-- Search Button (Auth) -->
                 <button type="button"
-                    class="inline-flex items-center justify-center p-2 text-gray-700 hover:text-orange-500 transition"
+                    class="hidden lg:inline-flex items-center justify-center p-2 text-gray-700 hover:text-orange-500 transition"
                     aria-label="Search" @click="toggleSearch">
                     <Search />
                 </button>
@@ -212,7 +212,7 @@ onUnmounted(() => {
             <template v-else>
                 <div class="flex items-center gap-1 sm:gap-2">
                     <button type="button"
-                        class="hidden md:inline-flex items-center justify-center p-2 text-gray-700 hover:text-orange-500 transition"
+                        class="hidden lg:inline-flex items-center justify-center p-2 text-gray-700 hover:text-orange-500 transition"
                         aria-label="Search" @click="toggleSearch">
                         <Search />
                     </button>
@@ -226,7 +226,7 @@ onUnmounted(() => {
                         </span>
                     </button>
                     <Link :href="route('login')"
-                        class="hidden md:inline-flex items-center justify-center p-2 text-gray-700 hover:text-orange-500 transition"
+                        class="hidden lg:inline-flex items-center justify-center p-2 text-gray-700 hover:text-orange-500 transition"
                         aria-label="Login">
                         <User />
                     </Link>
@@ -235,7 +235,7 @@ onUnmounted(() => {
 
             <!-- Floating Search Dropdown Window -->
             <div v-if="isSearchOpen"
-                class="absolute right-0 top-full mt-3 w-80 sm:w-96 bg-white rounded-2xl border border-gray-200 shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
+                class="fixed left-4 right-4 top-[72px] sm:left-4 sm:right-auto sm:w-96 lg:absolute lg:inset-auto lg:right-0 lg:top-full lg:mt-3 lg:w-96 bg-white rounded-2xl border border-gray-200 shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
                 <!-- Search Input Header -->
                 <div class="relative flex items-center">
                     <Search class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
