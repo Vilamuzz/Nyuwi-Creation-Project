@@ -144,7 +144,7 @@ class OrderController extends Controller
                 foreach ($quantitiesByProduct as $productId => $requiredQty) {
                     $product = $lockedProducts->get($productId);
 
-                    if (! $product || $product->stock < $requiredQty) {
+                    if (!$product || $product->stock < $requiredQty) {
                         $name = $product?->name ?? "Product #{$productId}";
                         throw new \RuntimeException("Insufficient stock for {$name}");
                     }
@@ -223,16 +223,22 @@ class OrderController extends Controller
             $order = Order::where('id', $validated['order_id'])
                 ->where('user_id', Auth::id())
                 ->firstOrFail();
-            $order->update(['status' => 'completed']);
 
-            // Save reviews
+            if ($order->status === 'shipped') {
+                $order->update(['status' => 'completed']);
+            }
+
             foreach ($validated['reviews'] as $review) {
-                ProductReview::create([
-                    'user_id' => Auth::id(),
-                    'product_id' => $review['product_id'],
-                    'order_id' => $validated['order_id'],
-                    'rating' => $review['rating']
-                ]);
+                ProductReview::updateOrCreate(
+                    [
+                        'order_id' => $validated['order_id'],
+                        'product_id' => $review['product_id'],
+                    ],
+                    [
+                        'user_id' => Auth::id(),
+                        'rating' => $review['rating'],
+                    ]
+                );
             }
         });
 

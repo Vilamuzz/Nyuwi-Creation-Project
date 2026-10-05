@@ -156,12 +156,11 @@ Reviews:
 3. Submits rating (1-5) + comment
 4. Review appears on product page for other customers
 
-TODO / open item:
-- No current server-side check confirming the reviewer actually purchased
-  and received the specific product via a completed order before allowing
-  a review, or preventing duplicate reviews per order item. Button is
-  hidden client-side on eligible orders only — this is not a security
-  control and needs a backend guard before launch.
+Security & Verification Guards :
+- Server-side order ownership check (OrderCompleteRequest::authorize).
+- Order status and payment validation (order must be 'shipped' or 'completed' and 'paid').
+- Product eligibility verification (only items actually purchased in the order can be reviewed).
+- Distinct validation & unique database constraint ['order_id', 'product_id'] to prevent duplicate reviews per order item.
 ```
 
 ---

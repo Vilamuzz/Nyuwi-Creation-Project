@@ -1,5 +1,31 @@
 # Changelog
 
+## [2026-10-05] — Review Authorization, Order Status Verification, and Duplicate Prevention
+
+- **Server-Side Authorization & Eligibility in `OrderCompleteRequest`:**
+    - Added request authorization verifying the authenticated user strictly owns the order (`user_id === auth()->id()`), rejecting unauthorized completion attempts with 403 Forbidden.
+    - Enforced order state validation: orders can only be completed/reviewed if they are in `shipped` or `completed` status and `paid`/`settlement`. Pre-shipped or unpaid orders (`waiting`, `checking`, `processing`) are rejected.
+    - Verified that every `product_id` submitted in reviews was genuinely purchased in that specific order, preventing forged reviews of unpurchased store products.
+    - Added `distinct` validation on `reviews.*.product_id` to prevent submitting the same product multiple times within a single payload.
+- **Idempotent Review Handling in `OrderController::complete`:**
+    - Switched from raw `ProductReview::create` to `ProductReview::updateOrCreate`, ensuring idempotent review updates and preventing duplicate review rows upon multiple submissions.
+    - Only transitioned order status to `completed` if the order is currently `shipped`.
+- **Database Unique Constraint on `product_reviews`:**
+    - Created migration `2026_10_05_135500_add_unique_index_to_product_reviews_table.php` adding a composite unique index on `['order_id', 'product_id']`.
+- **Security Tests & Documentation:**
+    - Created `tests/Feature/OrderReviewSecurityTest.php` with 6 dedicated test cases covering foreign order protection, pre-shipped order rejection, unpurchased product rejection, distinct product validation, idempotent review submission, and successful completion flow.
+    - Updated `docs/03_APP_FLOW.md` resolving the Flow 5 Reviews open TODO item.
+- **Verification:** Ran `npm run build` with zero errors.
+
+### Files changed
+
+- `database/migrations/2026_10_05_135500_add_unique_index_to_product_reviews_table.php`
+- `app/Http/Requests/OrderCompleteRequest.php`
+- `app/Http/Controllers/OrderController.php`
+- `tests/Feature/OrderReviewSecurityTest.php`
+- `docs/03_APP_FLOW.md`
+- `docs/CHANGELOG.md`
+
 ## [2026-10-05] — Database Row Locking and Stock Reservation Lifecycle
 
 - **Pessimistic Row-Level Locking on Checkout:**
