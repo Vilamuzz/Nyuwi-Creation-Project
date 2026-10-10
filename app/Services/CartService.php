@@ -166,6 +166,10 @@ class CartService
     {
         $items = $this->getSessionItems($request);
 
+        if (empty($items)) {
+            return [];
+        }
+
         $products = Product::whereIn('id', collect($items)->pluck('product_id'))
             ->get()
             ->keyBy('id');

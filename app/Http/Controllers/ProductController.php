@@ -9,6 +9,7 @@ use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use App\Models\ProductReview;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -118,6 +119,8 @@ class ProductController extends Controller
 
         $product = Product::create($productData);
 
+        Cache::flush();
+
         return redirect()
             ->route("products.index")
             ->with("success", "Product created successfully.");
@@ -212,6 +215,8 @@ class ProductController extends Controller
 
         $product->update($updateData);
 
+        Cache::flush();
+
         return redirect()
             ->route("products.index")
             ->with("success", "Product updated successfully.");
@@ -243,6 +248,8 @@ class ProductController extends Controller
         // Delete the product from database
         $product->delete();
 
+        Cache::flush();
+
         // Delete images after successful database deletion
         if ($images && is_array($images)) {
             foreach ($images as $imageName) {
@@ -263,33 +270,41 @@ class ProductController extends Controller
 
     public function landingPage()
     {
-        $productPresentation = fn() => Product::query()
-            ->withCount("reviews as total_reviews")
-            ->withAvg("reviews as average_rating", "rating");
+        $landingData = Cache::remember("landing_page_data", 60, function () {
+            $productPresentation = fn() => Product::query()
+                ->withCount("reviews as total_reviews")
+                ->withAvg("reviews as average_rating", "rating");
 
-        $newProducts = $productPresentation()->latest()->take(10)->get();
+            $newProducts = $productPresentation()->latest()->take(10)->get();
 
-        $featuredProducts = $productPresentation()
-            ->select("products.*")
-            ->selectRaw(
-                '(SELECT COALESCE(SUM(order_items.quantity), 0)
-                FROM order_items
-                INNER JOIN orders ON orders.id = order_items.order_id
-                WHERE order_items.product_id = products.id
-                AND orders.status = ?) as total_sold',
-                ["completed"],
-            )
-            ->orderByDesc("total_sold")
-            ->latest("products.created_at")
-            ->take(10)
-            ->get();
+            $featuredProducts = $productPresentation()
+                ->select("products.*")
+                ->selectRaw(
+                    '(SELECT COALESCE(SUM(order_items.quantity), 0)
+                    FROM order_items
+                    INNER JOIN orders ON orders.id = order_items.order_id
+                    WHERE order_items.product_id = products.id
+                    AND orders.status = ?) as total_sold',
+                    ["completed"],
+                )
+                ->orderByDesc("total_sold")
+                ->latest("products.created_at")
+                ->take(10)
+                ->get();
+
+            return [
+                "newProducts" => $newProducts,
+                "featuredProducts" => $featuredProducts,
+                "categories" => Category::all(),
+            ];
+        });
 
         return Inertia::render("Customer/LandingPage", [
             "canLogin" => Route::has("login"),
             "canRegister" => Route::has("register"),
-            "newProducts" => $newProducts,
-            "featuredProducts" => $featuredProducts,
-            "categories" => Category::all(),
+            "newProducts" => $landingData["newProducts"],
+            "featuredProducts" => $landingData["featuredProducts"],
+            "categories" => $landingData["categories"],
         ]);
     }
 
@@ -298,6 +313,29 @@ class ProductController extends Controller
      */
     public function newFeaturedPage(Request $request)
     {
+        $hasFilters = $request->filled("search") || $request->filled("category") || $request->filled("sortField") || $request->filled("page");
+        if (!$hasFilters) {
+            $data = Cache::remember("new_featured_page_default", 60, function () {
+                $products = Product::query()
+                    ->withCount("reviews as total_reviews")
+                    ->withAvg("reviews as average_rating", "rating")
+                    ->latest()
+                    ->paginate(16);
+                $products->withQueryString();
+
+                return [
+                    "products" => $products,
+                    "categories" => Category::all(),
+                ];
+            });
+
+            return Inertia::render("Customer/NewFeaturedPage", [
+                "products" => $data["products"],
+                "categories" => $data["categories"],
+                "filters" => $request->only(["search", "category", "sortField", "sortDirection"]),
+            ]);
+        }
+
         $query = Product::query()
             ->withCount("reviews as total_reviews")
             ->withAvg("reviews as average_rating", "rating");
@@ -343,6 +381,29 @@ class ProductController extends Controller
      */
     public function salePage(Request $request)
     {
+        $hasFilters = $request->filled("search") || $request->filled("category") || $request->filled("sortField") || $request->filled("page");
+        if (!$hasFilters) {
+            $data = Cache::remember("sale_page_default", 60, function () {
+                $products = Product::query()
+                    ->withCount("reviews as total_reviews")
+                    ->withAvg("reviews as average_rating", "rating")
+                    ->latest()
+                    ->paginate(16);
+                $products->withQueryString();
+
+                return [
+                    "products" => $products,
+                    "categories" => Category::all(),
+                ];
+            });
+
+            return Inertia::render("Customer/SalePage", [
+                "products" => $data["products"],
+                "categories" => $data["categories"],
+                "filters" => $request->only(["search", "category", "sortField", "sortDirection"]),
+            ]);
+        }
+
         $query = Product::query()
             ->withCount("reviews as total_reviews")
             ->withAvg("reviews as average_rating", "rating");
@@ -387,6 +448,38 @@ class ProductController extends Controller
 
     protected function renderCategoryPage(Request $request, string $categoryName, string $pageComponent, string $fallbackCategoryName = "")
     {
+        $hasFilters = $request->filled("search") || $request->filled("sortField") || $request->filled("page");
+        if (!$hasFilters) {
+            $data = Cache::remember("category_page_{$categoryName}", 60, function () use ($categoryName, $fallbackCategoryName) {
+                $category = Category::where("name", $categoryName)->first();
+                if (!$category && $fallbackCategoryName !== "") {
+                    $category = Category::where("name", $fallbackCategoryName)->first();
+                }
+
+                $query = Product::query()
+                    ->withCount("reviews as total_reviews")
+                    ->withAvg("reviews as average_rating", "rating");
+
+                if ($category) {
+                    $query->where("category_id", $category->id);
+                }
+
+                $products = $query->latest()->paginate(16);
+                $products->withQueryString();
+
+                return [
+                    "products" => $products,
+                    "categories" => Category::all(),
+                ];
+            });
+
+            return Inertia::render($pageComponent, [
+                "products" => $data["products"],
+                "categories" => $data["categories"],
+                "filters" => $request->only(["search", "sortField", "sortDirection"]),
+            ]);
+        }
+
         $category = Category::where("name", $categoryName)->first();
         if (!$category && $fallbackCategoryName !== "") {
             $category = Category::where("name", $fallbackCategoryName)->first();
@@ -453,35 +546,39 @@ class ProductController extends Controller
 
     public function product(string $slug)
     {
-        $product = Product::where("slug", $slug)->firstOrFail();
-        $categories = Category::all();
+        $data = Cache::remember("product_detail_{$slug}", 60, function () use ($slug) {
+            $product = Product::where("slug", $slug)->firstOrFail();
+            $categories = Category::all();
 
-        // Calculate average rating and total reviews
-        $reviews = ProductReview::where("product_id", $product->id)
-            ->select("rating")
-            ->get();
-        $averageRating = $reviews->avg("rating") ?? 0;
-        $totalReviews = $reviews->count();
+            // Calculate average rating and total reviews
+            $reviews = ProductReview::where("product_id", $product->id)
+                ->select("rating")
+                ->get();
+            $averageRating = $reviews->avg("rating") ?? 0;
+            $totalReviews = $reviews->count();
 
-        $productRating = [
-            "average_rating" => round($averageRating, 1),
-            "total_reviews" => $totalReviews,
-        ];
+            $productRating = [
+                "average_rating" => round($averageRating, 1),
+                "total_reviews" => $totalReviews,
+            ];
 
-        // Get related products from the same category
-        $relatedProducts = Product::where("category_id", $product->category_id)
-            ->where("id", "!=", $product->id)
-            ->withCount("reviews as total_reviews")
-            ->withAvg("reviews as average_rating", "rating")
-            ->take(4)
-            ->get();
+            // Get related products from the same category
+            $relatedProducts = Product::where("category_id", $product->category_id)
+                ->where("id", "!=", $product->id)
+                ->withCount("reviews as total_reviews")
+                ->withAvg("reviews as average_rating", "rating")
+                ->take(4)
+                ->get();
 
-        return Inertia::render("Customer/Product", [
-            "product" => $product,
-            "categories" => $categories,
-            "productRating" => $productRating,
-            "relatedProducts" => $relatedProducts,
-        ]);
+            return [
+                "product" => $product,
+                "categories" => $categories,
+                "productRating" => $productRating,
+                "relatedProducts" => $relatedProducts,
+            ];
+        });
+
+        return Inertia::render("Customer/Product", $data);
     }
 
     /**
@@ -495,34 +592,36 @@ class ProductController extends Controller
             return response()->json([]);
         }
 
-        $products = Product::query()
-            ->with('category')
-            ->where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")
-                  ->orWhere('description', 'LIKE', "%{$search}%");
-            })
-            ->take(6)
-            ->get()
-            ->map(function ($product) {
-                $imagePath = null;
-                if (!empty($product->images) && is_array($product->images) && count($product->images) > 0) {
-                    $imageName = $product->images[0];
-                    $imagePath = str_starts_with($imageName, 'http') || str_starts_with($imageName, '/')
-                        ? $imageName
-                        : asset('storage/products/' . $imageName);
-                }
+        $results = Cache::remember("api_search_" . md5($search), 60, function () use ($search) {
+            return Product::query()
+                ->with('category')
+                ->where(function ($q) use ($search) {
+                    $q->where('name', 'LIKE', "%{$search}%")
+                      ->orWhere('description', 'LIKE', "%{$search}%");
+                })
+                ->take(6)
+                ->get()
+                ->map(function ($product) {
+                    $imagePath = null;
+                    if (!empty($product->images) && is_array($product->images) && count($product->images) > 0) {
+                        $imageName = $product->images[0];
+                        $imagePath = str_starts_with($imageName, 'http') || str_starts_with($imageName, '/')
+                            ? $imageName
+                            : asset('storage/products/' . $imageName);
+                    }
 
-                return [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'slug' => $product->slug,
-                    'price' => (float) $product->price,
-                    'formatted_price' => 'Rp ' . number_format($product->price, 0, ',', '.'),
-                    'category' => $product->category ? $product->category->name : null,
-                    'image' => $imagePath,
-                ];
-            });
+                    return [
+                        'id' => $product->id,
+                        'name' => $product->name,
+                        'slug' => $product->slug,
+                        'price' => (float) $product->price,
+                        'formatted_price' => 'Rp ' . number_format($product->price, 0, ',', '.'),
+                        'category' => $product->category ? $product->category->name : null,
+                        'image' => $imagePath,
+                    ];
+                });
+        });
 
-        return response()->json($products);
+        return response()->json($results);
     }
 }

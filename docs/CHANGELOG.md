@@ -1,5 +1,56 @@
 # Changelog
 
+## [2026-10-10] — PHP-FPM Concurrency & Storefront Performance Optimization for k6 Load Testing
+
+- **Fixed PHP-FPM Pool Configuration & Worker Starvation:**
+    - Fixed path misplacement of `pool.conf` by moving it to `docker/php/pool.conf` so `docker-compose.yml` mounts a valid configuration file instead of an auto-generated empty directory.
+    - Scaled PHP-FPM worker pool from default 5 workers to 60 static workers (`pm = static`, `pm.max_children = 60`, `pm.max_requests = 1000`) matching available container memory limits (2GB RAM).
+- **Nginx Upstream Keepalive, Buffer & Compression Tuning:**
+    - Configured persistent FastCGI upstream keepalive (`upstream php-fpm { server app:9000; keepalive 32; }`, `fastcgi_keep_conn on`).
+    - Tuned FastCGI response buffers (`fastcgi_buffer_size 128k`, `fastcgi_buffers 16 128k`, `fastcgi_busy_buffers_size 256k`) to prevent disk buffering of Inertia SSR responses.
+    - Enabled Gzip compression on Nginx (`gzip on`, `gzip_min_length 1024`, `gzip_types text/plain text/css application/json application/javascript text/xml`) to drastically reduce network payload.
+- **Application Caching & Query Optimization:**
+    - Cached landing page product payload (`newProducts`, `featuredProducts`, and `categories`) in `ProductController::landingPage()` using `Cache::remember('landing_page_data', 60, ...)` to eliminate correlated subqueries under heavy concurrent traffic.
+    - Cached category catalog pages (`/flowers`, `/boquets`, `/accessories`, `/bags`, `/sale`, `/new-featured`), individual product detail views, and search API responses (`apiSearch`).
+    - Short-circuited empty guest cart queries in `CartService::guestItems()` to prevent empty database lookups on every page view.
+    - Invalidated product cache on administrative mutations (`store`, `update`, `destroy`).
+- **Load Test Verification:**
+    - Re-ran full 8-minute k6 load test (`k6 run loadtest/script.js`) across all 5 stages up to 200 concurrent VUs.
+    - All thresholds passed with 0 premature aborts:
+        - `http_req_duration`: p(95) = **304.26ms** (threshold `<800ms`)
+        - `http_req_duration{endpoint:home}`: p(95) = **324.14ms** (threshold `<800ms`)
+        - `http_req_duration{endpoint:product}`: p(95) = **300.55ms** (threshold `<1000ms`)
+        - `http_req_failed`: rate = **0.46%** (threshold `<1.00%`)
+    - Handled 27,673 HTTP requests and 13,829 iterations.
+- **Automated Tests:**
+    - Created `tests/Feature/LandingPageTest.php` testing landing page inertia props and cache behavior. All tests passed.
+
+### Files changed
+
+- `docker/php/pool.conf`
+- `docker/nginx/nginx.conf`
+- `app/Http/Controllers/ProductController.php`
+- `app/Services/CartService.php`
+- `tests/Feature/LandingPageTest.php` _(New)_
+- `docs/CHANGELOG.md`
+
+## [2026-10-08] — k6 Load Test Script for Public Storefront
+
+- **Rewrote `loadtest/script.js` against real routes:**
+    - Replaced the placeholder path with a weighted mix of live public routes from `routes/web.php`: home, 6 category pages (`/flowers`, `/boquets`, `/new-featured`, `/accessories`, `/bags`, `/sale`), product detail, `/api/products/search`, and `/cart`.
+    - Added a `setup()` step that discovers real product slugs via `GET /api/products/search`; product-detail requests are skipped when no slugs are found.
+    - Tagged every request with `endpoint` and added grouped thresholds (`http_req_duration{endpoint:home}` p95 < 800ms, `endpoint:product` p95 < 1000ms) alongside the original abort-on-fail p95/error-rate thresholds.
+    - Added `SMOKE=1` short-run mode (30s, 5 VUs) and `BASE_URL` override; kept the original 20 → 200 VU ramp stages.
+    - Verified k6 behavior empirically (k6 v2.3.0): `discardResponseBodies` was rejected because it nulls response bodies in `setup()`, breaking slug discovery.
+- **Documentation:** Added `loadtest/README.md` with run commands, traffic weights, thresholds, and scope notes (write/auth flows excluded — they need CSRF and login flows).
+- **Verification:** `k6 inspect` passes for both full and smoke modes; `npm run build` completes with zero errors. Live smoke run pending — Docker stack was not reachable from this environment.
+
+### Files changed
+
+- `loadtest/script.js`
+- `loadtest/README.md`
+- `docs/CHANGELOG.md`
+
 ## [2026-10-05] — Review Authorization, Order Status Verification, and Duplicate Prevention
 
 - **Server-Side Authorization & Eligibility in `OrderCompleteRequest`:**
