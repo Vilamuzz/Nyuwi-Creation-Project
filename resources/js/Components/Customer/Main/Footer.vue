@@ -1,7 +1,6 @@
 <script setup>
 import { Link } from "@inertiajs/vue3";
-import { ref } from "vue";
-import { MessageCircle, Instagram, MapPin, Clock, CreditCard } from "lucide-vue-next";
+import { MessageCircle, Instagram, MapPin, Clock } from "lucide-vue-next";
 </script>
 
 <template>

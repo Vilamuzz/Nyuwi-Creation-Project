@@ -28,6 +28,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhooks/midtrans',
         ]);
 
+        $middleware->trustProxies(at: '*');
+
         //
     })
     ->withExceptions(function (Exceptions $exceptions) {

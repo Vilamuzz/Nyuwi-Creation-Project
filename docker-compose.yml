@@ -5,6 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: nyuwi-app
+    user: "1000:1000"
     restart: unless-stopped
     working_dir: /var/www
     volumes:
